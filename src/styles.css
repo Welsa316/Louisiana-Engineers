@@ -568,16 +568,22 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Hero: oversized wordmark behind a suspended engineering structure.    */
+/* Hero: oversized wordmark with a still photograph set into its        */
+/* baseline. Everything is in flow, sized from the viewport, so the     */
+/* photograph and the copy never overlap at any height.                 */
 /* ------------------------------------------------------------------ */
 .hero {
   --sage: #536f5b;
   --sage-2: #607c67;
+  --mark-size: min(24vw, 34svh);
+  --mark-top: calc(var(--header-h) + 1.5svh);
+  --stage-h: calc(var(--mark-top) + 0.92 * var(--mark-size));
+  --panel-ratio: 2.3;
+  --panel-w: min(118vw, 1800px, 190svh);
   position: relative;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   color: var(--color-paper);
   background: var(--sage);
   isolation: isolate;
@@ -591,15 +597,15 @@
   background: radial-gradient(85% 65% at 50% 100%, var(--sage-2) 0%, var(--sage) 72%);
 }
 .hero-stage {
-  position: absolute;
-  inset: 0;
+  height: var(--stage-h);
+  flex-shrink: 0;
 }
 .hero-mark {
   position: absolute;
   left: 50%;
-  top: calc(var(--header-h) + 1.5vh);
+  top: var(--mark-top);
   transform: translateX(-50%);
-  font-size: clamp(6.5rem, 24vw, 28rem);
+  font-size: var(--mark-size);
   line-height: 0.92;
   letter-spacing: -0.045em;
   font-weight: 400;
@@ -608,18 +614,59 @@
   pointer-events: none;
   user-select: none;
 }
-.hero-scene {
+.hero-panel {
+  /* A tonal layer, not a picture frame: the photograph takes the sage hue
+     through a luminosity blend and dissolves into the field through a
+     feathered elliptical mask whose radius the entrance animates. */
+  --reveal: 1;
   position: absolute;
-  inset: 0;
-  z-index: 1;
-  transform-origin: 50% 55%;
+  z-index: 0;
+  left: 50%;
+  top: calc(58% - var(--panel-w) / (2 * var(--panel-ratio)));
+  width: var(--panel-w);
+  aspect-ratio: var(--panel-ratio);
+  margin-left: calc(var(--panel-w) / -2);
+  mix-blend-mode: luminosity;
+  opacity: 0.62;
+  -webkit-mask-image: radial-gradient(
+    calc(52% * var(--reveal)) calc(50% * var(--reveal)) at 50% 52%,
+    #000 30%,
+    transparent 74%
+  );
+  mask-image: radial-gradient(
+    calc(52% * var(--reveal)) calc(50% * var(--reveal)) at 50% 52%,
+    #000 30%,
+    transparent 74%
+  );
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
 }
-.hero-scene canvas {
+.hero-panel img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 45%;
+  filter: contrast(1.08) brightness(0.92);
+  will-change: transform;
+}
+.hero-stage,
+.hero-foot {
+  position: relative;
+  z-index: 2;
+}
+.hero-rule {
+  grid-column: 1 / -1;
   display: block;
+  height: 1px;
+  background: var(--line-on-dark-strong);
+  margin-bottom: clamp(1.5rem, 3vh, 2.5rem);
 }
 .hero-foot {
   position: relative;
   z-index: 2;
+  margin-top: auto;
+  padding-top: 2rem;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   column-gap: clamp(1rem, 2vw, 2rem);
@@ -1140,6 +1187,10 @@
   .wordmark-desc {
     display: none;
   }
+  .hero {
+    --panel-ratio: 2;
+    --panel-w: min(140vw, 150svh);
+  }
   .hero-intro {
     grid-column: 1 / 7;
   }
@@ -1224,9 +1275,14 @@
   .menu-toggle {
     display: inline-flex;
   }
-  .hero-mark {
-    font-size: 29vw;
-    top: calc(var(--header-h) + 1.25rem);
+  .hero {
+    --mark-size: 29vw;
+    --mark-top: calc(var(--header-h) + 1.25rem);
+    --panel-ratio: 1.5;
+    --panel-w: 150vw;
+  }
+  .hero-panel {
+    top: calc(38% - var(--panel-w) / (2 * var(--panel-ratio)));
   }
   .hero-foot {
     grid-template-columns: 1fr;
