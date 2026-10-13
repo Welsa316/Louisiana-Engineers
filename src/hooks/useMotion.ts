@@ -34,19 +34,14 @@ export function useMotion(root: RefObject<HTMLElement | null>) {
 
     const q = gsap.utils.selector(scope);
     const reveals = q<HTMLElement>("[data-reveal]");
-    const heroImage = q<HTMLElement>("[data-hero-image]");
-    const heroTitle = q<HTMLElement>("[data-hero-title]")[0];
-    const heroBits = q<HTMLElement>("[data-hero]");
     const headerBits = q<HTMLElement>("[data-header] .header-inner > *");
     const splits = q<HTMLElement>("[data-split]");
     const marks = q<SVGElement>(".mark-draw");
 
     // Start states, before first paint.
     gsap.set(reveals, { autoAlpha: 0, y: 28 });
-    gsap.set(heroImage, { scale: 1.08 });
-    gsap.set(heroBits, { autoAlpha: 0, y: 18 });
     gsap.set(headerBits, { autoAlpha: 0, y: -8 });
-    gsap.set([heroTitle, ...splits].filter(Boolean), { autoAlpha: 0 });
+    gsap.set(splits, { autoAlpha: 0 });
     marks.forEach((m) => gsap.set(m.querySelectorAll("[pathLength]"), { strokeDashoffset: 1 }));
 
     const ctx = gsap.context(() => {}, scope);
@@ -58,47 +53,9 @@ export function useMotion(root: RefObject<HTMLElement | null>) {
     fontsReady().then(() => {
       if (cancelled) return;
       ctx.add(() => {
-        // Hero entrance -------------------------------------------------
+        // Header entrance --------------------------------------------------
         const intro = gsap.timeline({ defaults: { ease: "expo.out" } });
-        intro
-          .to(heroImage, { scale: 1, duration: 2.8, ease: "power2.out" }, 0)
-          .to(headerBits, { autoAlpha: 1, y: 0, duration: 1, stagger: 0.06 }, 0.3)
-          .to(heroBits[0], { autoAlpha: 1, y: 0, duration: 0.9 }, 0.4);
-
-        if (heroTitle) {
-          let introPlayed = false;
-          splitInstances.push(
-            SplitText.create(heroTitle, {
-              type: "lines",
-              mask: "lines",
-              autoSplit: true,
-              onSplit(self) {
-                gsap.set(heroTitle, { autoAlpha: 1 });
-                if (introPlayed) return undefined;
-                const tween = gsap.fromTo(
-                  self.lines,
-                  { yPercent: 108 },
-                  {
-                    yPercent: 0,
-                    duration: 1.3,
-                    ease: "expo.out",
-                    stagger: 0.1,
-                    onComplete: () => {
-                      introPlayed = true;
-                    },
-                  },
-                );
-                intro.add(tween, 0.55);
-                return tween;
-              },
-            }),
-          );
-        }
-
-        intro
-          .to(heroBits[1], { autoAlpha: 1, y: 0, duration: 1 }, 1.05)
-          .to(heroBits[2], { autoAlpha: 1, y: 0, duration: 1 }, 1.2)
-          .to(heroBits[3], { autoAlpha: 1, y: 0, duration: 1 }, 1.4);
+        intro.to(headerBits, { autoAlpha: 1, y: 0, duration: 1, stagger: 0.06 }, 0.3);
 
         // Masked line reveals for section statements -----------------------
         splits.forEach((el) => {

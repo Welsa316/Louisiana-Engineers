@@ -8,7 +8,7 @@
  */
 
 export const org = {
-  name: "Muslim Engineers of Science and Technology",
+  name: "Muslim Engineers in Science & Tech",
   short: "MEST",
   region: "Louisiana, USA",
   tagline: "Engineering progress. Building community.",

@@ -1,6 +1,6 @@
-# MEST — Muslim Engineers of Science and Technology
+# MEST — Muslim Engineers in Science & Tech
 
-Landing page for the Muslim Engineers of Science and Technology. React, TypeScript, Vite, Tailwind CSS 4, GSAP (ScrollTrigger + SplitText), Lucide icons.
+Landing page for the Muslim Engineers in Science & Tech. React, TypeScript, Vite, Tailwind CSS 4, GSAP (ScrollTrigger + SplitText), React Three Fiber, Lucide icons.
 
 ## Run locally
 
@@ -30,6 +30,7 @@ All replaceable content lives in [`src/content/site.ts`](src/content/site.ts).
 
 - `src/App.tsx` — page composition
 - `src/components/` — `Header`, `Hero`, `Purpose`, `Pillars`, `Community`, `Events`, `Membership`, `Footer`, `Mark` (geometric mark and tiling pattern)
+- `src/components/hero/` — the hero's 3D centrepiece: `structure.ts` generates the suspended truss (a squashed rhombicuboctahedron with an eight-pointed star rotor on a central axle), `Sculpture.tsx` renders it with React Three Fiber and animates the assembly, camera push-in, idle motion and pointer parallax
 - `src/hooks/useMotion.ts` — entrance sequence, masked line reveals, scroll reveals and parallax, with a reduced-motion bypass and failsafes so nothing stays hidden
 - `src/content/site.ts` — navigation, copy for the pillars, events, contact and credits
 - `src/styles.css` — design tokens (`@theme`), type roles, components and responsive compositions

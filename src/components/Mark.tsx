@@ -73,7 +73,7 @@ export function Wordmark({
     <a
       className={`wordmark ${className}`.trim()}
       href="#top"
-      aria-label="MEST, Muslim Engineers of Science and Technology. Back to top"
+      aria-label="MEST, Muslim Engineers in Science and Tech. Back to top"
     >
       <Mark className="wordmark-mark" />
       <span className="wordmark-text" aria-hidden="true">
@@ -81,9 +81,9 @@ export function Wordmark({
       </span>
       {describe && (
         <span className="wordmark-desc" aria-hidden="true">
-          Muslim Engineers of
+          Muslim Engineers in
           <br />
-          Science and Technology
+          Science &amp; Tech
         </span>
       )}
     </a>
