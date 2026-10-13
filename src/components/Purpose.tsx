@@ -39,7 +39,7 @@ export function Purpose() {
         <div className="grid-12 mt-14 md:mt-24">
           <div className="col-span-12 md:col-start-4 md:col-span-4" data-reveal>
             <p className="t-body purpose-copy measure-wide">
-              MESL exists to build lasting professional relationships among
+              MEST exists to build lasting professional relationships among
               Muslim engineers, engineering students, and aspiring technical
               professionals throughout Louisiana.
             </p>

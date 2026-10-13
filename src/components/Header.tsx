@@ -143,7 +143,7 @@ export function Header() {
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
             <p className="t-small" style={{ opacity: 0.6 }}>
-              Muslim Engineering Society of Louisiana
+              Muslim Engineers of Science and Technology
             </p>
           </div>
         </div>

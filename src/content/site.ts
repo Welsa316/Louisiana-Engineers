@@ -8,8 +8,8 @@
  */
 
 export const org = {
-  name: "Muslim Engineering Society of Louisiana",
-  short: "MESL",
+  name: "Muslim Engineers of Science and Technology",
+  short: "MEST",
   region: "Louisiana, USA",
   tagline: "Engineering progress. Building community.",
   description:

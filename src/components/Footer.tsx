@@ -15,7 +15,7 @@ export function Footer() {
             <div className="flex items-center gap-4">
               <Mark className="w-10 h-10 text-champagne" />
               <span className="t-display-sm" style={{ letterSpacing: "0.04em", fontWeight: 400 }}>
-                MESL
+                MEST
               </span>
             </div>
             <p className="t-lead measure mt-8" style={{ opacity: 0.85 }}>
@@ -131,7 +131,7 @@ export function Footer() {
           </div>
           <p className="t-small text-muted mt-4 measure-wide">
             Photographs are illustrative and licensed from Unsplash. They do not
-            depict MESL members or events.
+            depict MEST members or events.
           </p>
           <ul className="mt-6 t-small">
             {photoCredits.map((c) => (

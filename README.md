@@ -1,6 +1,6 @@
-# MESL — Muslim Engineering Society of Louisiana
+# MEST — Muslim Engineers of Science and Technology
 
-Landing page for the Muslim Engineering Society of Louisiana. React, TypeScript, Vite, Tailwind CSS 4, GSAP (ScrollTrigger + SplitText), Lucide icons.
+Landing page for the Muslim Engineers of Science and Technology. React, TypeScript, Vite, Tailwind CSS 4, GSAP (ScrollTrigger + SplitText), Lucide icons.
 
 ## Run locally
 
@@ -23,7 +23,7 @@ All replaceable content lives in [`src/content/site.ts`](src/content/site.ts).
 1. **Events.** The four listings are samples and render with a visible "Sample" tag. Replace them with confirmed dates, venues and descriptions. Set `placeholder: false` on real entries to remove the tag and the footnote.
 2. **Membership form.** Set `VITE_MEMBERSHIP_ENDPOINT` to a POST endpoint (a form service URL works). The form sends `{ name, email, role }` as JSON. Until the variable is set, submitting shows an honest "enrollment opens soon" message and sends nothing.
 3. **Contact and social links.** Fill `contact.email` and the `socials` hrefs. Empty values render as "to be announced" rather than dead links.
-4. **Photography.** The photographs are licensed Unsplash images and are illustrative; they do not show MESL members or events. Replace the files in `public/images/` with organization photography when available and update `photoCredits`.
+4. **Photography.** The photographs are licensed Unsplash images and are illustrative; they do not show MEST members or events. Replace the files in `public/images/` with organization photography when available and update `photoCredits`.
 5. **Metadata.** `index.html` carries the title, description and Open Graph tags. Add a `<link rel="canonical">` once the domain is known. `public/og.jpg` is the share image.
 
 ## Structure
