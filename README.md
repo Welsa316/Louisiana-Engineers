@@ -29,20 +29,20 @@ All replaceable content lives in [`src/content/site.ts`](src/content/site.ts).
 ## Structure
 
 - `src/App.tsx` — page composition
-- `src/components/Hero.tsx` — the hero: an oversized wordmark with a still photograph set into its baseline; GSAP runs the letter masks, the clip reveal, the drawn rule, the staggered copy and the scroll-scrubbed exit
+- `src/components/Hero.tsx` — the hero: a full-bleed photograph opened through an eight-pointed star aperture under the oversized wordmark; GSAP runs the aperture, the letter masks, the drawn rule, the staggered copy and the scroll-scrubbed exit
 - `src/components/` — `Header`, `Hero`, `Purpose`, `Pillars`, `Community`, `Events`, `Membership`, `Footer`, `Mark` (geometric mark and tiling pattern)
 - `src/hooks/useMotion.ts` — entrance sequence, masked line reveals, scroll reveals and parallax, with a reduced-motion bypass and failsafes so nothing stays hidden
 - `src/content/site.ts` — navigation, copy for the pillars, events, contact and credits
 - `src/styles.css` — design tokens (`@theme`), type roles, components and responsive compositions
-- `public/fonts/` — Hanken Grotesk (variable, SIL OFL), self-hosted
+- `public/fonts/` — Cormorant Garamond and Hanken Grotesk (variable, SIL OFL), self-hosted
 - `public/images/` — WebP photography with mobile variants for the two full-bleed images
 
 ## Design system
 
 - Palette: charcoal `#1b1c1a`, warm off-white `#f3f0ea`, forest `#27433a`, bronze `#a9865a` (champagne `#d6c19a` on dark surfaces).
-- Type: one family, Hanken Grotesk, from 300 (display) to 500 (labels). Every type role declares size, line height and tracking together.
+- Type: Cormorant Garamond (300–500) for display and headings, Hanken Grotesk for body, labels and controls. Every type role declares size, line height and tracking together.
 - Geometry: an eight-pointed star drawn from alternating radii; the same function produces the brand mark and the star-and-cross tiling behind the membership section.
 
 ## Photography credits
 
-Unsplash license. Bridge: Viktor Solomonik. Steel lattice: Nick Fewings. Conversation: Small Group Network. Engineers with drawings: Fiqih Alfarish. Reviewing plans and workshop: ThisisEngineering.
+Unsplash license. Bridge at night: Koushik Beeram. Steel lattice: Nick Fewings. Conversation: Small Group Network. Engineers with drawings: Fiqih Alfarish. Reviewing plans and workshop: ThisisEngineering.

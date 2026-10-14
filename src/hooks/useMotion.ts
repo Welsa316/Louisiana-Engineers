@@ -2,6 +2,7 @@ import { useLayoutEffect, type RefObject } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
+import { starClipPath, starCoverRadius } from "../lib/geometry";
 
 const REVEAL_START = "top 88%";
 
@@ -142,6 +143,34 @@ export function useMotion(root: RefObject<HTMLElement | null>) {
             stagger: 0.15,
             scrollTrigger: { trigger: m, start: "top 90%", once: true },
           });
+        });
+
+        // Star apertures: section imagery opens through the same eight-point
+        // geometry as the hero, once, when it enters the viewport.
+        q<HTMLElement>("[data-aperture]").forEach((el) => {
+          const w = el.clientWidth;
+          const h = el.clientHeight;
+          const tween = gsap.fromTo(
+            el,
+            { clipPath: starClipPath(w, h, 0.5) },
+            {
+              clipPath: starClipPath(w, h, starCoverRadius(w, h)),
+              duration: 1.9,
+              ease: "expo.inOut",
+              paused: true,
+              onComplete: () => gsap.set(el, { clearProps: "clipPath" }),
+            },
+          );
+          ScrollTrigger.create({
+            trigger: el,
+            start: "top 82%",
+            once: true,
+            onEnter: () => tween.play(),
+            onRefresh: (st) => {
+              if (st.progress > 0 || st.isActive) tween.play();
+            },
+          });
+          revealTweens.push(tween);
         });
 
         // Parallax ---------------------------------------------------------

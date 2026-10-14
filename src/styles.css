@@ -4,6 +4,13 @@
 /* Typeface: Hanken Grotesk, variable 200–800, self-hosted (SIL OFL). */
 /* ------------------------------------------------------------------ */
 @font-face {
+  font-family: "Cormorant Garamond";
+  src: url("/fonts/cormorant-garamond-latin.woff2") format("woff2");
+  font-weight: 300 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
   font-family: "Hanken Grotesk";
   src: url("/fonts/hanken-grotesk-latin.woff2") format("woff2");
   font-weight: 200 800;
@@ -16,6 +23,7 @@
 /* ------------------------------------------------------------------ */
 @theme {
   --font-sans: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Cormorant Garamond", "Times New Roman", Georgia, serif;
 
   --color-ink: #1b1c1a;
   --color-ink-2: #262825;
@@ -148,34 +156,43 @@
 /* ------------------------------------------------------------------ */
 /* Type roles — every role declares size, leading and tracking.         */
 /* ------------------------------------------------------------------ */
+.t-display-xl,
+.t-display-lg,
+.t-display-md,
+.t-display-sm,
+.t-heading {
+  font-family: var(--font-display);
+  font-kerning: normal;
+  font-feature-settings: "kern", "liga";
+}
 .t-display-xl {
-  font-size: clamp(3rem, 1rem + 6vw, 7.25rem);
-  line-height: 0.96;
-  letter-spacing: -0.035em;
+  font-size: clamp(3.5rem, 1rem + 7vw, 8.5rem);
+  line-height: 0.94;
+  letter-spacing: -0.01em;
   font-weight: 300;
 }
 .t-display-lg {
-  font-size: clamp(2.375rem, 1.2rem + 4.2vw, 5.25rem);
-  line-height: 1.02;
-  letter-spacing: -0.03em;
+  font-size: clamp(2.75rem, 1.2rem + 4.8vw, 6rem);
+  line-height: 1;
+  letter-spacing: -0.012em;
   font-weight: 300;
 }
 .t-display-md {
-  font-size: clamp(1.875rem, 1rem + 2.6vw, 3.5rem);
-  line-height: 1.06;
-  letter-spacing: -0.025em;
-  font-weight: 300;
+  font-size: clamp(2.125rem, 1rem + 3vw, 4rem);
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  font-weight: 400;
 }
 .t-display-sm {
-  font-size: clamp(1.5rem, 1rem + 1.4vw, 2.25rem);
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  font-weight: 300;
+  font-size: clamp(1.75rem, 1rem + 1.7vw, 2.75rem);
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  font-weight: 400;
 }
 .t-heading {
-  font-size: clamp(1.25rem, 1rem + 0.6vw, 1.625rem);
-  line-height: 1.25;
-  letter-spacing: -0.012em;
+  font-size: clamp(1.5rem, 1rem + 0.9vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: 0;
   font-weight: 400;
 }
 .t-lead {
@@ -568,33 +585,51 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Hero: oversized wordmark with a still photograph set into its        */
-/* baseline. Everything is in flow, sized from the viewport, so the     */
-/* photograph and the copy never overlap at any height.                 */
+/* Hero: a full-bleed night photograph opened through a star aperture,  */
+/* with the wordmark set large over it.                                 */
 /* ------------------------------------------------------------------ */
 .hero {
-  --sage: #536f5b;
-  --sage-2: #607c67;
-  --mark-size: min(24vw, 34svh);
-  --mark-top: calc(var(--header-h) + 1.5svh);
-  --stage-h: calc(var(--mark-top) + 0.92 * var(--mark-size));
-  --panel-ratio: 2.3;
-  --panel-w: min(118vw, 1800px, 190svh);
+  --mark-size: min(26vw, 38svh);
+  --mark-top: calc(var(--header-h) + 3svh);
+  --stage-h: calc(var(--mark-top) + 0.9 * var(--mark-size));
   position: relative;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   color: var(--color-paper);
-  background: var(--sage);
+  background: #121613;
   isolation: isolate;
   overflow: hidden;
 }
-.hero::before {
-  content: "";
+.hero-media {
   position: absolute;
   inset: 0;
-  z-index: -1;
-  background: radial-gradient(85% 65% at 50% 100%, var(--sage-2) 0%, var(--sage) 72%);
+  z-index: 0;
+  overflow: hidden;
+  will-change: clip-path;
+}
+.hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 42%;
+  filter: saturate(0.55) contrast(1.06) brightness(0.9);
+  transform-origin: 50% 45%;
+  will-change: transform;
+}
+.hero-shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 18, 16, 0.42);
+}
+.hero-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.085;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.9 0 0 0 0 0.9 0 0 0 0.7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 220px 220px;
+  pointer-events: none;
 }
 .hero-stage {
   height: var(--stage-h);
@@ -605,50 +640,15 @@
   left: 50%;
   top: var(--mark-top);
   transform: translateX(-50%);
+  font-family: var(--font-display);
   font-size: var(--mark-size);
-  line-height: 0.92;
-  letter-spacing: -0.045em;
-  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: 0.03em;
+  font-weight: 300;
   color: var(--color-paper);
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
-}
-.hero-panel {
-  /* A tonal layer, not a picture frame: the photograph takes the sage hue
-     through a luminosity blend and dissolves into the field through a
-     feathered elliptical mask whose radius the entrance animates. */
-  --reveal: 1;
-  position: absolute;
-  z-index: 0;
-  left: 50%;
-  top: calc(58% - var(--panel-w) / (2 * var(--panel-ratio)));
-  width: var(--panel-w);
-  aspect-ratio: var(--panel-ratio);
-  margin-left: calc(var(--panel-w) / -2);
-  mix-blend-mode: luminosity;
-  opacity: 0.62;
-  -webkit-mask-image: radial-gradient(
-    calc(52% * var(--reveal)) calc(50% * var(--reveal)) at 50% 52%,
-    #000 30%,
-    transparent 74%
-  );
-  mask-image: radial-gradient(
-    calc(52% * var(--reveal)) calc(50% * var(--reveal)) at 50% 52%,
-    #000 30%,
-    transparent 74%
-  );
-  transform-origin: 50% 50%;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-.hero-panel img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 45%;
-  filter: contrast(1.08) brightness(0.92);
-  will-change: transform;
 }
 .hero-stage,
 .hero-foot {
@@ -685,7 +685,7 @@
   margin-bottom: 1rem;
 }
 .hero-line {
-  max-width: 22ch;
+  max-width: 24ch;
 }
 .hero-aside {
   grid-column: 9 / 13;
@@ -1187,10 +1187,6 @@
   .wordmark-desc {
     display: none;
   }
-  .hero {
-    --panel-ratio: 2;
-    --panel-w: min(140vw, 150svh);
-  }
   .hero-intro {
     grid-column: 1 / 7;
   }
@@ -1276,13 +1272,11 @@
     display: inline-flex;
   }
   .hero {
-    --mark-size: 29vw;
-    --mark-top: calc(var(--header-h) + 1.25rem);
-    --panel-ratio: 1.5;
-    --panel-w: 150vw;
+    --mark-size: 30vw;
+    --mark-top: calc(var(--header-h) + 2rem);
   }
-  .hero-panel {
-    top: calc(38% - var(--panel-w) / (2 * var(--panel-ratio)));
+  .hero-media img {
+    object-position: 50% 40%;
   }
   .hero-foot {
     grid-template-columns: 1fr;

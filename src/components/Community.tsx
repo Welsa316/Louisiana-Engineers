@@ -67,7 +67,7 @@ export function Community() {
         <div className="community-grid mt-16 md:mt-28">
           {frames.map((f, i) => (
             <figure className={f.cls} key={f.src} data-reveal>
-              <div className={`frame ${f.cls.split(" ")[1]}`}>
+              <div className={`frame ${f.cls.split(" ")[1]}`} data-aperture>
                 <img
                   src={f.src}
                   width={f.width}

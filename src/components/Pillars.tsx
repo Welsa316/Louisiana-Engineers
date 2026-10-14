@@ -40,7 +40,7 @@ export function Pillars() {
         </ul>
       </div>
 
-      <figure className="band-media">
+      <figure className="band-media" data-aperture>
         <img
           src="/images/lattice.webp"
           srcSet="/images/lattice-mobile.webp 900w, /images/lattice.webp 2000w"

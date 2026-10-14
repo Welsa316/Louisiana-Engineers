@@ -142,9 +142,9 @@ export const socials: { label: string; href: string }[] = [
 
 export const photoCredits = [
   {
-    subject: "Bridge over water",
-    author: "Viktor Solomonik",
-    href: "https://unsplash.com/photos/3sH1ji73YdE",
+    subject: "Cable-stayed bridge at night",
+    author: "Koushik Beeram",
+    href: "https://unsplash.com/photos/rgj0XAcG0T0",
   },
   {
     subject: "Steel lattice",
