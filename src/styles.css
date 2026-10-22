@@ -1324,7 +1324,7 @@
     grid-column: 1;
   }
   .hero-line {
-    max-width: 14ch;
+    max-width: none;
   }
   .hero-aside {
     gap: 1.25rem;
@@ -1343,8 +1343,15 @@
   .purpose-statement {
     max-width: none;
   }
+  /* Phone board: one profile per row, portrait beside the text. */
   .board-grid {
-    gap: 2.25rem 1rem;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .member {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 1.25rem;
+    align-items: start;
   }
   .pillar-grid {
     grid-template-columns: 1fr;
