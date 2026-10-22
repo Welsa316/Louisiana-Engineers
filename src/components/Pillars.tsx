@@ -26,7 +26,7 @@ export function Pillars() {
 
         <ul className="pillar-grid mt-14 md:mt-20" data-stagger>
           {pillars.map((p) => (
-            <li className="pillar" key={p.title} data-reveal tabIndex={0}>
+            <li className="pillar" key={p.title} data-reveal>
               <div className="pillar-index t-label">
                 <span>{p.index}</span>
               </div>

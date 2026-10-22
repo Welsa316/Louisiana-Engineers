@@ -423,6 +423,10 @@
 .header.is-hidden {
   transform: translateY(-100%);
 }
+/* Never hide the header while keyboard focus is inside it. */
+.header.is-hidden:focus-within {
+  transform: none;
+}
 .header-inner {
   height: 100%;
   display: flex;
