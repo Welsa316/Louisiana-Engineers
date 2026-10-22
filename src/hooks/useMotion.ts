@@ -3,16 +3,9 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { starClipPath, starCoverRadius } from "../lib/geometry";
+import { fontsReady } from "../lib/fonts";
 
 const REVEAL_START = "top 88%";
-
-function fontsReady(timeoutMs = 1200): Promise<void> {
-  if (!("fonts" in document)) return Promise.resolve();
-  return Promise.race([
-    document.fonts.ready.then(() => undefined),
-    new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs)),
-  ]);
-}
 
 function inViewport(el: Element) {
   const rect = el.getBoundingClientRect();

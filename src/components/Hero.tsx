@@ -6,6 +6,7 @@ import { SplitText } from "gsap/SplitText";
 import { LogoMark } from "./Logo";
 import { org } from "../content/site";
 import { starClipPath, starCoverRadius } from "../lib/geometry";
+import { fontsReady } from "../lib/fonts";
 
 /**
  * Hero: a full-bleed night photograph of a cable-stayed bridge, opened
@@ -55,6 +56,7 @@ export function Hero() {
     gsap.set(aside, { autoAlpha: 0, y: 16 });
 
     const splits: SplitText[] = [];
+    let cancelled = false;
     ctx.add(() => {
       const intro = gsap.timeline({ defaults: { ease: "expo.out" } });
       introRef.current = intro;
@@ -73,25 +75,10 @@ export function Hero() {
         )
         .to(image, { scale: 1, duration: 3.4, ease: "power3.out" }, 0);
 
-      // 2. Wordmark: letters rise out of their masks as the aperture passes.
-      const chars = SplitText.create(title, { type: "chars", mask: "chars" });
-      splits.push(chars);
-      gsap.set(title, { autoAlpha: 1 });
-      intro.fromTo(
-        chars.chars,
-        { yPercent: 112 },
-        { yPercent: 0, duration: 1.6, stagger: 0.09 },
-        0.7,
-      );
-
-      // 3. Rule draws, then copy and actions arrive in sequence.
-      const lines = SplitText.create(line, { type: "lines", mask: "lines" });
-      splits.push(lines);
-      gsap.set(line, { autoAlpha: 1 });
+      // 2. Rule draws, then the label and actions arrive in sequence.
       intro
         .to(rule, { scaleX: 1, duration: 1.4, ease: "power3.inOut" }, 1.5)
         .to(eyebrow, { autoAlpha: 1, y: 0, duration: 0.9 }, 1.8)
-        .fromTo(lines.lines, { yPercent: 110 }, { yPercent: 0, duration: 1.2, stagger: 0.11 }, 1.9)
         .to(aside, { autoAlpha: 1, y: 0, duration: 1, stagger: 0.14 }, 2.15);
 
       // Exit: the photograph lags the scroll and swells slightly, the type
@@ -106,7 +93,43 @@ export function Hero() {
         .to(rule, { scaleX: 0, transformOrigin: "right center", ease: "none" }, 0);
     });
 
+    // 3. Letter and line masks are measured from the real font, so they wait
+    // for it (at most 1.2s) and then join the intro at their planned times.
+    fontsReady().then(() => {
+      if (cancelled) return;
+      ctx.add(() => {
+        const intro = introRef.current;
+        if (!intro) return;
+        const at = (t: number) => Math.max(t, intro.time());
+
+        const chars = SplitText.create(title, { type: "chars", mask: "chars" });
+        splits.push(chars);
+        gsap.set(title, { autoAlpha: 1 });
+        intro.add(
+          gsap.fromTo(
+            chars.chars,
+            { yPercent: 112 },
+            { yPercent: 0, duration: 1.6, stagger: 0.09, ease: "expo.out" },
+          ),
+          at(0.7),
+        );
+
+        const lines = SplitText.create(line, { type: "lines", mask: "lines" });
+        splits.push(lines);
+        gsap.set(line, { autoAlpha: 1 });
+        intro.add(
+          gsap.fromTo(
+            lines.lines,
+            { yPercent: 110 },
+            { yPercent: 0, duration: 1.2, stagger: 0.11, ease: "expo.out" },
+          ),
+          at(1.9),
+        );
+      });
+    });
+
     return () => {
+      cancelled = true;
       splits.forEach((s) => s.revert());
       ctx.revert();
     };
