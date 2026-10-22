@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Menu, X } from "lucide-react";
-import { Wordmark } from "./Mark";
+import { Wordmark } from "./Logo";
 import { navigation } from "../content/site";
 
 export function Header() {
@@ -88,8 +88,8 @@ export function Header() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <a className="btn btn-outline" href="#join">
-              Join the Society
+            <a className="btn btn-outline" href="#get-involved">
+              Join MEST
               <ArrowUpRight size={15} aria-hidden="true" />
             </a>
             <button
@@ -138,8 +138,8 @@ export function Header() {
             </ul>
           </nav>
           <div className="menu-foot">
-            <a className="btn btn-light" href="#join" onClick={closeMenu}>
-              Join the Society
+            <a className="btn btn-light" href="#get-involved" onClick={closeMenu}>
+              Join MEST
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
             <p className="t-small" style={{ opacity: 0.6 }}>

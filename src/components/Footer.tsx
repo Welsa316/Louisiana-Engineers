@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { ArrowUp, ArrowUpRight, X } from "lucide-react";
-import { Mark } from "./Mark";
+import { Logo } from "./Logo";
 import { contact, navigation, org, photoCredits, socials } from "../content/site";
 
 export function Footer() {
@@ -8,17 +8,12 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="footer on-dark" id="contact">
+    <footer className="footer" id="contact">
       <div className="shell pt-20 pb-8 md:pt-28 md:pb-10">
         <div className="footer-cols">
           <div className="col-span-12 lg:col-span-5">
-            <div className="flex items-center gap-4">
-              <Mark className="w-10 h-10 text-champagne" />
-              <span className="t-display-sm" style={{ letterSpacing: "0.04em", fontWeight: 400 }}>
-                MEST
-              </span>
-            </div>
-            <p className="t-lead measure mt-8" style={{ opacity: 0.85 }}>
+            <Logo className="footer-logo" title="MEST, Muslim Engineers in Science & Tech" />
+            <p className="t-lead measure mt-10 text-fg-2">
               Built by engineers, for the engineers who come next.
             </p>
           </div>
@@ -35,11 +30,6 @@ export function Footer() {
                   </a>
                 </li>
               ))}
-              <li>
-                <a className="link-quiet link" href="#join">
-                  Membership
-                </a>
-              </li>
             </ul>
           </nav>
 
@@ -114,7 +104,7 @@ export function Footer() {
         <div className="credits-inner">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="t-label text-bronze-ink">Photography</p>
+              <p className="t-label text-accent">Photography</p>
               <h2 className="t-display-sm mt-3" id="credits-title">
                 Image credits
               </h2>
@@ -129,7 +119,7 @@ export function Footer() {
               <X size={20} aria-hidden="true" />
             </button>
           </div>
-          <p className="t-small text-muted mt-4 measure-wide">
+          <p className="t-small text-fg-2 mt-4 measure-wide">
             Photographs are illustrative and licensed from Unsplash. They do not
             depict MEST members or events.
           </p>

@@ -43,10 +43,15 @@ const frames = [
   },
 ];
 
+/**
+ * Not rendered at launch. The content plan schedules a past-event gallery
+ * for the next phase, with authentic MEST photographs; this layout is kept
+ * for that, and its stock images should be replaced before it returns.
+ */
 export function Community() {
   return (
     <section
-      className="on-dark section"
+      className="section"
       id="community"
       aria-labelledby="community-title"
     >

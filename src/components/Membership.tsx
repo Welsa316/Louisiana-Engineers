@@ -1,7 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
-import { StarPattern } from "./Mark";
-import { membershipEndpoint, membershipRoles } from "../content/site";
+import { contact, features, membershipEndpoint, membershipRoles } from "../content/site";
 
 type Status =
   | { tone: "idle" }
@@ -73,19 +72,15 @@ export function Membership() {
 
   return (
     <section
-      className="on-forest membership section"
-      id="join"
-      aria-labelledby="join-title"
+      className="membership section"
+      id="get-involved"
+      aria-labelledby="get-involved-title"
     >
-      <div className="membership-pattern" aria-hidden="true">
-        <StarPattern />
-      </div>
-
       <div className="shell">
         <div className="section-head" data-reveal>
-          <span className="num">05</span>
-          <h2 className="t-label" id="join-title">
-            Membership
+          <span className="num">04</span>
+          <h2 className="t-label" id="get-involved-title">
+            Get involved
           </h2>
         </div>
 
@@ -97,16 +92,17 @@ export function Membership() {
 
         <div className="grid-12 mt-12 md:mt-20 gap-y-12">
           <div className="col-span-12 lg:col-span-5">
-            <p className="t-lead measure" data-reveal style={{ opacity: 0.88 }}>
-              Open to students, engineers, educators, and industry professionals
-              across Louisiana.
+            <p className="t-lead measure" data-reveal>
+              Whether you are studying, entering the profession, or established
+              in your field, there is a place for you in MEST.
             </p>
-            <p className="t-small measure mt-6" data-reveal style={{ opacity: 0.66 }}>
-              Membership is the simplest way to be part of the mentorship,
-              events, and conversations described above.
+            <p className="t-small measure mt-6 text-fg-2" data-reveal>
+              Connect with the community and stay informed about future events
+              and opportunities.
             </p>
           </div>
 
+          {features.membershipForm ? (
           <form
             className="col-span-12 lg:col-start-7 lg:col-span-6"
             onSubmit={submit}
@@ -196,7 +192,7 @@ export function Membership() {
                 {status.tone === "busy" ? "Sending" : "Join the Society"}
                 <ArrowUpRight size={16} aria-hidden="true" />
               </button>
-              <p className="t-small" style={{ opacity: 0.7 }}>
+              <p className="t-small text-fg-2">
                 We only use your email to talk to you about membership.
               </p>
             </div>
@@ -210,6 +206,21 @@ export function Membership() {
               {"message" in status ? status.message : ""}
             </p>
           </form>
+          ) : (
+            <div className="col-span-12 lg:col-start-7 lg:col-span-6 lg:self-end contact-block" data-reveal>
+              <h3 className="t-label text-accent">Contact us</h3>
+              {contact.email ? (
+                <a className="t-heading link mt-4" href={`mailto:${contact.email}`}>
+                  {contact.email}
+                </a>
+              ) : (
+                <p className="t-heading mt-4 text-fg-2">Email to be announced</p>
+              )}
+              <p className="t-small membership-status mt-8">
+                Membership enrollment opens soon.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </section>

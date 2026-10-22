@@ -2,12 +2,11 @@ import { pillars } from "../content/site";
 
 export function Pillars() {
   return (
-    <section className="pillars-band" id="pillars" aria-labelledby="pillars-title">
+    <section className="band-panel" id="offers" aria-labelledby="offers-title">
       <div className="shell section">
         <div className="section-head" data-reveal>
-          <span className="num">02</span>
-          <h2 className="t-label" id="pillars-title">
-            Our pillars
+          <h2 className="t-label" id="offers-title">
+            What MEST offers
           </h2>
         </div>
 
@@ -16,7 +15,7 @@ export function Pillars() {
             Three commitments that shape everything we do.
           </p>
           <p
-            className="t-body text-muted col-span-12 md:col-start-9 md:col-span-4 measure-wide md:pt-3"
+            className="t-body text-fg-2 col-span-12 md:col-start-9 md:col-span-4 measure-wide md:pt-3"
             data-reveal
           >
             Each one is a practice, not a slogan. Together they describe what a

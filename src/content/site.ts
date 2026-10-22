@@ -1,26 +1,41 @@
 /**
  * Replaceable site content.
  *
- * Everything an organizer will need to update before launch lives here:
- * events, contact channels, social links, and the membership endpoint.
- * Placeholder entries are flagged with `placeholder: true` and render
- * with a visible "Sample" marker so nothing invented is mistaken for fact.
+ * Copy follows MEST_Website_Sitemap_and_Content_Plan (v1.0), which marks
+ * it as a draft for review. Everything an organizer will need to update
+ * before launch lives here: mission copy, events, board profiles, contact
+ * channels and social links. Empty values render as honest "to be
+ * announced" states instead of invented content.
  */
 
 export const org = {
   name: "Muslim Engineers in Science & Tech",
   short: "MEST",
   region: "Louisiana, USA",
-  tagline: "Engineering progress. Building community.",
-  description:
-    "Connecting Muslim engineers, students, and innovators across Louisiana through mentorship, collaboration, and shared purpose.",
+  headline: ["Built on knowledge.", "Connected by purpose."],
+  intro:
+    "A community for Muslim engineers, scientists, technologists, and students to connect, grow, and make an impact.",
 };
 
+export const mission = {
+  statement:
+    "MEST brings together Muslim students and professionals in engineering, science, and technology to foster meaningful connections, mentorship, professional growth, and service. We aim to build a welcoming community where members can share knowledge, support one another, and contribute their skills for the greater good.",
+  about: "A network for people at every stage.",
+  audience: [
+    "Aspiring STEM students",
+    "Early-career professionals",
+    "Experienced engineers",
+    "Researchers",
+    "Mentors",
+  ],
+};
+
+/** Suggested navigation from the content plan. */
 export const navigation = [
-  { label: "Purpose", href: "#purpose" },
-  { label: "Pillars", href: "#pillars" },
-  { label: "Community", href: "#community" },
+  { label: "Mission", href: "#mission" },
   { label: "Events", href: "#events" },
+  { label: "Board", href: "#board" },
+  { label: "Get Involved", href: "#get-involved" },
 ] as const;
 
 export const pillars = [
@@ -51,68 +66,65 @@ export const pillars = [
 ] as const;
 
 export type EventItem = {
-  /** ISO date, used for the <time> element. */
-  date: string;
-  day: string;
-  month: string;
   title: string;
-  format: string;
+  /** ISO date, YYYY-MM-DD. */
+  date: string;
+  /** Display time, for example "6:30 PM". */
+  time: string;
+  /** Venue and city, or "Online". */
   location: string;
+  /** Speaker talk, networking meetup, student career session, workshop. */
+  format: string;
+  /** One or two sentences. */
   description: string;
-  /** Marks illustrative sample content that must be replaced before launch. */
-  placeholder: boolean;
+  /** Registration page. Leave empty if registration is not open yet. */
+  registrationUrl: string;
 };
 
 /**
- * Sample listings. Replace with confirmed events, dates, venues and
- * registration links. Every entry below is illustrative.
+ * Confirmed events only. While this list is empty the section shows the
+ * plan's empty state. Example entry:
+ *
+ *   {
+ *     title: "Networking evening",
+ *     date: "2027-02-12",
+ *     time: "6:30 PM",
+ *     location: "Baton Rouge",
+ *     format: "Networking meetup",
+ *     description: "One or two sentences about the event.",
+ *     registrationUrl: "https://...",
+ *   },
  */
-export const events: EventItem[] = [
-  {
-    date: "2027-02-12",
-    day: "12",
-    month: "Feb",
-    title: "Networking evening",
-    format: "Professional networking",
-    location: "Baton Rouge",
-    description:
-      "An evening for engineers and technical professionals across the state to meet, trade perspectives, and find collaborators.",
-    placeholder: true,
-  },
-  {
-    date: "2027-03-05",
-    day: "05",
-    month: "Mar",
-    title: "Technical talk",
-    format: "Lecture and discussion",
-    location: "New Orleans",
-    description:
-      "A practitioner-led session on engineering work shaping Louisiana, followed by open discussion.",
-    placeholder: true,
-  },
-  {
-    date: "2027-03-26",
-    day: "26",
-    month: "Mar",
-    title: "Student workshop",
-    format: "Workshop",
-    location: "Lafayette",
-    description:
-      "Hands-on career guidance for engineering students: internships, licensure, and the first years of practice.",
-    placeholder: true,
-  },
-  {
-    date: "2027-04-17",
-    day: "17",
-    month: "Apr",
-    title: "Community gathering",
-    format: "Members and families",
-    location: "Statewide",
-    description:
-      "A gathering for members, students, and families. Less agenda, more conversation.",
-    placeholder: true,
-  },
+export const events: EventItem[] = [];
+
+export const eventFormats = [
+  "Speaker talks",
+  "Networking meetups",
+  "Student career sessions",
+  "Workshops",
 ];
+
+export type BoardMember = {
+  name: string;
+  /** Official board title. */
+  role: string;
+  /** Path under public/, for example "/images/board/jane-doe.webp". */
+  photo: string;
+  /** One or two sentences. */
+  bio: string;
+  /** Optional profession or area of expertise. */
+  expertise?: string;
+  /** Optional LinkedIn profile URL. */
+  linkedin?: string;
+};
+
+/**
+ * Board profiles, published once each member confirms their details.
+ * While empty, the section shows `boardPlaceholderCount` placeholder
+ * profiles so the layout can be reviewed.
+ */
+export const board: BoardMember[] = [];
+export const boardPlaceholderCount = 4;
 
 export const membershipRoles = [
   "Engineering student",
@@ -120,6 +132,14 @@ export const membershipRoles = [
   "Educator or researcher",
   "Industry professional",
 ] as const;
+
+/**
+ * Feature switches. The membership form is built and tested but hidden
+ * until enrollment opens; set membershipForm to true to show it.
+ */
+export const features = {
+  membershipForm: false,
+};
 
 /**
  * POST endpoint for the membership form (for example a form service URL).
@@ -150,25 +170,5 @@ export const photoCredits = [
     subject: "Steel lattice",
     author: "Nick Fewings",
     href: "https://unsplash.com/photos/yIbnj4mTBPE",
-  },
-  {
-    subject: "Conversation outdoors",
-    author: "Small Group Network",
-    href: "https://unsplash.com/photos/bxiOjnbjRM0",
-  },
-  {
-    subject: "Engineers with drawings",
-    author: "Fiqih Alfarish",
-    href: "https://unsplash.com/photos/lPUalY6OKDU",
-  },
-  {
-    subject: "Reviewing plans",
-    author: "ThisisEngineering",
-    href: "https://unsplash.com/photos/Fc9jeKBxlBI",
-  },
-  {
-    subject: "Workshop",
-    author: "ThisisEngineering",
-    href: "https://unsplash.com/photos/AvGIBmvdcac",
   },
 ];

@@ -37,13 +37,11 @@ export function useMotion(root: RefObject<HTMLElement | null>) {
     const reveals = q<HTMLElement>("[data-reveal]");
     const headerBits = q<HTMLElement>("[data-header] .header-inner > *");
     const splits = q<HTMLElement>("[data-split]");
-    const marks = q<SVGElement>(".mark-draw");
 
     // Start states, before first paint.
     gsap.set(reveals, { autoAlpha: 0, y: 28 });
     gsap.set(headerBits, { autoAlpha: 0, y: -8 });
     gsap.set(splits, { autoAlpha: 0 });
-    marks.forEach((m) => gsap.set(m.querySelectorAll("[pathLength]"), { strokeDashoffset: 1 }));
 
     const ctx = gsap.context(() => {}, scope);
     const splitInstances: SplitText[] = [];
@@ -132,17 +130,6 @@ export function useMotion(root: RefObject<HTMLElement | null>) {
               if (tween.progress() === 0 && inViewport(el)) tween.play();
             }, 1500),
           );
-        });
-
-        // Line drawing for the geometric mark ------------------------------
-        marks.forEach((m) => {
-          gsap.to(m.querySelectorAll("[pathLength]"), {
-            strokeDashoffset: 0,
-            duration: 1.8,
-            ease: "power2.inOut",
-            stagger: 0.15,
-            scrollTrigger: { trigger: m, start: "top 90%", once: true },
-          });
         });
 
         // Star apertures: section imagery opens through the same eight-point

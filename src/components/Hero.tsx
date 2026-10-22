@@ -3,7 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
-import { Mark } from "./Mark";
+import { LogoMark } from "./Logo";
 import { org } from "../content/site";
 import { starClipPath, starCoverRadius } from "../lib/geometry";
 
@@ -127,6 +127,7 @@ export function Hero() {
           decoding="async"
         />
         <div className="hero-shade" />
+        <div className="hero-tint" />
         <div className="hero-grain" />
       </div>
 
@@ -143,27 +144,24 @@ export function Hero() {
             {org.name}
           </h1>
           <p className="t-display-sm hero-line" data-hero-line>
-            Connecting minds.
+            {org.headline[0]}
             <br />
-            Engineering tomorrow.
+            {org.headline[1]}
           </p>
         </div>
 
         <div className="hero-aside" data-hero-aside>
           <div className="hero-aside-info">
-            <Mark className="w-7 h-7 text-champagne" />
-            <p className="t-small">
-              A professional community for engineers, students and researchers
-              across Louisiana.
-            </p>
+            <LogoMark />
+            <p className="t-small">{org.intro}</p>
           </div>
           <div className="hero-actions">
-            <a className="btn btn-light" href="#purpose">
-              Discover {org.short}
+            <a className="btn btn-light" href="#get-involved">
+              Join {org.short}
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
-            <a className="link" href="#join">
-              Join the Society
+            <a className="link" href="#mission">
+              Our mission
             </a>
           </div>
         </div>
