@@ -6,6 +6,8 @@ import { contact, navigation, org, photoCredits, socials } from "../content/site
 export function Footer() {
   const credits = useRef<HTMLDialogElement>(null);
   const year = new Date().getFullYear();
+  // Social channels only appear once they have a real link.
+  const linkedSocials = socials.filter((s) => s.href);
 
   return (
     <footer className="footer" id="contact">
@@ -51,11 +53,11 @@ export function Footer() {
             </ul>
           </div>
 
-          <div className="footer-col col-span-12 md:col-span-4 lg:col-span-2">
-            <h2 className="t-label">Follow</h2>
-            <ul>
-              {socials.map((s) =>
-                s.href ? (
+          {linkedSocials.length > 0 && (
+            <div className="footer-col col-span-12 md:col-span-4 lg:col-span-2">
+              <h2 className="t-label">Follow</h2>
+              <ul>
+                {linkedSocials.map((s) => (
                   <li key={s.label}>
                     <a
                       className="link-quiet link"
@@ -67,14 +69,10 @@ export function Footer() {
                       <ArrowUpRight size={14} aria-hidden="true" />
                     </a>
                   </li>
-                ) : (
-                  <li key={s.label}>
-                    <span className="tba">{s.label}</span>
-                  </li>
-                ),
-              )}
-            </ul>
-          </div>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="footer-bottom mt-20 md:mt-28">

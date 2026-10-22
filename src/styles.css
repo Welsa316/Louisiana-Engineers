@@ -882,6 +882,16 @@
 .event:focus-within {
   background: var(--panel-lift);
 }
+/* The row toggles details; Register sits beside it, always visible. */
+.event-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6rem;
+  align-items: center;
+  column-gap: clamp(1rem, 2vw, 2rem);
+}
+.event-register {
+  justify-self: end;
+}
 .event-row {
   width: 100%;
   display: grid;
@@ -1411,6 +1421,13 @@
   .event-date {
     flex-direction: column;
     gap: 0.2rem;
+  }
+  .event-head {
+    grid-template-columns: 1fr;
+  }
+  .event-register {
+    justify-self: start;
+    margin: -0.5rem 0 1.25rem calc(4.25rem + 0.875rem);
   }
   .event-icon {
     width: 2.5rem;
