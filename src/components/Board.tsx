@@ -1,35 +1,28 @@
 import { ArrowUpRight } from "lucide-react";
-import { LogoMark } from "./Logo";
 import { board, boardPlaceholderCount, type BoardMember } from "../content/site";
 
-function Profile({ member }: { member: BoardMember | null }) {
+/**
+ * One row of the board directory: number, role and name, then a short
+ * introduction. Board members are not photographed; the directory is set
+ * in type, with the same numeral-and-rule device as the section headers.
+ */
+function Profile({ member, index }: { member: BoardMember | null; index: number }) {
   const name = member?.name || "Board member";
   return (
     <li className="member" data-reveal>
-      <figure className="portrait">
-        {member?.photo ? (
-          <img
-            src={member.photo}
-            alt={`Portrait of ${member.name}`}
-            loading="lazy"
-            decoding="async"
-            width={800}
-            height={1000}
-          />
-        ) : (
-          <div className="portrait-empty" aria-hidden="true">
-            <LogoMark />
-          </div>
-        )}
-      </figure>
-      <div className="member-text">
+      <span className="member-index" aria-hidden="true">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <div className="member-id">
         <p className="t-label text-accent">{member?.role || "Role to be confirmed"}</p>
-        <h3 className="t-heading mt-2">{name}</h3>
-        {member?.expertise && <p className="t-small text-fg-2 mt-1">{member.expertise}</p>}
-        <p className="t-small text-fg-2 mt-3">{member?.bio || "Profile coming soon."}</p>
+        <h3 className="t-display-sm member-name">{name}</h3>
+      </div>
+      <div className="member-about">
+        {member?.expertise && <p className="t-small">{member.expertise}</p>}
+        <p className="t-body text-fg-2">{member?.bio || "Profile coming soon."}</p>
         {member?.linkedin && (
           <a
-            className="link mt-4"
+            className="link"
             href={member.linkedin}
             target="_blank"
             rel="noreferrer"
@@ -44,7 +37,7 @@ function Profile({ member }: { member: BoardMember | null }) {
   );
 }
 
-/** 03 Meet the Board: names, roles, portraits and short introductions. */
+/** 03 Meet the Board: names, roles and short introductions. */
 export function Board() {
   const placeholders = board.length === 0;
   const people: (BoardMember | null)[] = placeholders
@@ -74,9 +67,9 @@ export function Board() {
           )}
         </div>
 
-        <ul className="board-grid mt-14 md:mt-20" data-stagger>
+        <ul className="board-list mt-14 md:mt-20" data-stagger>
           {people.map((m, i) => (
-            <Profile key={m?.name ? m.name : `placeholder-${i}`} member={m} />
+            <Profile key={m?.name ? m.name : `placeholder-${i}`} member={m} index={i} />
           ))}
         </ul>
       </div>

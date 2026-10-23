@@ -23,7 +23,7 @@ One scrolling page, following `MEST_Website_Sitemap_and_Content_Plan` v1.0:
 1. Hero: what MEST is, with Join MEST and Our mission
 2. Mission & About: mission statement, who it is for, and what MEST offers
 3. Events: confirmed events, or the plan's empty state while none are scheduled
-4. Meet the Board: name, role, headshot and short bio for each member
+4. Meet the Board: name, role and short bio for each member, set as a typographic directory (no photographs)
 5. Get Involved: invitation and contact route
 6. Footer: email, social profiles and organization details
 
@@ -34,7 +34,7 @@ Navigation: Mission, Events, Board, Get Involved.
 All replaceable content lives in [`src/content/site.ts`](src/content/site.ts). Copy comes from the content plan, which marks it as a draft for review.
 
 1. **Events.** Add confirmed events to `events` (title, date, time, location, format, description, registration link). While the list is empty the section shows "Upcoming events will appear here."
-2. **Board.** Add each member to `board` (name, official title, headshot path, one or two sentence bio, optional expertise and LinkedIn). Put headshots in `public/images/board/`. While the list is empty, four placeholder profiles are shown.
+2. **Board.** Add each member to `board` (name, official title, one or two sentence bio, optional expertise and LinkedIn). Board members are not photographed. While the list is empty, four placeholder rows are shown.
 3. **Contact and social links.** Fill `contact.email` and the `socials` hrefs. Empty values render as "to be announced" rather than dead links.
 4. **Membership form.** Built but hidden. Set `features.membershipForm` to `true` and `VITE_MEMBERSHIP_ENDPOINT` to a POST endpoint to show it; it sends `{ name, email, role }` as JSON.
 5. **Photography.** The hero bridge and the steel lattice are licensed Unsplash images, not MEST or New Orleans; the bridge is in Dallas. The image-led Community section is not rendered; it is kept in `src/components/Community.tsx` for the past-event gallery and needs authentic photos before it returns.

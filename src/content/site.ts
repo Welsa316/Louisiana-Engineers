@@ -115,8 +115,6 @@ export type BoardMember = {
   name: string;
   /** Official board title. */
   role: string;
-  /** Path under public/, for example "/images/board/jane-doe.webp". */
-  photo: string;
   /** One or two sentences. */
   bio: string;
   /** Optional profession or area of expertise. */
