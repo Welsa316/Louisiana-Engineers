@@ -165,6 +165,8 @@ export function Hero() {
         <div className="hero-intro">
           <h1 className="t-label hero-eyebrow" id="hero-title" data-hero-eyebrow>
             {org.name}
+            <span className="sr-only">, </span>
+            <span className="hero-place">{org.region}</span>
           </h1>
           <p className="t-display-sm hero-line" data-hero-line>
             {org.headline[0]}

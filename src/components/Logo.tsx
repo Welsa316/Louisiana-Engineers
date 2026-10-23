@@ -138,7 +138,7 @@ export function Wordmark({ describe = true }: { describe?: boolean }) {
     <a
       className="wordmark"
       href="#top"
-      aria-label="MEST, Muslim Engineers in Science and Tech. Back to top"
+      aria-label="MEST, Muslim Engineers in Science & Tech. Back to top"
     >
       <LogoMark className="wordmark-mark" />
       <LogoLetters className="wordmark-letters" />

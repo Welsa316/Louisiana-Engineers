@@ -1,6 +1,6 @@
 # MEST — Muslim Engineers in Science & Tech
 
-Landing page for the Muslim Engineers in Science & Tech. React, TypeScript, Vite, Tailwind CSS 4, GSAP (ScrollTrigger + SplitText), Lucide icons.
+Landing page for Muslim Engineers in Science & Tech (MEST), a professional and community organization based in Greater New Orleans, Louisiana. React, TypeScript, Vite, Tailwind CSS 4, GSAP (ScrollTrigger + SplitText), Lucide icons.
 
 ## Run locally
 
@@ -37,8 +37,9 @@ All replaceable content lives in [`src/content/site.ts`](src/content/site.ts). C
 2. **Board.** Add each member to `board` (name, official title, headshot path, one or two sentence bio, optional expertise and LinkedIn). Put headshots in `public/images/board/`. While the list is empty, four placeholder profiles are shown.
 3. **Contact and social links.** Fill `contact.email` and the `socials` hrefs. Empty values render as "to be announced" rather than dead links.
 4. **Membership form.** Built but hidden. Set `features.membershipForm` to `true` and `VITE_MEMBERSHIP_ENDPOINT` to a POST endpoint to show it; it sends `{ name, email, role }` as JSON.
-5. **Photography.** The hero bridge and the steel lattice are licensed Unsplash images, not MEST or Louisiana. The image-led Community section is not rendered; it is kept in `src/components/Community.tsx` for the past-event gallery and needs authentic photos before it returns.
-6. **Metadata.** Add a `<link rel="canonical">` once the domain is known.
+5. **Photography.** The hero bridge and the steel lattice are licensed Unsplash images, not MEST or New Orleans; the bridge is in Dallas. The image-led Community section is not rendered; it is kept in `src/components/Community.tsx` for the past-event gallery and needs authentic photos before it returns.
+6. **Regional copy.** The Greater New Orleans descriptions in `site.ts` (mission overview and region paragraph, pillar lines, Get Involved note) were written for Phase 1 and need the organizers' approval.
+7. **Metadata.** Add a `<link rel="canonical">` once the domain is known.
 
 ## Structure
 

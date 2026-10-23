@@ -98,7 +98,8 @@ export function Membership() {
             </p>
             <p className="t-small measure mt-6 text-fg-2" data-reveal>
               Connect with the community and stay informed about future events
-              and opportunities.
+              and opportunities. MEST is based in New Orleans, and students and
+              professionals from elsewhere in Louisiana and beyond are welcome.
             </p>
           </div>
 
@@ -189,7 +190,7 @@ export function Membership() {
                 disabled={status.tone === "busy"}
                 aria-busy={status.tone === "busy"}
               >
-                {status.tone === "busy" ? "Sending" : "Join the Society"}
+                {status.tone === "busy" ? "Sending" : "Join MEST"}
                 <ArrowUpRight size={16} aria-hidden="true" />
               </button>
               <p className="t-small text-fg-2">

@@ -19,8 +19,7 @@ export function Pillars() {
             data-reveal
           >
             Each one is a practice, not a slogan. Together they describe what a
-            member can expect from the society, and what the society asks in
-            return.
+            member can expect from MEST, and what MEST asks in return.
           </p>
         </div>
 

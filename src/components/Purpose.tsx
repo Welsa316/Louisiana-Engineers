@@ -26,10 +26,17 @@ export function Purpose() {
           </div>
         </div>
 
-        <div className="grid-12 mt-14 md:mt-24 gap-y-12">
+        <div className="grid-12 mt-10 md:mt-14">
+          <div className="col-span-12 md:col-start-4 md:col-span-8" data-reveal>
+            <p className="t-lead purpose-overview">{mission.overview}</p>
+            <p className="t-body text-fg-2 measure-wide mt-6">{mission.region}</p>
+          </div>
+        </div>
+
+        <div className="grid-12 mt-14 md:mt-20 gap-y-12">
           <div className="col-span-12 md:col-start-4 md:col-span-5" data-reveal>
             <h3 className="t-label text-accent">Our mission</h3>
-            <p className="t-lead measure-wide mt-5">{mission.statement}</p>
+            <p className="t-body measure-wide mt-5">{mission.statement}</p>
           </div>
           <div className="col-span-12 md:col-start-10 md:col-span-3" data-reveal>
             <h3 className="t-label text-accent">Who it's for</h3>

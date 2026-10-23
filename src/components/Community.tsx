@@ -95,7 +95,7 @@ export function Community() {
             <p className="t-body measure-wide">
               Networking sessions, mentorship pairings, technical conversations,
               and the kind of gatherings where a career quietly changes
-              direction. The society is what happens between the meetings.
+              direction. MEST is what happens between the meetings.
             </p>
             <a className="link mt-8" href="#events">
               See what's coming up

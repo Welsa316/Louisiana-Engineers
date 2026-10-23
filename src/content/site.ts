@@ -2,7 +2,8 @@
  * Replaceable site content.
  *
  * Copy follows MEST_Website_Sitemap_and_Content_Plan (v1.0), which marks
- * it as a draft for review. Everything an organizer will need to update
+ * it as a draft for review. The Greater New Orleans descriptions were
+ * added in Phase 1 and also need the organizers' approval. Everything an organizer will need to update
  * before launch lives here: mission copy, events, board profiles, contact
  * channels and social links. Empty values render as honest "to be
  * announced" states instead of invented content.
@@ -11,7 +12,7 @@
 export const org = {
   name: "Muslim Engineers in Science & Tech",
   short: "MEST",
-  region: "Louisiana, USA",
+  region: "Greater New Orleans, Louisiana",
   headline: ["Built on knowledge.", "Connected by purpose."],
   intro:
     "A community for Muslim engineers, scientists, technologists, and students to connect, grow, and make an impact.",
@@ -21,6 +22,12 @@ export const mission = {
   statement:
     "MEST brings together Muslim students and professionals in engineering, science, and technology to foster meaningful connections, mentorship, professional growth, and service. We aim to build a welcoming community where members can share knowledge, support one another, and contribute their skills for the greater good.",
   about: "A network for people at every stage.",
+  /** Lead paragraph under the Mission & About headline. */
+  overview:
+    "MEST is a professional and community organization based in Greater New Orleans, bringing together Muslims who study and work in engineering, science, and technology.",
+  /** The regional context, in the site's own voice. */
+  region:
+    "The region is home to universities and medical centers, a working port and the industries along the river, energy and coastal engineering, and a growing technology sector. MEST gives the people working and studying across these fields a place to meet, learn from one another, and support the next generation, as professionals and as a community.",
   audience: [
     "Aspiring STEM students",
     "Early-career professionals",
@@ -43,23 +50,23 @@ export const pillars = [
     index: "01",
     title: "Connect",
     summary:
-      "Build meaningful relationships with engineers and professionals across disciplines.",
+      "Build meaningful relationships among engineers, scientists, and technologists across disciplines.",
     detail:
-      "Civil, mechanical, electrical, chemical, petroleum, software, environmental. The common ground is the work, and the people who do it well.",
+      "Civil and chemical engineering, biology and public health, software and data, and everything in between. The common ground is the work, and the people who do it well.",
   },
   {
     index: "02",
     title: "Mentor",
     summary:
-      "Support students and emerging engineers through guidance, knowledge sharing, and opportunity.",
+      "Support students and early-career professionals through guidance, knowledge sharing, and opportunity.",
     detail:
-      "The first internship, the licensure exam, the first job offer. Every one of these is easier with someone who has already been through it.",
+      "The first internship, the licensure exam or graduate application, the first job offer. Every one of these is easier with someone who has already been through it.",
   },
   {
     index: "03",
     title: "Advance",
     summary:
-      "Encourage innovation, professional excellence, and contributions to the broader community.",
+      "Encourage innovation, professional excellence, and contributions to New Orleans and the wider community.",
     detail:
       "Technical rigor as a form of service. Work that holds up, and a community that holds people to it.",
   },
@@ -127,10 +134,11 @@ export const board: BoardMember[] = [];
 export const boardPlaceholderCount = 4;
 
 export const membershipRoles = [
-  "Engineering student",
-  "Practicing engineer",
-  "Educator or researcher",
-  "Industry professional",
+  "Student",
+  "Engineer",
+  "Scientist or researcher",
+  "Technology professional",
+  "Educator or mentor",
 ] as const;
 
 /**
@@ -152,7 +160,7 @@ export const membershipEndpoint: string =
 /** Contact channels. Empty strings render as "to be announced". */
 export const contact = {
   email: "",
-  city: "Louisiana, USA",
+  city: "Greater New Orleans, Louisiana",
 };
 
 export const socials: { label: string; href: string }[] = [

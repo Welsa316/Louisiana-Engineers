@@ -16,7 +16,8 @@ export function Footer() {
           <div className="col-span-12 lg:col-span-5">
             <Logo className="footer-logo" title="MEST, Muslim Engineers in Science & Tech" />
             <p className="t-lead measure mt-10 text-fg-2">
-              Built by engineers, for the engineers who come next.
+              Built by engineers, scientists, and technologists, for the
+              generation coming up behind them.
             </p>
           </div>
 
@@ -77,7 +78,7 @@ export function Footer() {
 
         <div className="footer-bottom mt-20 md:mt-28">
           <p>
-            © {year} {org.name}
+            © {year} {org.name} ({org.short})
           </p>
           <div className="flex items-center gap-8">
             <button className="link link-quiet" onClick={() => credits.current?.showModal()}>
