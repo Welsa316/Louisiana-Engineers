@@ -78,7 +78,7 @@ export function Membership() {
     >
       <div className="shell">
         <div className="section-head" data-reveal>
-          <span className="num">04</span>
+          <span className="num">03</span>
           <h2 className="t-label" id="get-involved-title">
             Get involved
           </h2>

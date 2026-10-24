@@ -4,7 +4,7 @@
  * Copy follows MEST_Website_Sitemap_and_Content_Plan (v1.0), which marks
  * it as a draft for review. The Greater New Orleans descriptions were
  * added in Phase 1 and also need the organizers' approval. Everything an organizer will need to update
- * before launch lives here: mission copy, events, board profiles, contact
+ * before launch lives here: mission copy, events, contact
  * channels and social links. Empty values render as honest "to be
  * announced" states instead of invented content.
  */
@@ -41,7 +41,6 @@ export const mission = {
 export const navigation = [
   { label: "Mission", href: "#mission" },
   { label: "Events", href: "#events" },
-  { label: "Board", href: "#board" },
   { label: "Get Involved", href: "#get-involved" },
 ] as const;
 
@@ -110,26 +109,6 @@ export const eventFormats = [
   "Student career sessions",
   "Workshops",
 ];
-
-export type BoardMember = {
-  name: string;
-  /** Official board title. */
-  role: string;
-  /** One or two sentences. */
-  bio: string;
-  /** Optional profession or area of expertise. */
-  expertise?: string;
-  /** Optional LinkedIn profile URL. */
-  linkedin?: string;
-};
-
-/**
- * Board profiles, published once each member confirms their details.
- * While empty, the section shows `boardPlaceholderCount` placeholder
- * profiles so the layout can be reviewed.
- */
-export const board: BoardMember[] = [];
-export const boardPlaceholderCount = 4;
 
 export const membershipRoles = [
   "Student",

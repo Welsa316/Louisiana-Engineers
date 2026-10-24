@@ -1015,51 +1015,6 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Meet the Board                                                       */
-/* ------------------------------------------------------------------ */
-/* A ruled directory set in type: number, role and name, introduction. */
-.board-list {
-  border-top: 1px solid var(--line-strong);
-}
-.member {
-  display: grid;
-  grid-template-columns: 6rem minmax(0, 5fr) minmax(0, 6fr);
-  column-gap: clamp(1rem, 2vw, 2rem);
-  align-items: baseline;
-  padding: 2.25rem 0 2.5rem;
-  border-bottom: 1px solid var(--line);
-}
-.member-index {
-  font-size: 0.9375rem;
-  line-height: 1;
-  font-weight: 500;
-  color: var(--color-accent);
-  font-variant-numeric: tabular-nums;
-}
-.member-index::after {
-  content: "";
-  display: inline-block;
-  width: 1.5rem;
-  height: 1px;
-  background: currentColor;
-  margin-left: 0.75rem;
-  vertical-align: middle;
-  opacity: 0.6;
-}
-.member-name {
-  margin-top: 0.6rem;
-  text-wrap: balance;
-}
-.member-about {
-  display: grid;
-  gap: 0.75rem;
-  justify-items: start;
-}
-.member-about .t-body {
-  max-width: 52ch;
-}
-
-/* ------------------------------------------------------------------ */
 /* 05 Membership                                                        */
 /* ------------------------------------------------------------------ */
 .membership {
@@ -1322,13 +1277,6 @@
   .event-panel-inner {
     grid-template-columns: 5.5rem minmax(0, 1fr);
   }
-  .member {
-    grid-template-columns: 5rem minmax(0, 1fr);
-    row-gap: 1rem;
-  }
-  .member-about {
-    grid-column: 2;
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1377,15 +1325,6 @@
   }
   .purpose-statement {
     max-width: none;
-  }
-  /* Phone board: number above the role, one column. */
-  .member {
-    grid-template-columns: 1fr;
-    row-gap: 0.875rem;
-    padding: 1.75rem 0 2rem;
-  }
-  .member-about {
-    grid-column: 1;
   }
   .pillar-grid {
     grid-template-columns: 1fr;
