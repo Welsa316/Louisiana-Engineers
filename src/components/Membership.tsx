@@ -99,7 +99,7 @@ export function Membership() {
             <p className="t-small measure mt-6 text-fg-2" data-reveal>
               Connect with the community and stay informed about future events
               and opportunities. MEST is based in New Orleans, and students and
-              professionals from elsewhere in Louisiana and beyond are welcome.
+              professionals from elsewhere in Louisiana are welcome.
             </p>
           </div>
 

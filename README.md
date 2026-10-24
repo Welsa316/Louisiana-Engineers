@@ -35,7 +35,7 @@ All replaceable content lives in [`src/content/site.ts`](src/content/site.ts). C
 1. **Events.** Add confirmed events to `events` (title, date, time, location, format, description, registration link). While the list is empty the section shows "Upcoming events will appear here."
 2. **Contact and social links.** Fill `contact.email` and the `socials` hrefs. Empty values render as "to be announced" rather than dead links.
 3. **Membership form.** Built but hidden. Set `features.membershipForm` to `true` and `VITE_MEMBERSHIP_ENDPOINT` to a POST endpoint to show it; it sends `{ name, email, role }` as JSON.
-4. **Photography.** The hero bridge and the steel lattice are licensed Unsplash images, not MEST or New Orleans; the bridge is in Dallas. The image-led Community section is not rendered; it is kept in `src/components/Community.tsx` for the past-event gallery and needs authentic photos before it returns.
+4. **Photography.** Licensed Unsplash images, not MEST's own. The hero is the Crescent City Connection in New Orleans; the steel lattice in the offers band is not a New Orleans structure. The image-led Community section is not rendered; it is kept in `src/components/Community.tsx` for the past-event gallery and needs authentic photos before it returns.
 5. **Regional copy.** The Greater New Orleans descriptions in `site.ts` (mission overview and region paragraph, pillar lines, Get Involved note) were written for Phase 1 and need the organizers' approval.
 6. **Metadata.** Add a `<link rel="canonical">` once the domain is known.
 
@@ -58,4 +58,4 @@ All replaceable content lives in [`src/content/site.ts`](src/content/site.ts). C
 
 ## Photography credits
 
-Unsplash license. Bridge at night: Koushik Beeram. Steel lattice: Nick Fewings.
+Unsplash license. Crescent City Connection at night: iSawRed. Steel lattice: Nick Fewings.

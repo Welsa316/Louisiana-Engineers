@@ -144,13 +144,14 @@ export function Hero() {
           srcSet="/images/hero-mobile.webp 1100w, /images/hero.webp 2400w"
           sizes="100vw"
           width={2400}
-          height={1600}
+          height={1350}
           alt=""
           fetchPriority="high"
           decoding="async"
         />
         <div className="hero-shade" />
         <div className="hero-tint" />
+        <div className="hero-scrim" />
         <div className="hero-grain" />
       </div>
 

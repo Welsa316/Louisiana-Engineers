@@ -595,6 +595,18 @@
   mix-blend-mode: color;
   opacity: 0.22;
 }
+/* Darkens the lower part of the photograph, where the copy sits, so every
+   line keeps at least 4.5:1 against the brightest steel behind it. */
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 38%,
+    color-mix(in srgb, var(--color-bg) 62%, transparent) 62%,
+    color-mix(in srgb, var(--color-bg) 82%, transparent) 100%
+  );
+}
 .hero-grain {
   position: absolute;
   inset: 0;

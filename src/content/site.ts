@@ -147,9 +147,9 @@ export const socials: { label: string; href: string }[] = [
 
 export const photoCredits = [
   {
-    subject: "Cable-stayed bridge at night",
-    author: "Koushik Beeram",
-    href: "https://unsplash.com/photos/rgj0XAcG0T0",
+    subject: "Crescent City Connection at night, New Orleans",
+    author: "iSawRed",
+    href: "https://unsplash.com/photos/N8vOZKzNdvg",
   },
   {
     subject: "Steel lattice",
