@@ -835,8 +835,11 @@
 .pn-option:hover {
   border-color: var(--color-accent);
 }
-.pn-option[aria-checked="true"],
-.pn-option[aria-pressed="true"] {
+.pn-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+.pn-option[data-checked="true"] {
   border-color: var(--color-purple);
   background: var(--pn-purple-ghost);
 }
@@ -862,12 +865,10 @@
   transform: scale(0);
   transition: transform var(--dur) var(--ease-out-expo);
 }
-.pn-option[aria-checked="true"] .pn-option-mark,
-.pn-option[aria-pressed="true"] .pn-option-mark {
+.pn-option[data-checked="true"] .pn-option-mark {
   border-color: var(--color-accent);
 }
-.pn-option[aria-checked="true"] .pn-option-mark::after,
-.pn-option[aria-pressed="true"] .pn-option-mark::after {
+.pn-option[data-checked="true"] .pn-option-mark::after {
   transform: scale(1);
 }
 .pn-option-title {
@@ -1342,6 +1343,9 @@
 }
 .pn-wizard-aside {
   position: sticky;
+  top: calc(var(--pn-bar-h) + var(--header-h) + 2rem);
+}
+.pn-app .pn-wizard-aside {
   top: calc(var(--pn-bar-h) + 2rem);
 }
 .pn-onboard {
@@ -1415,10 +1419,10 @@
   transform: scaleX(0);
   transition: transform var(--dur-slow) var(--ease-out-expo);
 }
-.pn-tab[aria-selected="true"] {
+.pn-tab[aria-pressed="true"] {
   color: var(--color-fg);
 }
-.pn-tab[aria-selected="true"]::after {
+.pn-tab[aria-pressed="true"]::after {
   transform: scaleX(1);
 }
 .pn-tab-count {
@@ -1429,7 +1433,7 @@
   background: var(--pn-surface-3);
   color: var(--color-fg-2);
 }
-.pn-tab[aria-selected="true"] .pn-tab-count {
+.pn-tab[aria-pressed="true"] .pn-tab-count {
   color: var(--color-fg);
 }
 
@@ -2260,6 +2264,10 @@
     bottom: 0;
     background: var(--color-bg);
     padding-bottom: 1rem;
+  }
+  /* Inside the app shell the tab bar sits below the footer. */
+  .pn-app .pn-wizard-foot {
+    bottom: calc(4rem + env(safe-area-inset-bottom));
   }
   .pn-wizard-foot .btn {
     flex: 1;

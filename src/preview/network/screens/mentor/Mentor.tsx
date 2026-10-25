@@ -373,9 +373,9 @@ export function MentorAvailability() {
       <div className="pn-split mt-8">
         <div className="grid gap-6">
           <Card title="Status" aside={<Status tone={ms.status === "paused" ? "paused" : active >= ms.maxActive ? "off" : "active"} label={ms.status === "paused" ? "Paused" : active >= ms.maxActive ? "Full" : "Taking requests"} />}>
-            <div className="pn-options">
-              <Option checked={draft.status === "active"} title="Taking requests" note="Students who match your topics and audience can send you a request." onClick={() => setDraft((d) => ({ ...d, status: "active", pausedUntil: undefined }))} />
-              <Option checked={draft.status === "paused"} title="Paused" note="Your profile stays listed; the request button is replaced with a paused notice. Set a date or leave it open." onClick={() => setDraft((d) => ({ ...d, status: "paused" }))} />
+            <div className="pn-options" role="radiogroup" aria-label="Mentorship status">
+              <Option name="mentor-status" checked={draft.status === "active"} title="Taking requests" note="Students who match your topics and audience can send you a request." onClick={() => setDraft((d) => ({ ...d, status: "active", pausedUntil: undefined }))} />
+              <Option name="mentor-status" checked={draft.status === "paused"} title="Paused" note="Your profile stays listed; the request button is replaced with a paused notice. Set a date or leave it open." onClick={() => setDraft((d) => ({ ...d, status: "paused" }))} />
             </div>
             {draft.status === "paused" && (
               <div className="mt-4 max-w-xs">
@@ -891,9 +891,9 @@ export function MentorSettings() {
         <div className="grid gap-6">
           <Card title="Directory visibility">
             <div className="pn-options" role="radiogroup">
-              <Option checked={visibility === "public"} title="Public" note="Anyone can find your profile, including visitors who are not signed in." onClick={() => setVisibility("public")} />
-              <Option checked={visibility === "members"} title="Members only" note="Only signed-in MEST members see your profile." onClick={() => setVisibility("members")} />
-              <Option checked={visibility === "hidden"} title="Hidden" note="Nobody can find you. Existing mentees keep access. Use this instead of deleting when you need a break." onClick={() => setVisibility("hidden")} />
+              <Option name="visibility" checked={visibility === "public"} title="Public" note="Anyone can find your profile, including visitors who are not signed in." onClick={() => setVisibility("public")} />
+              <Option name="visibility" checked={visibility === "members"} title="Members only" note="Only signed-in MEST members see your profile." onClick={() => setVisibility("members")} />
+              <Option name="visibility" checked={visibility === "hidden"} title="Hidden" note="Nobody can find you. Existing mentees keep access. Use this instead of deleting when you need a break." onClick={() => setVisibility("hidden")} />
             </div>
           </Card>
           <Card title="Contact methods" aside={<span className="t-small text-fg-2">Revealed only on accept</span>}>

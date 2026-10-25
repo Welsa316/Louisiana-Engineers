@@ -331,7 +331,7 @@ export function RequestForm({ mentorId }: { mentorId: string }) {
             <p className="pn-wizard-lead">These are the topics {p.firstName} offered. Pick the closest one.</p>
             <div className="pn-wizard-body pn-options" role="radiogroup">
               {p.mentorship.topics.map((t) => (
-                <Option key={t} checked={form.topic === t} title={t} onClick={() => set("topic", t)} />
+                <Option key={t} name="topic" checked={form.topic === t} title={t} onClick={() => set("topic", t)} />
               ))}
             </div>
           </>
@@ -363,16 +363,16 @@ export function RequestForm({ mentorId }: { mentorId: string }) {
               <fieldset className="pn-fieldset">
                 <legend className="t-small">Format</legend>
                 <div className="pn-options pn-options-2" role="radiogroup">
-                  {(p.mentorship.format === "either" || p.mentorship.format === "one-time") && <Option checked={form.format === "one-time"} title="One conversation" note="A single focused session." onClick={() => set("format", "one-time")} />}
-                  {(p.mentorship.format === "either" || p.mentorship.format === "recurring") && <Option checked={form.format === "recurring"} title="Recurring" note="A few sessions over time." onClick={() => set("format", "recurring")} />}
+                  {(p.mentorship.format === "either" || p.mentorship.format === "one-time") && <Option name="format" checked={form.format === "one-time"} title="One conversation" note="A single focused session." onClick={() => set("format", "one-time")} />}
+                  {(p.mentorship.format === "either" || p.mentorship.format === "recurring") && <Option name="format" checked={form.format === "recurring"} title="Recurring" note="A few sessions over time." onClick={() => set("format", "recurring")} />}
                 </div>
               </fieldset>
               <fieldset className="pn-fieldset">
                 <legend className="t-small">Where</legend>
                 <div className="pn-options pn-options-2" role="radiogroup">
-                  {(p.mentorship.mode === "either" || p.mentorship.mode === "online") && <Option checked={form.mode === "online"} title="Online" onClick={() => set("mode", "online")} />}
-                  {(p.mentorship.mode === "either" || p.mentorship.mode === "in-person") && <Option checked={form.mode === "in-person"} title="In person" onClick={() => set("mode", "in-person")} />}
-                  {p.mentorship.mode === "either" && <Option checked={form.mode === "either"} title="Either works" onClick={() => set("mode", "either")} />}
+                  {(p.mentorship.mode === "either" || p.mentorship.mode === "online") && <Option name="mode" checked={form.mode === "online"} title="Online" onClick={() => set("mode", "online")} />}
+                  {(p.mentorship.mode === "either" || p.mentorship.mode === "in-person") && <Option name="mode" checked={form.mode === "in-person"} title="In person" onClick={() => set("mode", "in-person")} />}
+                  {p.mentorship.mode === "either" && <Option name="mode" checked={form.mode === "either"} title="Either works" onClick={() => set("mode", "either")} />}
                 </div>
               </fieldset>
               <Field label="Scheduling preferences" optional hint="Days and times that work for you. The actual booking happens after acceptance.">

@@ -300,34 +300,42 @@ export function SwitchRow({
   );
 }
 
+/**
+ * Option card over a native radio or checkbox, so keyboard behaviour and
+ * screen-reader semantics come from the browser. Radios in one set share
+ * a `name`.
+ */
 export function Option({
   checked,
   title,
   note,
   multi = false,
+  name,
   onClick,
 }: {
   checked: boolean;
   title: ReactNode;
   note?: ReactNode;
   multi?: boolean;
+  name?: string;
   onClick: () => void;
 }) {
+  const fallback = useId();
   return (
-    <button
-      type="button"
-      className="pn-option"
-      role={multi ? undefined : "radio"}
-      aria-checked={multi ? undefined : checked}
-      aria-pressed={multi ? checked : undefined}
-      onClick={onClick}
-    >
+    <label className="pn-option" data-checked={checked}>
+      <input
+        type={multi ? "checkbox" : "radio"}
+        name={multi ? undefined : name ?? fallback}
+        className="sr-only"
+        checked={checked}
+        onChange={onClick}
+      />
       <span className={multi ? "pn-option-mark pn-option-mark-square" : "pn-option-mark"} aria-hidden="true" />
       <span>
         <span className="pn-option-title">{title}</span>
         {note && <span className="pn-option-note block">{note}</span>}
       </span>
-    </button>
+    </label>
   );
 }
 
@@ -399,6 +407,10 @@ export function Select({
 
 /* ---------- Tabs ---------- */
 
+/**
+ * Filter tabs: a group of toggle buttons rather than an ARIA tablist, since
+ * the content below is one list filtered by the choice, not separate panels.
+ */
 export function Tabs<T extends string>({
   value,
   onChange,
@@ -411,14 +423,13 @@ export function Tabs<T extends string>({
   label: string;
 }) {
   return (
-    <div className="pn-tabs" role="tablist" aria-label={label}>
+    <div className="pn-tabs" role="group" aria-label={label}>
       {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
-          role="tab"
           className="pn-tab"
-          aria-selected={value === t.id}
+          aria-pressed={value === t.id}
           onClick={() => onChange(t.id)}
         >
           {t.label}
@@ -503,11 +514,12 @@ export function Drawer({
   footer?: ReactNode;
 }) {
   const ref = useDialog(open, onClose);
+  const titleId = useId();
   return (
-    <dialog ref={ref} className="pn-drawer" aria-label={typeof title === "string" ? title : undefined}>
+    <dialog ref={ref} className="pn-drawer" aria-labelledby={titleId}>
       <div className="pn-drawer-inner">
         <div className="pn-drawer-head">
-          <h2>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           <button type="button" className="pn-icon-btn" aria-label="Close" onClick={onClose}>
             <X size={20} aria-hidden="true" />
           </button>
@@ -533,10 +545,11 @@ export function Modal({
   footer?: ReactNode;
 }) {
   const ref = useDialog(open, onClose);
+  const titleId = useId();
   return (
-    <dialog ref={ref} className="pn-modal">
+    <dialog ref={ref} className="pn-modal" aria-labelledby={titleId}>
       <div className="pn-modal-inner">
-        <h2>{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         {open && children}
         {footer && <div className="pn-modal-foot">{footer}</div>}
       </div>
@@ -558,12 +571,13 @@ export function Sheet({
   footer?: ReactNode;
 }) {
   const ref = useDialog(open, onClose);
+  const titleId = useId();
   return (
-    <dialog ref={ref} className="pn-sheet" aria-label={typeof title === "string" ? title : undefined}>
+    <dialog ref={ref} className="pn-sheet" aria-labelledby={titleId}>
       <div className="pn-sheet-inner">
         <div className="pn-sheet-handle" aria-hidden="true" />
         <div className="pn-drawer-head">
-          <h2>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           <button type="button" className="pn-icon-btn" aria-label="Close" onClick={onClose}>
             <X size={20} aria-hidden="true" />
           </button>

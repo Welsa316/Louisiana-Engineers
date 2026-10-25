@@ -9,7 +9,8 @@ import "./styles.css";
  * its own chunk so the landing page's bundle is unchanged.
  */
 const PREVIEW_PREFIX = "/preview/professional-network";
-const isPreview = window.location.pathname.startsWith(PREVIEW_PREFIX);
+const { pathname } = window.location;
+const isPreview = pathname === PREVIEW_PREFIX || pathname.startsWith(`${PREVIEW_PREFIX}/`);
 const NetworkPreview = lazy(() => import("./preview/network/NetworkPreview"));
 
 createRoot(document.getElementById("root")!).render(

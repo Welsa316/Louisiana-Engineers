@@ -86,9 +86,14 @@ function initialState(): State {
   };
 }
 
-let counter = 2000;
-/** Prototype ids. The real build uses database-generated UUIDs. */
-export const newId = (prefix: string) => `${prefix}-${++counter}-${Date.now().toString(36).slice(-4)}`;
+/** Prototype ids: random, so they survive reloads without colliding. The real build uses database UUIDs. */
+export const newId = (prefix: string) => {
+  const rand =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+  return `${prefix}-${rand}`;
+};
 const nextId = newId;
 const now = () => new Date().toISOString();
 
@@ -117,6 +122,19 @@ function reducer(state: State, action: Action): State {
       };
 
     case "sendRequest": {
+      // The same rules the UI enforces, so a deep link or stale form cannot bypass them.
+      const mentor = state.professionals.find((p) => p.id === action.request.mentorId);
+      const duplicate = state.requests.some(
+        (r) => r.menteeId === action.request.menteeId && r.mentorId === action.request.mentorId && (r.status === "pending" || r.status === "accepted"),
+      );
+      if (
+        !mentor ||
+        !isMentorAvailable(mentor, state.requests) ||
+        duplicate ||
+        openRequestCount(action.request.menteeId, state.requests) >= MAX_OPEN_REQUESTS
+      ) {
+        return { ...state, toast: { id: Date.now(), text: "That request cannot be sent right now." } };
+      }
       const created = now();
       const expires = new Date(created);
       expires.setDate(expires.getDate() + 14);
@@ -143,15 +161,19 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         requests: state.requests.map((r) =>
-          r.id === action.id ? { ...r, status: "canceled", respondedAt: now() } : r,
+          r.id === action.id && r.status === "pending" ? { ...r, status: "canceled", respondedAt: now() } : r,
         ),
         toast: { id: Date.now(), text: "Request withdrawn." },
       };
 
     case "respond": {
       const req = state.requests.find((r) => r.id === action.id);
-      if (!req) return state;
+      if (!req || req.status !== "pending") return state;
       const accepted = action.decision === "accepted";
+      const mentor = state.professionals.find((p) => p.id === req.mentorId);
+      if (accepted && (!mentor || !mentor.mentorship || activeMenteeCount(mentor.id, state.requests) >= mentor.mentorship.maxActive)) {
+        return { ...state, toast: { id: Date.now(), text: "You are at your mentee cap. Complete one or raise the cap first." } };
+      }
       return {
         ...state,
         requests: state.requests.map((r) =>
@@ -182,7 +204,7 @@ function reducer(state: State, action: Action): State {
     case "completeRequest":
       return {
         ...state,
-        requests: state.requests.map((r) => (r.id === action.id ? { ...r, status: "completed" } : r)),
+        requests: state.requests.map((r) => (r.id === action.id && r.status === "accepted" ? { ...r, status: "completed" } : r)),
         toast: { id: Date.now(), text: "Marked complete. Thank you for your time." },
       };
 
@@ -265,14 +287,24 @@ function reducer(state: State, action: Action): State {
   }
 }
 
+/** Pending requests past their expiry date become `expired`, as the real build's scheduled job would do. */
+function expireOverdue(state: State): State {
+  const cutoff = now();
+  if (!state.requests.some((r) => r.status === "pending" && r.expiresAt < cutoff)) return state;
+  return {
+    ...state,
+    requests: state.requests.map((r) => (r.status === "pending" && r.expiresAt < cutoff ? { ...r, status: "expired" } : r)),
+  };
+}
+
 function load(): State {
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return initialState();
+    if (!raw) return expireOverdue(initialState());
     const parsed = JSON.parse(raw) as Partial<State>;
-    return { ...initialState(), ...parsed, toast: null };
+    return expireOverdue({ ...initialState(), ...parsed, toast: null });
   } catch {
-    return initialState();
+    return expireOverdue(initialState());
   }
 }
 

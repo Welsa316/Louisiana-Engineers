@@ -471,7 +471,7 @@ export function ProfessionalOnboarding() {
                     <legend className="t-small">Format</legend>
                     <div className="pn-options" role="radiogroup">
                       {([["one-time", "One-time guidance", "A single conversation on a specific question."], ["recurring", "Recurring mentoring", "A few conversations over a semester or more."], ["either", "Either", "Decide per request."]] as const).map(([v, t, n]) => (
-                        <Option key={v} checked={form.format === v} title={t} note={n} onClick={() => set("format", v)} />
+                        <Option key={v} name="format" checked={form.format === v} title={t} note={n} onClick={() => set("format", v)} />
                       ))}
                     </div>
                   </fieldset>
@@ -479,7 +479,7 @@ export function ProfessionalOnboarding() {
                     <legend className="t-small">Where</legend>
                     <div className="pn-options" role="radiogroup">
                       {([["online", "Online", "Video or phone."], ["in-person", "In person", "Around Greater New Orleans."], ["either", "Either", "Whatever suits the mentee."]] as const).map(([v, t, n]) => (
-                        <Option key={v} checked={form.mode === v} title={t} note={n} onClick={() => set("mode", v)} />
+                        <Option key={v} name="mode" checked={form.mode === v} title={t} note={n} onClick={() => set("mode", v)} />
                       ))}
                     </div>
                   </fieldset>
@@ -513,8 +513,8 @@ export function ProfessionalOnboarding() {
                 <fieldset className="pn-fieldset">
                   <legend className="t-small">Directory visibility</legend>
                   <div className="pn-options pn-options-2" role="radiogroup">
-                    <Option checked={form.visibility === "public"} title="Public" note="Anyone can find you, including search engines and visitors who are not signed in." onClick={() => set("visibility", "public")} />
-                    <Option checked={form.visibility === "members"} title="Members only" note="Only signed-in MEST members can see your profile." onClick={() => set("visibility", "members")} />
+                    <Option name="visibility" checked={form.visibility === "public"} title="Public" note="Anyone can find you, including search engines and visitors who are not signed in." onClick={() => set("visibility", "public")} />
+                    <Option name="visibility" checked={form.visibility === "members"} title="Members only" note="Only signed-in MEST members can see your profile." onClick={() => set("visibility", "members")} />
                   </div>
                 </fieldset>
                 <fieldset className="pn-fieldset">
