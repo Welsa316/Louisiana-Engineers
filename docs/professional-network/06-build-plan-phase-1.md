@@ -237,6 +237,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 
 ### Task 10: Development seed (core), job scheduler, outbox job
 
+> **Handoff from integration (wave 3):** `sendOutboxBatch(db, limit, mailer)` sends a whole batch inside the caller's transaction, so one failing statement after some sends would roll their `sent_at` back and resend them next run. The `send-emails` job must claim and mark rows in short per-row transactions (or wrap each row in a SAVEPOINT), with a test that a failure on row 3 leaves rows 1 and 2 marked sent.
+
 **Depends on:** Task 5.
 
 **Files:** Create `server/seed/{seed,users,profiles}.ts` (users with verified emails `<prototype-id>@example.test`, profiles for the 23 people with `kind`, `approval_state` and `mission_accepted_at` from the prototype, admin roles for `admin@example.test` and `admin2@example.test`, written inside `withSystem`), `server/src/jobs/{scheduler,send-emails}.ts`; Modify `server/src/index.ts` (start the scheduler from `jobs/index.ts` when `JOBS_ENABLED`; in development the `send-emails` job always runs so magic links print); Test `server/test/jobs/scheduler.test.ts`.
@@ -464,6 +466,8 @@ All suites; e2e loop end to end with every email printed by the development mail
 - [ ] **Step 3:** Commit: `Pass the accessibility and overflow checks`.
 
 ### Task 29: Runbook, deployment files, prototype removal
+
+> **Handoff from integration (wave 3):** The runbook must tell the operator to confirm, on the live Railway service, how many proxies append to `X-Forwarded-For` (send a request with a fake leading entry and read the stored `auth_tokens.ip`), and set `TRUST_PROXY=true` and `TRUST_PROXY_HOPS` to match. The per-IP magic-link limit depends on it.
 
 **Depends on:** Task 28.
 

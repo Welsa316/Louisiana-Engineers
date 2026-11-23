@@ -25,12 +25,15 @@ export interface AuthRouteOptions {
   nodeEnv?: Env["NODE_ENV"];
   /** Read the client IP from `X-Forwarded-For` (only behind a trusted proxy). */
   trustProxy?: boolean;
+  /** Trusted proxies that append to `X-Forwarded-For` (see `clientIp`). */
+  trustProxyHops?: number;
   appOrigin?: string;
 }
 
 export function createAuthRoutes(options: AuthRouteOptions = {}): Hono {
   const nodeEnv = options.nodeEnv ?? env.NODE_ENV;
   const trustProxy = options.trustProxy ?? env.TRUST_PROXY;
+  const trustProxyHops = options.trustProxyHops ?? env.TRUST_PROXY_HOPS;
   const appOrigin = options.appOrigin ?? env.APP_ORIGIN;
   const secure = cookieIsSecure(nodeEnv, appOrigin);
   const origins = allowedOrigins(appOrigin, nodeEnv);
@@ -45,7 +48,7 @@ export function createAuthRoutes(options: AuthRouteOptions = {}): Hono {
 
   app.post("/magic-link", originCheck(origins), validate(magicLinkSchema), async (c) => {
     const { email } = c.req.valid("json");
-    const result = await requestMagicLink({ email, ip: clientIp(c, trustProxy), appOrigin });
+    const result = await requestMagicLink({ email, ip: clientIp(c, trustProxy, trustProxyHops), appOrigin });
     if (!result.ok) throw new AppError(429, "rate_limited", "magic link rate limit");
     if (testMode) devLinks.set(email.toLowerCase(), result.link);
     return c.json({}, 202);
@@ -159,14 +162,21 @@ async function readToken(c: Context): Promise<string | null> {
 }
 
 /**
- * The client address for the per-IP limit. Behind a trusted proxy it is the
- * first `X-Forwarded-For` entry; otherwise the socket's peer address (absent
- * when the app is called in-process, as in tests).
+ * The client address for the per-IP limit. Behind a trusted proxy, a client
+ * can prepend anything to `X-Forwarded-For`, but each trusted proxy appends
+ * the peer it saw, so the address is the entry `hops` places from the right
+ * (1 = the last entry, appended by the one proxy in front of us). Without a
+ * trusted proxy it is the socket's peer address (absent when the app is
+ * called in-process, as in tests).
  */
-export function clientIp(c: Context, trustProxy: boolean): string | null {
+export function clientIp(c: Context, trustProxy: boolean, hops = env.TRUST_PROXY_HOPS): string | null {
   if (trustProxy) {
-    const first = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
-    if (first && isIp(first)) return first;
+    const entries = (c.req.header("x-forwarded-for") ?? "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    const candidate = entries[entries.length - Math.max(1, hops)];
+    if (candidate && isIp(candidate)) return candidate;
   }
   const incoming = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)?.incoming;
   const address = incoming?.socket?.remoteAddress;

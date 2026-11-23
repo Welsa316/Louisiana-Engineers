@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { Hono } from "hono";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { requireAdmin, requireMember, requireUser, userIdOf } from "../../src/auth/middleware";
+import { cookieIsSecure, setSessionCookie } from "../../src/auth/session";
 import { createAuthRoutes } from "../../src/routes/auth";
 import { createConfigRoutes } from "../../src/routes/config";
 import { asSystem, createTestDb, testApp, truncateAll, type TestDb } from "../harness";
@@ -257,5 +258,23 @@ describe("sessions", () => {
       googleEnabled: true,
       platformPaused: true,
     });
+  });
+
+  it("session_cookie_is_secure_in_production_and_over_https", async () => {
+    expect(cookieIsSecure("production", "http://127.0.0.1:8787")).toBe(true);
+    expect(cookieIsSecure("production", "https://mest.example")).toBe(true);
+    expect(cookieIsSecure("development", "https://mest.example")).toBe(false);
+    expect(cookieIsSecure("test", "https://mest.example")).toBe(true);
+    expect(cookieIsSecure("test", "http://127.0.0.1:8787")).toBe(false);
+
+    // The flag reaches the Set-Cookie header, with the other protections.
+    const probe = new Hono().get("/", (c) => {
+      setSessionCookie(c, "value", cookieIsSecure("production", "http://x"));
+      return c.text("ok");
+    });
+    const header = (await probe.request("/")).headers.get("set-cookie") ?? "";
+    expect(header).toMatch(/;\s*Secure/);
+    expect(header).toMatch(/;\s*HttpOnly/);
+    expect(header).toMatch(/SameSite=Lax/);
   });
 });

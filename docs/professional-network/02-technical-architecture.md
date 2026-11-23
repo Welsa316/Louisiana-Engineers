@@ -55,7 +55,7 @@ Alternatives considered:
 | Database | `pg` 8, no ORM | SQL in numbered migrations under `server/migrations/`; parameterized queries in services |
 | Validation | zod 3 | `validate(schema)` middleware answers `400 { code: 'validation', issues }` |
 | Sign-in | Magic link (our code) and Google OAuth through `arctic` | No passwords. See section 5.1 |
-| Email | Resend SDK | Drained from `email_outbox` by an in-process job; without an API key the job marks rows sent and logs the text body, which is how a local magic link is read |
+| Email | Resend SDK | Drained from `email_outbox` by an in-process job; without an API key outside production the job marks rows sent and logs the text body, which is how a local magic link is read; in production a missing key is a recorded send failure, so a working sign-in link never reaches the logs |
 | Jobs | In-process scheduler | One interval per job under a lock row in `job_runs`; see section 4.6 |
 | Tests | vitest for the server and the shared schemas (policy and function tests run against a real Postgres), Playwright with `@axe-core/playwright` for end-to-end checks at 375 and 1280 | Every test database is private to its worker (`mest_test_<WORKTREE_ID>`) |
 
@@ -955,7 +955,7 @@ Jobs run inside the API process when `JOBS_ENABLED` is true (one Railway service
 
 | Job | Every | Action |
 | --- | --- | --- |
-| `send-emails` | 60 s | Renders and sends up to 50 `email_outbox` rows through Resend; sets `sent_at`, or `attempts + 1` with `last_error`, and gives up after 3 attempts. Without `RESEND_API_KEY` it marks rows sent and logs the text body. In development this job always runs so magic links print |
+| `send-emails` | 60 s | Renders and sends up to 50 `email_outbox` rows through Resend; sets `sent_at`, or `attempts + 1` with `last_error`, and gives up after 3 attempts. Without `RESEND_API_KEY` outside production it marks rows sent and logs the text body; in production it records a failure instead. Each row is claimed and marked in its own short transaction, so one failure cannot resend a batch (at-least-once per row only across a crash between send and commit). In development this job always runs so magic links print |
 | `expire-requests` | 1 h | `pending` requests past `expires_at`: `expire_request(id)` |
 | `reminders` | 24 h | Pending requests older than `config.reminder_days[n]` days with `reminders_sent = n`: `send_request_reminder(id, n)` |
 | `resume-paused` | 24 h | `paused_until <= now`: `resume_mentor(id)` |

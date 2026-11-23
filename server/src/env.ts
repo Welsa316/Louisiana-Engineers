@@ -39,6 +39,8 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   JOBS_ENABLED: bool.default(false),
   TRUST_PROXY: bool.default(false),
+  // How many trusted proxies append to X-Forwarded-For (Railway's edge: 1).
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(1).max(5).default(1),
 });
 
 export type Env = z.infer<typeof schema>;

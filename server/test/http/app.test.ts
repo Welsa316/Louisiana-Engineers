@@ -110,3 +110,14 @@ describe("http skeleton", () => {
     }
   });
 });
+
+describe("mounted areas", () => {
+  it("auth_and_config_routes_are_mounted_under_api", async () => {
+    const me = await app.request("/api/auth/me");
+    expect(me.status).toBe(200);
+    expect(await me.json()).toEqual({ user: null });
+    const config = await app.request("/api/config/public");
+    expect(config.status).toBe(200);
+    expect(await config.json()).toMatchObject({ googleEnabled: expect.any(Boolean), platformPaused: false });
+  });
+});

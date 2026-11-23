@@ -250,6 +250,18 @@ describe("magic link", () => {
     expect((await requestLink("fresh@example.test", "192.0.2.98")).status).toBe(429);
   });
 
+  it("spoofed_forwarded_for_entries_cannot_dodge_the_ip_limit", async () => {
+    // A client can prepend anything to X-Forwarded-For; the trusted proxy
+    // appends the real peer address last. Rotating the leading entries must
+    // not create a fresh per-IP bucket.
+    for (let i = 0; i < 5; i += 1) {
+      const res = await requestLink(`spoof${i}@example.test`, `10.9.8.${i + 1}, 198.51.100.200`);
+      expect(res.status, `link ${i + 1}`).toBe(202);
+    }
+    const sixth = await requestLink("spoof-last@example.test", "10.9.8.77, 198.51.100.200");
+    expect(sixth.status).toBe(429);
+  });
+
   it("ip_is_read_from_x_forwarded_for_only_behind_a_trusted_proxy", async () => {
     const direct = testApp(new Hono().route("/auth", createAuthRoutes({ trustProxy: false })));
     const res = await direct.request("/api/auth/magic-link", {
@@ -263,11 +275,25 @@ describe("magic link", () => {
     );
     expect(row.rows[0].ip).not.toBe("192.0.2.1");
 
+    // One trusted proxy (the default): the entry it appended, the last one.
+    // The leading entry is whatever the client sent and is not trusted.
     await requestLink("proxied@example.test", "192.0.2.2, 10.0.0.1");
     const proxied = await db.pool.query<{ ip: string | null }>(
       "SELECT host(ip) AS ip FROM auth_tokens WHERE email = 'proxied@example.test'",
     );
-    expect(proxied.rows[0].ip).toBe("192.0.2.2");
+    expect(proxied.rows[0].ip).toBe("10.0.0.1");
+
+    // Two trusted proxies: the second entry from the right.
+    const twoHops = testApp(new Hono().route("/auth", createAuthRoutes({ trustProxy: true, trustProxyHops: 2 })));
+    await twoHops.request("/api/auth/magic-link", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: ORIGIN, "x-forwarded-for": "6.6.6.6, 192.0.2.3, 10.0.0.1" },
+      body: JSON.stringify({ email: "two-hops@example.test" }),
+    });
+    const hopped = await db.pool.query<{ ip: string | null }>(
+      "SELECT host(ip) AS ip FROM auth_tokens WHERE email = 'two-hops@example.test'",
+    );
+    expect(hopped.rows[0].ip).toBe("192.0.2.3");
   });
 
   it("dev_routes_absent_outside_test", async () => {
