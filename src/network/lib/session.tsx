@@ -3,7 +3,7 @@
  * The answer never carries the email address (shared/types/auth.ts).
  */
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { hashKey, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import type { MeResponse, PublicConfig, SessionUser } from "@shared/types/auth";
 import { api } from "./api";
@@ -50,7 +50,11 @@ export function useSignOut(): () => Promise<void> {
     // Only forget the session locally once the server has ended it; if the
     // request fails the cookie is still valid, so the caller shows an error.
     await api("/auth/signout", { method: "POST" });
-    client.clear();
+    // Drop every other answer, but keep the session query itself and set it
+    // to signed out: `clear()` would detach the mounted `useSession` callers
+    // from the cache, so a page that stays put kept showing the old account.
+    const sessionHash = hashKey(queryKeys.session);
+    client.removeQueries({ predicate: (query) => query.queryHash !== sessionHash });
     client.setQueryData<MeResponse>(queryKeys.session, { user: null });
   }, [client]);
 }
