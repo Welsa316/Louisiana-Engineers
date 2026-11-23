@@ -48,7 +48,13 @@ async function transaction<T>(setup: (client: PoolClient) => Promise<void>, fn: 
   const client = await getPool().connect();
   let broken: Error | undefined;
   try {
-    await client.query("BEGIN");
+    try {
+      await client.query("BEGIN");
+    } catch (error) {
+      // A connection that cannot start a transaction is not reused.
+      broken = error instanceof Error ? error : new Error(String(error));
+      throw error;
+    }
     try {
       await setup(client);
       const result = await fn(wrapClient(client));
