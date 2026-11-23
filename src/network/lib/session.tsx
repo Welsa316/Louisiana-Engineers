@@ -47,12 +47,11 @@ export function useSession(): Session {
 export function useSignOut(): () => Promise<void> {
   const client = useQueryClient();
   return useCallback(async () => {
-    try {
-      await api("/auth/signout", { method: "POST" });
-    } finally {
-      client.clear();
-      client.setQueryData<MeResponse>(queryKeys.session, { user: null });
-    }
+    // Only forget the session locally once the server has ended it; if the
+    // request fails the cookie is still valid, so the caller shows an error.
+    await api("/auth/signout", { method: "POST" });
+    client.clear();
+    client.setQueryData<MeResponse>(queryKeys.session, { user: null });
   }, [client]);
 }
 

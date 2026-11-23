@@ -2440,7 +2440,8 @@
 
 @media (max-width: 47.99rem) {
   .pn-main-head {
-    display: none;
+    justify-content: space-between;
+    margin: -0.5rem 0 1.5rem;
   }
   .pn-header-actions {
     gap: 0.25rem;

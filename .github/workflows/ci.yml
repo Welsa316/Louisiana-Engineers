@@ -52,4 +52,12 @@ jobs:
           curl -fsS http://127.0.0.1:8787/network/directory | grep -q '<div id="root">'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/nothing-here)" = "404"
           kill $SERVER_PID
+      - name: Seed the database for the browser tests
+        run: npm run migrate && npm run seed
+      - name: Install the browser the pinned Playwright expects
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests at 375 and 1280
+        run: npm run e2e
+        env:
+          CI: "true"
       - run: docker build -t mest .

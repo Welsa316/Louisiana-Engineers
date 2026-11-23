@@ -24,7 +24,9 @@ function SignOutButton({ className, onDone }: { className: string; onDone?: () =
   const signOut = useSignOut();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   return (
+    <>
     <button
       type="button"
       className={className}
@@ -33,16 +35,25 @@ function SignOutButton({ className, onDone }: { className: string; onDone?: () =
         setBusy(true);
         try {
           await signOut();
-        } finally {
-          setBusy(false);
           onDone?.();
           navigate("/");
+        } catch {
+          // The server session is still valid, so stay signed in and say so.
+          setFailed(true);
+        } finally {
+          setBusy(false);
         }
       }}
     >
       <LogOut size={16} aria-hidden="true" />
       <span>Sign out</span>
     </button>
+    {failed ? (
+      <p role="alert" className="t-small text-fg-2">
+        Sign-out did not go through. Check your connection and try again.
+      </p>
+    ) : null}
+    </>
   );
 }
 
@@ -71,6 +82,8 @@ export function PublicShell({ children, headerSlot }: { children: ReactNode; hea
   const { user, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
+  // "Join the network" means nothing to someone already signed in.
+  const publicNav = user ? PUBLIC_NAV.filter((item) => item.to !== "/join") : PUBLIC_NAV;
 
   return (
     <>
@@ -86,7 +99,7 @@ export function PublicShell({ children, headerSlot }: { children: ReactNode; hea
             </Link>
           </div>
           <nav aria-label="Network" className="nav-links">
-            {PUBLIC_NAV.map((item) => (
+            {publicNav.map((item) => (
               <NavLink key={item.to} to={item.to} className="nav-link">
                 {item.label}
               </NavLink>
@@ -125,7 +138,7 @@ export function PublicShell({ children, headerSlot }: { children: ReactNode; hea
       </header>
       <Sheet open={menuOpen} onClose={closeMenu} title="Menu">
         <nav aria-label="Network menu" className="pn-menu-list">
-          {PUBLIC_NAV.map((item) => (
+          {publicNav.map((item) => (
             <NavLink key={item.to} to={item.to} className="pn-menu-link" onClick={closeMenu}>
               {item.label}
             </NavLink>
@@ -244,20 +257,22 @@ export function AppShell({
       </aside>
 
       <main id="main" className="pn-main" tabIndex={-1}>
-        <div className="pn-topbar md:hidden">
-          <Link to="/" className="wordmark" aria-label="MEST Network home">
+        {/* One header row at every width, so the slot (the notification bell)
+            mounts once: the logo and label are phone-only, and with no slot
+            the row is phone-only too. */}
+        <div className={headerSlot ? "pn-main-head" : "pn-main-head md:hidden"} data-testid="app-head">
+          <Link to="/" className="wordmark md:hidden" aria-label="MEST Network home">
             <LogoMark className="wordmark-mark" />
           </Link>
           <div className="flex items-center gap-3">
-            <span className="t-small text-fg-2">{kindLabel(user)}</span>
+            <span className="t-small text-fg-2 md:hidden">{kindLabel(user)}</span>
             {headerSlot}
           </div>
         </div>
-        {headerSlot ? <div className="pn-main-head">{headerSlot}</div> : null}
         <div className="pn-main-inner">{children}</div>
       </main>
 
-      <nav className="pn-tabbar" aria-label="Sections">
+      <nav className="pn-tabbar" aria-label="Sections, tab bar">
         {nav.tabs.map((item) => (
           <NavLink key={item.id} to={item.to} end={item.end}>
             <item.icon size={20} aria-hidden="true" />

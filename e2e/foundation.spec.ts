@@ -21,6 +21,10 @@ test.describe("foundation", () => {
     await expect(page.locator(".pn-root header.pn-header")).toBeVisible();
     await expect(page.locator("main h1")).toBeVisible();
     await expect(page).toHaveTitle(/MEST Network/);
+    // The not-found page also has an h1 and a MEST Network title, so prove
+    // this is the home route and not the catch-all.
+    await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toHaveCount(0);
+    expect(await page.title()).not.toMatch(/^Page not found/);
     // Every network page is noindex unless it opts in.
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex");
   });
