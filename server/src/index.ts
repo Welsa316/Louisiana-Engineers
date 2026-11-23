@@ -7,6 +7,8 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import type { Pool } from "./db/pool";
+import { apiErrorHandler, apiNotFound } from "./http/errors";
+import { createApiRoutes } from "./routes/index";
 
 export interface AppOptions {
   /** The built web app (`vite build` output). */
@@ -50,6 +52,10 @@ export function createApp({ webDist, pool, cacheIndex = true }: AppOptions): Hon
     }
   });
 
+  app.route("/api", createApiRoutes());
+  app.all("/api", apiNotFound);
+  app.all("/api/*", apiNotFound);
+
   app.get("/", async (c) => c.html(await readIndex(), 200, { "Cache-Control": "no-cache" }));
   app.get("/network", async (c) => c.html(await readIndex(), 200, { "Cache-Control": "no-cache" }));
   app.get("/network/*", async (c) => c.html(await readIndex(), 200, { "Cache-Control": "no-cache" }));
@@ -91,6 +97,7 @@ export function createApp({ webDist, pool, cacheIndex = true }: AppOptions): Hon
 
   app.notFound((c) => c.text("Not found", 404));
   app.onError((error, c) => {
+    if (c.req.path === "/api" || c.req.path.startsWith("/api/")) return apiErrorHandler(error, c);
     console.error("[http] unhandled error", error);
     return c.text("Internal error", 500);
   });
