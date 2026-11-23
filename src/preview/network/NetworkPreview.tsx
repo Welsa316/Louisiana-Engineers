@@ -5,7 +5,7 @@
  */
 
 import { useEffect } from "react";
-import "./network.css";
+import "../../network/ui/network.css";
 import { RouterProvider, useRouter } from "./router";
 import { StoreProvider, useStore } from "./state/store";
 import { AppShell, PreviewBar, PublicShell, ToastHost } from "./layouts/Shells";
@@ -17,21 +17,23 @@ import { ProfessionalOnboarding, StudentOnboarding } from "./screens/onboarding/
 import { MenteeDashboard, MenteeRequestDetail, MenteeRequests, MenteeSaved, MenteeSettings, RequestForm } from "./screens/mentee/Mentee";
 import { MentorAvailability, MentorDashboard, MentorEditProfile, MentorMentees, MentorRequests, MentorSettings } from "./screens/mentor/Mentor";
 import { AdminApprovals, AdminMembers, AdminMentorship, AdminOverview, AdminReports } from "./screens/admin/Admin";
-import { Empty } from "./components/ui";
+import { Empty, UiLinkProvider } from "../../network/ui/ui";
 import { Link } from "./router";
 
 export default function NetworkPreview() {
   return (
     <StoreProvider>
       <RouterProvider>
-        <div className="pn-root">
-          <a className="skip-link" href="#main">
-            Skip to content
-          </a>
-          <PreviewBar />
-          <Routes />
-          <ToastHost />
-        </div>
+        <UiLinkProvider value={Link}>
+          <div className="pn-root pn-preview">
+            <a className="skip-link" href="#main">
+              Skip to content
+            </a>
+            <PreviewBar />
+            <Routes />
+            <ToastHost />
+          </div>
+        </UiLinkProvider>
       </RouterProvider>
     </StoreProvider>
   );

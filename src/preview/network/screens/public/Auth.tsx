@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowUpRight, GraduationCap, Briefcase, Mail, ShieldCheck } from "lucide-react";
 import { Link, useRouter } from "../../router";
 import { useStore } from "../../state/store";
-import { Field, Input, Notice, Star } from "../../components/ui";
+import { Field, Input, Notice, Star } from "../../../../network/ui/ui";
 
 /** 4. Login / signup. Passwordless by design: magic link, or Google. */
 export function SignIn() {

@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { ArrowRight, Check, Flag, Search, ShieldCheck, X } from "lucide-react";
 import { Link, useRouter } from "../../router";
 import { useStore, isListed } from "../../state/store";
-import { disciplineById, disciplines } from "../../data/taxonomy";
-import { fullName, initials, TODAY } from "../../data/mock";
+import { disciplineById, disciplines } from "@shared/taxonomy";
+import { fullName, initials, TODAY, topicLabel } from "../../data/mock";
 import type { Professional } from "../../data/types";
-import { Card, Drawer, Empty, fmtDate, fmtRelative, fmtRelativeLower, Monogram, Notice, PageHead, Stat, Status, Tabs } from "../../components/ui";
+import { Card, Drawer, Empty, fmtDate, fmtRelative, fmtRelativeLower, Monogram, Notice, PageHead, Stat, Status, Tabs } from "../../../../network/ui/ui";
 
 /* ====================================================================
    22. Admin overview
@@ -263,7 +263,7 @@ function ReviewBody({ p, reported }: { p: Professional; reported: boolean }) {
         <section>
           <h3 className="pn-kicker pn-kicker-plain mb-3">Wants to mentor</h3>
           <p className="t-small text-fg-2">
-            {p.mentorship.topics.join(", ")} · up to {p.mentorship.maxActive} at once · {p.mentorship.availability}
+            {p.mentorship.topics.map(topicLabel).join(", ")} · up to {p.mentorship.maxActive} at once · {p.mentorship.availability}
           </p>
         </section>
       )}
@@ -485,7 +485,7 @@ export function AdminMentorship() {
             {topics.map(([t, n]) => (
               <li key={t} className="grid gap-1 t-small">
                 <div className="flex justify-between gap-3">
-                  <span className="min-w-0 truncate">{t}</span>
+                  <span className="min-w-0 truncate">{topicLabel(t)}</span>
                   <span className="t-numeral text-fg-2">{n}</span>
                 </div>
                 <div className="h-1 rounded-full bg-[var(--pn-line)] overflow-hidden" aria-hidden="true">

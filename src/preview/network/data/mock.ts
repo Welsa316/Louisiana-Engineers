@@ -7,6 +7,7 @@
  * accidental. Nothing is persisted beyond the browser session.
  */
 
+import { topicById } from "@shared/taxonomy";
 import type {
   ActivityItem,
   Meeting,
@@ -52,7 +53,7 @@ export const professionals: Professional[] = [
     hasBookingLink: true,
     mentorship: {
       status: "active",
-      topics: ["Professional licensure (PE, FE)", "Internships and first jobs", "Leadership and management", "Negotiating offers"],
+      topics: ["professional-licensure", "internships-and-first-jobs", "leadership-and-management", "negotiating-offers"],
       audience: ["undergrad", "grad", "early-career"],
       format: "either",
       mode: "either",
@@ -89,7 +90,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Graduate school applications", "Research and publishing", "Technical interviews", "Career change into tech"],
+      topics: ["graduate-school", "research-and-publishing", "technical-interviews", "career-change-into-tech"],
       audience: ["grad", "early-career", "mid-career"],
       format: "recurring",
       mode: "online",
@@ -122,7 +123,7 @@ export const professionals: Professional[] = [
     hasBookingLink: true,
     mentorship: {
       status: "active",
-      topics: ["Career change into tech", "Technical interviews", "Resume and portfolio review", "Internships and first jobs"],
+      topics: ["career-change-into-tech", "technical-interviews", "resume-and-portfolio", "internships-and-first-jobs"],
       audience: ["undergrad", "early-career", "mid-career"],
       format: "one-time",
       mode: "online",
@@ -160,7 +161,7 @@ export const professionals: Professional[] = [
     mentorship: {
       status: "paused",
       pausedUntil: "2027-01-15",
-      topics: ["Graduate school applications", "Research and publishing", "Choosing a major or specialization"],
+      topics: ["graduate-school", "research-and-publishing", "choosing-a-major"],
       audience: ["undergrad", "grad"],
       format: "either",
       mode: "either",
@@ -194,7 +195,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Starting a company", "Professional licensure (PE, FE)", "Internships and first jobs"],
+      topics: ["starting-a-company", "professional-licensure", "internships-and-first-jobs"],
       audience: ["undergrad", "early-career"],
       format: "one-time",
       mode: "in-person",
@@ -227,7 +228,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Internships and first jobs", "Choosing a major or specialization", "Faith and professional life"],
+      topics: ["internships-and-first-jobs", "choosing-a-major", "faith-and-professional-life"],
       audience: ["high-school", "undergrad"],
       format: "either",
       mode: "either",
@@ -286,7 +287,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Internships and first jobs", "Graduate school applications", "Resume and portfolio review"],
+      topics: ["internships-and-first-jobs", "graduate-school", "resume-and-portfolio"],
       audience: ["undergrad", "grad"],
       format: "one-time",
       mode: "online",
@@ -319,7 +320,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Career change into tech", "Technical interviews", "Internships and first jobs"],
+      topics: ["career-change-into-tech", "technical-interviews", "internships-and-first-jobs"],
       audience: ["undergrad", "early-career"],
       format: "either",
       mode: "online",
@@ -356,7 +357,7 @@ export const professionals: Professional[] = [
     hasBookingLink: true,
     mentorship: {
       status: "active",
-      topics: ["Graduate school applications", "Research and publishing", "Choosing a major or specialization"],
+      topics: ["graduate-school", "research-and-publishing", "choosing-a-major"],
       audience: ["undergrad", "grad"],
       format: "recurring",
       mode: "either",
@@ -412,7 +413,7 @@ export const professionals: Professional[] = [
     hasBookingLink: true,
     mentorship: {
       status: "active",
-      topics: ["Resume and portfolio review", "Starting a company", "Career change into tech", "Negotiating offers"],
+      topics: ["resume-and-portfolio", "starting-a-company", "career-change-into-tech", "negotiating-offers"],
       audience: ["undergrad", "early-career", "mid-career"],
       format: "one-time",
       mode: "online",
@@ -445,7 +446,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Internships and first jobs", "Resume and portfolio review", "Technical interviews"],
+      topics: ["internships-and-first-jobs", "resume-and-portfolio", "technical-interviews"],
       audience: ["high-school", "undergrad"],
       format: "one-time",
       mode: "either",
@@ -482,7 +483,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Graduate school applications", "Research and publishing", "Choosing a major or specialization"],
+      topics: ["graduate-school", "research-and-publishing", "choosing-a-major"],
       audience: ["high-school", "undergrad", "grad"],
       format: "either",
       mode: "in-person",
@@ -518,7 +519,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Internships and first jobs", "Graduate school applications", "Choosing a major or specialization"],
+      topics: ["internships-and-first-jobs", "graduate-school", "choosing-a-major"],
       audience: ["undergrad", "grad", "early-career"],
       format: "either",
       mode: "either",
@@ -551,7 +552,7 @@ export const professionals: Professional[] = [
     hasBookingLink: true,
     mentorship: {
       status: "active",
-      topics: ["Starting a company", "Career change into tech", "Technical interviews"],
+      topics: ["starting-a-company", "career-change-into-tech", "technical-interviews"],
       audience: ["early-career", "mid-career"],
       format: "one-time",
       mode: "online",
@@ -588,7 +589,7 @@ export const professionals: Professional[] = [
     hasBookingLink: false,
     mentorship: {
       status: "active",
-      topics: ["Professional licensure (PE, FE)", "Internships and first jobs", "Leadership and management"],
+      topics: ["professional-licensure", "internships-and-first-jobs", "leadership-and-management"],
       audience: ["undergrad", "early-career"],
       format: "either",
       mode: "either",
@@ -621,7 +622,7 @@ export const professionals: Professional[] = [
     hasBookingLink: true,
     mentorship: {
       status: "active",
-      topics: ["Starting a company"],
+      topics: ["starting-a-company"],
       audience: ["undergrad", "early-career", "mid-career"],
       format: "recurring",
       mode: "online",
@@ -647,7 +648,7 @@ export const students: Student[] = [
     location: "New Orleans, LA",
     goals: "Land a coastal or water-resources internship for summer 2027 and understand the path to a PE license.",
     interests: ["Coastal engineering", "Water resources", "Hydraulics"],
-    topicsNeeded: ["Internships and first jobs", "Professional licensure (PE, FE)"],
+    topicsNeeded: ["internships-and-first-jobs", "professional-licensure"],
     joinedAt: "2026-09-20",
   },
   {
@@ -660,7 +661,7 @@ export const students: Student[] = [
     location: "New Orleans, LA",
     goals: "Decide between a research track and industry, and prepare for software interviews.",
     interests: ["Machine learning", "Backend systems"],
-    topicsNeeded: ["Technical interviews", "Research and publishing"],
+    topicsNeeded: ["technical-interviews", "research-and-publishing"],
     joinedAt: "2026-09-28",
   },
   {
@@ -673,7 +674,7 @@ export const students: Student[] = [
     location: "Kenner, LA",
     goals: "Choose between an MPH, medical school, and a research position after graduation.",
     interests: ["Public health", "Epidemiology"],
-    topicsNeeded: ["Graduate school applications", "Choosing a major or specialization"],
+    topicsNeeded: ["graduate-school", "choosing-a-major"],
     joinedAt: "2026-10-03",
   },
   {
@@ -686,7 +687,7 @@ export const students: Student[] = [
     location: "New Orleans, LA",
     goals: "Pick an engineering major and find out what engineers actually do all day.",
     interests: ["Robotics", "Cars"],
-    topicsNeeded: ["Choosing a major or specialization"],
+    topicsNeeded: ["choosing-a-major"],
     joinedAt: "2026-10-10",
   },
   {
@@ -699,7 +700,7 @@ export const students: Student[] = [
     location: "Metairie, LA",
     goals: "Move from agency web work into a product engineering role and negotiate a better offer.",
     interests: ["Product engineering", "Design systems"],
-    topicsNeeded: ["Negotiating offers", "Technical interviews"],
+    topicsNeeded: ["negotiating-offers", "technical-interviews"],
     joinedAt: "2026-10-14",
   },
 ];
@@ -714,7 +715,7 @@ export const requests: MentorshipRequest[] = [
     id: "req-1001",
     menteeId: "amina-rahman",
     mentorId: "zainab-qureshi",
-    topic: "Resume and portfolio review",
+    topic: "resume-and-portfolio",
     why: "I am applying for summer internships and would love a second pair of eyes on my resume from someone who has reviewed engineering applications.",
     goals: "A resume that reads well to a hiring manager, and advice on what projects to highlight.",
     format: "one-time",
@@ -730,7 +731,7 @@ export const requests: MentorshipRequest[] = [
     id: "req-1002",
     menteeId: "amina-rahman",
     mentorId: "fatima-noor",
-    topic: "Choosing a major or specialization",
+    topic: "choosing-a-major",
     why: "I was considering a public-health minor and wanted to understand how it pairs with engineering.",
     goals: "Decide whether to add the minor before registration closes.",
     format: "one-time",
@@ -747,7 +748,7 @@ export const requests: MentorshipRequest[] = [
     id: "req-1003",
     menteeId: "hamza-ali",
     mentorId: "layla-haddad",
-    topic: "Leadership and management",
+    topic: "leadership-and-management",
     why: "I am leading a student project team for the first time and keep running into conflict I do not know how to handle.",
     goals: "Practical ways to run a small team and give feedback without souring relationships.",
     format: "one-time",
@@ -761,7 +762,7 @@ export const requests: MentorshipRequest[] = [
     id: "req-1004",
     menteeId: "leen-saleh",
     mentorId: "layla-haddad",
-    topic: "Negotiating offers",
+    topic: "negotiating-offers",
     why: "I have an offer from a larger firm and want to negotiate without losing it.",
     goals: "Understand what is reasonable to ask for and how to ask.",
     format: "one-time",
@@ -775,7 +776,7 @@ export const requests: MentorshipRequest[] = [
     id: "req-1005",
     menteeId: "sumaya-osman",
     mentorId: "layla-haddad",
-    topic: "Internships and first jobs",
+    topic: "internships-and-first-jobs",
     why: "I want to understand how engineering consulting firms hire and whether a biology background has any way in.",
     goals: "A realistic view of environmental consulting roles.",
     format: "recurring",
@@ -791,7 +792,7 @@ export const requests: MentorshipRequest[] = [
     id: "req-1006",
     menteeId: "idris-fofana",
     mentorId: "layla-haddad",
-    topic: "Internships and first jobs",
+    topic: "internships-and-first-jobs",
     why: "I want to know what coastal engineers do.",
     goals: "Pick a major.",
     format: "one-time",
@@ -807,7 +808,7 @@ export const requests: MentorshipRequest[] = [
     id: "req-1007",
     menteeId: "hamza-ali",
     mentorId: "yusuf-hassan",
-    topic: "Research and publishing",
+    topic: "research-and-publishing",
     why: "Deciding whether to pursue a thesis option.",
     goals: "Understand what a thesis buys me in industry.",
     format: "recurring",
@@ -822,7 +823,7 @@ export const requests: MentorshipRequest[] = [
     id: "req-1008",
     menteeId: "leen-saleh",
     mentorId: "nadia-el-amin",
-    topic: "Resume and portfolio review",
+    topic: "resume-and-portfolio",
     why: "Moving toward product engineering and want my portfolio to show it.",
     goals: "A portfolio that speaks to product teams.",
     format: "one-time",
@@ -906,3 +907,6 @@ export const fullName = (p: { firstName: string; lastName: string; credentials?:
 
 export const initials = (p: { firstName: string; lastName: string }) =>
   `${p.firstName[0] ?? ""}${p.lastName[0] ?? ""}`.toUpperCase();
+
+/** The display label for a mentorship topic id. */
+export const topicLabel = (id: string) => topicById(id)?.label ?? id;

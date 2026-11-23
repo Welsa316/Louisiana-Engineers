@@ -2,8 +2,8 @@ import { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { Link } from "../../router";
 import { useStore } from "../../state/store";
-import { ActiveFilters, FilterPanel, ProfileCard, SearchBox, useDirectory, type Filters } from "../../components/directory";
-import { Empty, Select, Sheet } from "../../components/ui";
+import { ActiveFilters, FilterPanel, ProfileCard, SearchBox, useDirectory, type Filters } from "../../components/prototype-directory";
+import { Empty, Select, Sheet } from "../../../../network/ui/ui";
 
 /**
  * 2. Professional directory (public) and 10. mentor discovery (mentee) share

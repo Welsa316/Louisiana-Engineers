@@ -1,13 +1,16 @@
 /* ====================================================================
-   MEST professional network prototype
+   MEST Network
    Extends the site's tokens (src/styles.css) with the surfaces, status
    vocabulary and application layouts the network needs. Every class is
    prefixed pn- so nothing collides with the landing page. Dark only, no
    shadows: elevation comes from stepped surfaces and hairlines.
+   Shared by the app (src/network) and the design prototype, which adds
+   the .pn-preview frame with its role switcher bar.
    ==================================================================== */
 
 :root {
-  --pn-bar-h: 2.5rem;
+  /* Height of the prototype's fixed bar; zero in the real app. */
+  --pn-bar-h: 0px;
   --pn-rail-w: 15.5rem;
   --pn-surface-1: var(--color-panel);
   --pn-surface-2: color-mix(in srgb, var(--color-fg) 4%, var(--color-panel));
@@ -38,6 +41,9 @@
 /* ------------------------------------------------------------------ */
 /* Prototype frame: the role switcher sits above everything.           */
 /* ------------------------------------------------------------------ */
+.pn-preview {
+  --pn-bar-h: 2.5rem;
+}
 .pn-bar {
   position: fixed;
   inset: 0 0 auto 0;
@@ -2348,5 +2354,109 @@
   }
   .pn-toast {
     bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* App shell additions (src/network/app/shells.tsx)                     */
+/* ------------------------------------------------------------------ */
+
+/* The session is being read: hold the page's space quietly. */
+.pn-boot {
+  min-height: 60svh;
+}
+
+/* Skip-link target: focusable by script, no ring on the whole page. */
+.pn-root main:focus {
+  outline: none;
+}
+
+.pn-rail-user-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--pn-line-strong);
+  border-radius: 999px;
+  color: var(--color-fg-2);
+}
+
+/* Header controls mounted through headerSlot, on desktop. */
+.pn-main-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin: -0.5rem 0 1rem;
+}
+
+/* The public header's Menu button, shown once the nav links fold away. */
+.pn-header-menu {
+  display: none;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+/* Rows in the phone Menu sheets. */
+.pn-menu-list {
+  display: grid;
+  gap: 0.25rem;
+}
+.pn-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 0.75rem;
+  border-radius: 3px;
+  font-size: 1rem;
+  text-align: left;
+  color: var(--color-fg);
+  transition: background-color var(--dur) var(--ease-out);
+}
+.pn-menu-link svg {
+  color: var(--color-fg-2);
+}
+.pn-menu-link:hover {
+  background: var(--pn-purple-ghost);
+}
+.pn-menu-link[aria-current="page"] {
+  background: var(--pn-purple-dim);
+}
+.pn-menu-link[aria-current="page"] svg {
+  color: var(--color-accent);
+}
+.pn-menu-link:disabled {
+  opacity: 0.6;
+}
+
+@media (max-width: 63.99rem) {
+  .pn-header-menu {
+    display: inline-grid;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .pn-main-head {
+    display: none;
+  }
+  .pn-header-actions {
+    gap: 0.25rem;
+  }
+  .pn-tabbar button {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+    padding: 0.625rem 0.25rem 0.5rem;
+    font-size: 0.6875rem;
+    letter-spacing: 0.02em;
+    color: var(--color-fg-2);
+    min-height: 3.5rem;
+  }
+  .pn-tabbar button[aria-expanded="true"] {
+    color: var(--color-accent);
   }
 }

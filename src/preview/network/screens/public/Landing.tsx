@@ -1,9 +1,9 @@
 import { ArrowUpRight, ArrowRight } from "lucide-react";
 import { Link } from "../../router";
 import { useStore, isListed, isMentorAvailable } from "../../state/store";
-import { disciplines, mentorshipTopics } from "../../data/taxonomy";
-import { ProfileCard } from "../../components/directory";
-import { Star } from "../../components/ui";
+import { disciplines, mentorshipTopics } from "@shared/taxonomy";
+import { ProfileCard } from "../../components/prototype-directory";
+import { Star } from "../../../../network/ui/ui";
 
 /** 1. Professional network landing page. */
 export function Landing() {
