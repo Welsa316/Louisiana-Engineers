@@ -164,8 +164,8 @@ const SECTIONS: DraftSection[] = [
           items={[
             "Your profile disappears from the directory straight away, and your open requests are closed.",
             "You have 14 days to change your mind by signing in and choosing to keep your account.",
-            "After 14 days your profile, details, contact preferences, saved profiles and notifications are deleted, and your sign-in address is erased.",
-            "Requests you took part in stay in the other person's history under the name “Former member”, with everything you wrote removed.",
+            "After 14 days your profile is reduced to the name “Former member” with every personal field erased, your details, contact preferences, saved profiles and notifications are deleted, and your sign-in address is erased.",
+            "Requests you took part in stay in the other person's history under the name “Former member”, with what you wrote in them removed. Reports you filed about a profile are kept as moderation records, without your name.",
           ]}
         />
       </>

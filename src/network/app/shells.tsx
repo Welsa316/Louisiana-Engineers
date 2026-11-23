@@ -8,8 +8,8 @@
  * this file (the notification bell, Task 18).
  */
 
-import { useState, type ReactNode } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { ArrowUpRight, LogOut, Menu as MenuIcon, UserRound } from "lucide-react";
 import type { SessionUser } from "@shared/types/auth";
 import { LogoLetters, LogoMark } from "../../components/Logo";
@@ -19,6 +19,24 @@ import { Empty, Sheet } from "../ui/ui";
 import { navFor, type NavBadges, type NavItem } from "./nav";
 
 /* ---------- Shared pieces ---------- */
+
+/**
+ * After a client-side navigation, move focus to the new page's `main` (it
+ * has tabIndex -1), so keyboard and screen-reader users start at the new
+ * content instead of on the link they used. The first load is left alone,
+ * so the skip link stays the first Tab stop.
+ */
+function useFocusMainOnNavigate(): void {
+  const { pathname } = useLocation();
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    document.getElementById("main")?.focus({ preventScroll: true });
+  }, [pathname]);
+}
 
 function SignOutButton({ className, onDone }: { className: string; onDone?: () => void }) {
   const signOut = useSignOut();
@@ -80,6 +98,7 @@ const FOOTER_NAV = [
 
 export function PublicShell({ children, headerSlot }: { children: ReactNode; headerSlot?: ReactNode }) {
   const { user, status } = useSession();
+  useFocusMainOnNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
   // "Join the network" means nothing to someone already signed in.
@@ -218,6 +237,7 @@ export function AppShell({
   const { user } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
+  useFocusMainOnNavigate();
   // Guards render the shell only for a signed-in member; this keeps the
   // types honest if it is ever mounted elsewhere.
   if (!user) return null;

@@ -104,7 +104,7 @@ export function Join() {
                 who mainly want guidance can choose Student too.
               </p>
               {kindError ? (
-                <p id="join-kind-error" className="field-error t-small">
+                <p id="join-kind-error" role="alert" className="field-error t-small">
                   {kindError}
                 </p>
               ) : null}
@@ -130,7 +130,7 @@ export function Join() {
                 </Link>
               </p>
               {missionError ? (
-                <p id="join-mission-error" className="field-error t-small">
+                <p id="join-mission-error" role="alert" className="field-error t-small">
                   {missionError}
                 </p>
               ) : null}

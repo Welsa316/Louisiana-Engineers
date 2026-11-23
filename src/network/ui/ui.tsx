@@ -12,6 +12,7 @@ import {
   useId,
   useRef,
   type ButtonHTMLAttributes,
+  type ComponentProps,
   type ComponentType,
   type InputHTMLAttributes,
   type ReactNode,
@@ -419,7 +420,8 @@ export function Field({
   );
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
+/** React 19 passes `ref` as a prop, so callers can focus the field. */
+export function Input(props: ComponentProps<"input">) {
   return <input className="field-input" {...props} />;
 }
 

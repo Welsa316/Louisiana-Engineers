@@ -25,7 +25,7 @@ const STEPS: [string, string][] = [
   ],
   [
     "Meet",
-    "On accept, you see how the mentor wants to be reached: a booking link, an email address or LinkedIn. You arrange the meeting directly; MEST stays out of the way.",
+    "On accept, you see how the mentor wants to be reached: a booking link, an email address, LinkedIn, or a phone number if they choose to share it. You arrange the meeting directly; MEST stays out of the way.",
   ],
   [
     "Close the loop",

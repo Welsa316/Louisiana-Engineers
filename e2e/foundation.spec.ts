@@ -42,6 +42,8 @@ test.describe("foundation", () => {
     await expect(page.locator("main h1")).toBeVisible();
     await expect(page).toHaveTitle(/^Directory · MEST Network$/);
     expect(await page.evaluate(() => (window as unknown as { __noReload?: boolean }).__noReload)).toBe(true);
+    // A screen reader or keyboard user is taken to the new page's content.
+    await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("main");
   });
 
   test("an anonymous visitor opening /network/me is sent to sign in", async ({ page }) => {

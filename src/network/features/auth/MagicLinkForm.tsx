@@ -6,7 +6,7 @@
  * /check-email with the address in router state, never in the URL.
  */
 
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { ArrowUpRight } from "lucide-react";
 import { magicLinkSchema } from "@shared/schemas/auth";
@@ -52,6 +52,7 @@ export function MagicLinkForm({
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,6 +60,9 @@ export function MagicLinkForm({
     const parsed = magicLinkSchema.safeParse({ email });
     setFieldError(parsed.success ? null : "Enter a valid email address, like name@example.com.");
     const ready = beforeSend ? beforeSend() : true;
+    // When only the email is wrong, put the cursor back in it. (When the
+    // caller's own fields are missing too, it has already focused the first.)
+    if (!parsed.success && ready) inputRef.current?.focus();
     if (!parsed.success || !ready) return;
 
     setBusy(true);
@@ -81,6 +85,7 @@ export function MagicLinkForm({
           Email
         </label>
         <Input
+          ref={inputRef}
           id={inputId}
           type="email"
           name="email"
@@ -94,7 +99,7 @@ export function MagicLinkForm({
           placeholder="you@example.com"
         />
         {fieldError ? (
-          <p id={errorId} className="field-error t-small">
+          <p id={errorId} role="alert" className="field-error t-small">
             {fieldError}
           </p>
         ) : null}

@@ -90,6 +90,16 @@ test.describe("sign-in", () => {
     await expect(page.getByRole("button", { name: "Email me a sign-in link" })).toBeVisible();
   });
 
+  test("an invalid email is announced and focused", async ({ page }) => {
+    await page.goto("/network/signin");
+    const email = page.getByLabel("Email");
+    await email.fill("not-an-address");
+    await page.getByRole("button", { name: "Email me a sign-in link" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email address" })).toBeVisible();
+    await expect(email).toBeFocused();
+    await expect(email).toHaveAttribute("aria-invalid", "true");
+  });
+
   test("a failed Google sign-in has its own message", async ({ page }) => {
     await page.goto("/network/signin?error=google");
     const alert = page.getByRole("alert");
@@ -155,8 +165,9 @@ test.describe("join", () => {
 
     await page.getByLabel("Email").fill("new-student@example.test");
     await page.getByRole("button", { name: "Email me a sign-in link" }).click();
-    await expect(page.getByText("Choose which describes you.")).toBeVisible();
-    await expect(page.getByText("Confirm the mission statement to join.")).toBeVisible();
+    // Both errors are announced, not just shown.
+    await expect(page.getByRole("alert").filter({ hasText: "Choose which describes you." })).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: "Confirm the mission statement to join." })).toBeVisible();
     expect(sent).toHaveLength(0);
 
     await page.getByText("I am a student or early in my career").click();
