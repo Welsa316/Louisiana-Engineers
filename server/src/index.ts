@@ -121,10 +121,24 @@ async function main(): Promise<void> {
     console.log(`[http] listening on http://${info.address}:${info.port} (${env.NODE_ENV})`);
   });
 
+  // Background jobs: everything registered when JOBS_ENABLED; in development
+  // the email sender always runs, so a local magic link prints to this log.
+  const { registerJobs } = await import("./jobs/index");
+  const { schedulerPlan, startScheduler } = await import("./jobs/scheduler");
+  const plan = schedulerPlan(env);
+  let scheduler: { stop(): Promise<void> } | undefined;
+  if (plan) {
+    registerJobs();
+    scheduler = startScheduler(plan);
+  }
+
   const shutdown = (signal: string) => {
     console.log(`[http] ${signal} received, closing`);
+    // No new job runs start; the one in progress finishes before the pool closes.
+    const jobsStopped = scheduler?.stop() ?? Promise.resolve();
     server.close(() => {
-      closePool()
+      jobsStopped
+        .then(() => closePool())
         .catch((error) => console.error("[db] close failed", error))
         .finally(() => process.exit(0));
     });
