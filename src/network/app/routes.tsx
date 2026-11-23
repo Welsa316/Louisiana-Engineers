@@ -14,6 +14,8 @@
 
 import type { ReactNode } from "react";
 import { Outlet, type RouteObject } from "react-router";
+import { authRoutes } from "../features/auth/routes";
+import { publicRoutes } from "../features/public/routes";
 import { Stub } from "../features/public/Stub";
 import { RequireAdmin, RequireMember, RequireOnboarded } from "./guards";
 import type { NavBadges } from "./nav";
@@ -25,18 +27,12 @@ const appHeaderSlot: ReactNode = null;
 /** Rail and tab bar counts (requests waiting, unread notifications), once their tasks land. */
 const appBadges: NavBadges = {};
 
-/* Task 9 (features/public, features/auth) and Task 15 (directory, profile) replace these. */
+/* Task 9's public and sign-in pages; Task 15 replaces the directory and profile stubs. */
 const publicPages: RouteObject[] = [
-  { index: true, element: <Stub title="MEST Network" kicker="Directory and mentorship" /> },
+  ...publicRoutes,
   { path: "directory", element: <Stub title="Directory" /> },
   { path: "directory/:id", element: <Stub title="Profile" /> },
-  { path: "mentorship", element: <Stub title="Mentorship" /> },
-  { path: "signin", element: <Stub title="Sign in" /> },
-  { path: "check-email", element: <Stub title="Check your email" /> },
-  { path: "join", element: <Stub title="Join the network" /> },
-  { path: "guidelines", element: <Stub title="Community guidelines" /> },
-  { path: "privacy", element: <Stub title="Privacy" /> },
-  { path: "scheduled-for-deletion", element: <Stub title="Account scheduled for deletion" /> },
+  ...authRoutes,
 ];
 
 /* Task 14 (features/onboarding) replaces this. */

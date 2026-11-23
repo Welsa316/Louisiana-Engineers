@@ -443,6 +443,8 @@ All suites; e2e loop end to end with every email printed by the development mail
 
 ### Task 26: Account deletion with grace period and the sweep
 
+> **Handoff from integration (wave 5):** The grace screen (`src/network/features/auth/ScheduledForDeletion.tsx`, built by Task 9) shows no date because `GET /api/auth/me` carries only `hasDeletionScheduled`. Add the `execute_after` date (to the me response or a small endpoint), show "Your account is scheduled for deletion on [date]" per 02 section 8 step 3, and wire its disabled Keep my account button.
+
 > **Handoff from integration (wave 2):** `visibility` is an ordinary owner column, so an owner could set it back to `public` during the grace period. Guard it: while an open `account_deletions` row exists, the owner-guard trigger rejects visibility changes (or the listing rule excludes profiles with an open deletion through a definer helper), with a test.
 
 **Depends on:** Phase 1C complete.

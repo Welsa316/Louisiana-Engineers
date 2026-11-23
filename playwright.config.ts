@@ -30,6 +30,10 @@ export default defineConfig({
       PORT: "8787",
       APP_ORIGIN: origin,
       JOBS_ENABLED: "false",
+      // Specs that send real magic links give each test its own
+      // X-Forwarded-For address, so repeated local runs against one database
+      // do not exhaust the per-IP hourly limit (every request is 127.0.0.1).
+      TRUST_PROXY: "true",
     },
   },
   projects: [
