@@ -116,14 +116,21 @@ export function createAuthRoutes(options: AuthRouteOptions = {}): Hono {
     deleteCookie(c, GOOGLE_STATE_COOKIE, googleCookie);
     c.header("Cache-Control", "no-store");
     // Google reports a cancel or a refusal as `?error=`; nothing is exchanged then.
-    const signIn = c.req.query("error")
-      ? null
-      : await completeGoogleSignIn(
+    let signIn: Awaited<ReturnType<typeof completeGoogleSignIn>> = null;
+    if (!c.req.query("error")) {
+      try {
+        signIn = await completeGoogleSignIn(
           google,
           googleConfig.clientId,
           { code: c.req.query("code"), state: c.req.query("state"), cookie: stateCookie },
           { previousCookie: readSessionCookie(c), userAgent: c.req.header("user-agent") },
         );
+      } catch (error) {
+        // A top-level navigation: send the person back to sign in rather than
+        // show a JSON 500. Log the error code only, never the address.
+        console.error("[auth] google sign-in failed", (error as { code?: string }).code ?? "unknown");
+      }
+    }
     if (!signIn) return c.redirect(GOOGLE_SIGN_IN_FAILED_PATH, 302);
     setSessionCookie(c, signIn.session.value, secure);
     return c.redirect(signIn.redirect, 302);

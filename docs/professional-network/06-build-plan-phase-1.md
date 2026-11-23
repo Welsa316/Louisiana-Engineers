@@ -257,6 +257,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 
 ### Task 11: Profile schema: details, vocabularies, expertise, settings, contact, reviews, saved, dashboard view
 
+> **Handoff from integration (wave 4):** The core seed writes only the columns that exist after 0003. When `profile_in_directory()` becomes the participation check, every seeded professional disappears unless `server/seed/profiles-details.ts` writes `participation` from the prototype (every listed professional includes `directory`); `server/test/seed/seed.test.ts` (14 visible to a visitor) must stay green after this task.
+
 > **Handoff from integration (wave 2):** Migration 0002 ships `profile_in_directory(profile_id uuid)` as a SECURITY DEFINER stub that returns true; the profiles read policies and `profile_access` call it. This task must `CREATE OR REPLACE` its body with `EXISTS (SELECT 1 FROM professional_details d WHERE d.profile_id = $1 AND 'directory' = ANY(d.participation))`, keep it SECURITY DEFINER, and add a test that a professional without `directory` participation is invisible to visitors and members. Also: `write_audit` is not executable by `app_user`, so every audited action must happen inside a definer function; a professional's `bio` is required (enforce in `complete_onboarding` and by a trigger on professional_details or profiles, with a test); `profiles.linkedin_url` is readable through row policies on `profiles`, so the profile and directory endpoints must never select it (Task 13's tests guard this); the prototype's Musa Grant bio is under 120 characters and must be lengthened in the seed.
 
 **Depends on:** Tasks 5, 7 and 10.

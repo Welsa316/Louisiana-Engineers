@@ -1,6 +1,7 @@
 import { resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { registeredJobs, runJobOnce } from "./scheduler";
+import { registerJob, registeredJobs, runJobOnce } from "./scheduler";
+import { sendEmailsJob } from "./send-emails";
 
 /**
  * Registers every background job. Each job lives in its own
@@ -9,7 +10,7 @@ import { registeredJobs, runJobOnce } from "./scheduler";
  * starts what is registered here when `JOBS_ENABLED` is set.
  */
 export function registerJobs(): void {
-  // No jobs yet.
+  registerJob(sendEmailsJob);
 }
 
 /** `npm run job -- <name>` runs one job once, under the same lock as the scheduler. */

@@ -179,6 +179,41 @@ describe("google sign-in", () => {
     expect(await users()).toHaveLength(1);
   });
 
+  it("google_cannot_take_over_an_account_linked_to_another_google_identity", async () => {
+    // A verified address can move between Google accounts (a Workspace domain
+    // changes hands, a non-Gmail address is re-registered). A second subject
+    // reporting the same address must not replace the first link.
+    const existing = await insertUser("owner@example.test", "student");
+    googleAnswers(claimsFor({ email: "owner@example.test", sub: "google-sub-first" }));
+    const first = await startGoogle();
+    const linked = await finishGoogle({ code: "code-a", state: first.state }, first.cookie);
+    expect(linked.headers.get("location")).toBe("/network/me");
+
+    googleAnswers(claimsFor({ email: "owner@example.test", sub: "google-sub-intruder" }));
+    const second = await startGoogle();
+    const res = await finishGoogle({ code: "code-b", state: second.state }, second.cookie);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/network/signin?error=google");
+    expect(cookiePairs(res).get("mest_session") ?? "").toBe("");
+
+    const rows = await users();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe(existing);
+    expect(rows[0].google_sub).toBe("google-sub-first");
+  });
+
+  it("google_secure_state_cookie_over_https", async () => {
+    const https = testApp(
+      new Hono().route(
+        "/auth",
+        createAuthRoutes({ appOrigin: "https://mest.example", google: { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET } }),
+      ),
+    );
+    const res = await https.request("/api/auth/google");
+    const line = res.headers.getSetCookie().find((l) => l.startsWith("mest_google_oauth=")) ?? "";
+    expect(line).toMatch(/;\s*Secure/);
+  });
+
   it("google_creates_an_account_for_a_new_verified_address", async () => {
     googleAnswers(claimsFor({ email: "new@example.test", sub: "google-sub-new" }));
     const start = await startGoogle();

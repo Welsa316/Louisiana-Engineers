@@ -106,18 +106,22 @@ export async function completeGoogleSignIn(
 
   return withSystem(async (db) => {
     const userId = await linkGoogleAccount(db, claims.sub, claims.email);
+    if (!userId) return null;
     return startSession(db, userId, context);
   });
 }
 
 /**
  * The account for a Google subject: the live row already linked to it, else
- * the row with that verified address (which is then linked), else a new row.
- * A deleted account's tombstone gives up the subject rather than being
- * signed back in. The address on a linked row is left alone when the Google
- * address changes; the subject is the stable identity.
+ * the row with that verified address if it has no Google link yet (which is
+ * then linked), else a new row. A row already linked to a different subject
+ * is never re-linked: an address can move between Google accounts, so that
+ * would hand the account to whoever holds the address now; the sign-in fails
+ * instead (null). A deleted account's tombstone gives up the subject rather
+ * than being signed back in. The address on a linked row is left alone when
+ * the Google address changes; the subject is the stable identity.
  */
-async function linkGoogleAccount(db: Db, sub: string, email: string): Promise<string> {
+async function linkGoogleAccount(db: Db, sub: string, email: string): Promise<string | null> {
   // Serialize sign-ins for one subject so two concurrent callbacks cannot both create a row.
   await db.query("SELECT pg_advisory_xact_lock(hashtextextended('google:' || $1, 0))", [sub]);
 
@@ -132,17 +136,18 @@ async function linkGoogleAccount(db: Db, sub: string, email: string): Promise<st
   if (linked) return linked.id;
 
   await db.query("UPDATE users SET google_sub = NULL WHERE google_sub = $1 AND deleted_at IS NOT NULL", [sub]);
-  const user = await db.one<{ id: string }>(
+  const user = await db.maybeOne<{ id: string }>(
     `INSERT INTO users (email, email_verified_at, google_sub, last_sign_in_at)
      VALUES ($1, now(), $2, now())
      ON CONFLICT (email) DO UPDATE
         SET google_sub = EXCLUDED.google_sub,
             last_sign_in_at = now(),
             email_verified_at = coalesce(users.email_verified_at, now())
+      WHERE users.google_sub IS NULL
      RETURNING id`,
     [email, sub],
   );
-  return user.id;
+  return user?.id ?? null;
 }
 
 /** arctic's state and verifier are base64url, so a dot separates them unambiguously. */
