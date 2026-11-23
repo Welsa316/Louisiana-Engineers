@@ -226,6 +226,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 
 ### Task 9: Public screens and the landing header link
 
+> **Handoff from integration (wave 4):** Sign-in failures land on `/network/signin?error=link` (bad, used or expired magic link) or `/network/signin?error=google` (canceled or failed Google sign-in, including an address already linked to a different Google account). Show a distinct plain-language message for each, with an e2e assertion. Task 8 built stub pages and the aggregator `src/network/app/routes.tsx`; export this task's `RouteObject[]` from `features/public/routes.tsx` and `features/auth/routes.tsx` and say in the commit message what to swap in. Run `npx playwright install chromium` once if the browser is missing.
+
 **Depends on:** Task 8.
 
 **Files:** Create `src/network/features/public/{Home,Mentorship,Guidelines,Privacy,routes}.tsx`, `src/network/features/auth/{SignIn,CheckEmail,Join,ScheduledForDeletion,routes}.tsx` (`ScheduledForDeletion` renders the grace screen from `GET /api/auth/me`; its Keep-my-account button is wired in Task 26); Modify `src/content/site.ts` (add `{ label: "Directory", href: "/network/directory" }`), `src/components/Header.tsx` and `src/components/Footer.tsx` (skip hrefs not starting with `#` in the section observer and `aria-current`; render them as plain links); Test `e2e/auth.spec.ts`.
