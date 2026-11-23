@@ -67,7 +67,6 @@ describe("http skeleton", () => {
       "/nothing-here",
       "/preview/professional-network",
       "/networking",
-      "/api/nope",
       "/secret.txt",
       "/index.html",
       "/assets/missing.js",
@@ -80,6 +79,18 @@ describe("http skeleton", () => {
       expect(res.headers.get("content-type"), path).toContain("text/plain");
       expect(await res.text(), path).toBe("Not found");
     }
+  });
+
+  it("unknown_api_paths_are_json_404", async () => {
+    for (const path of ["/api", "/api/nope", "/api/health/extra", "/api/auth/whatever"]) {
+      const res = await app.request(path);
+      expect(res.status, path).toBe(404);
+      expect(res.headers.get("content-type"), path).toContain("application/json");
+      expect(await res.json(), path).toEqual({ code: "not_found" });
+    }
+    const post = await app.request("/api/nope", { method: "POST" });
+    expect(post.status).toBe(404);
+    expect(await post.json()).toEqual({ code: "not_found" });
   });
 
   it("encoded_slashes_cannot_leave_a_static_prefix", async () => {

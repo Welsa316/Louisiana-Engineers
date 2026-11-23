@@ -31,6 +31,15 @@ export function getPool(): Pool {
   return shared;
 }
 
+/**
+ * Replaces the process-wide pool. The test harness points it at the
+ * worktree's test database so `withUser` and `withSystem` reach it; nothing
+ * else calls this.
+ */
+export function setPool(pool: Pool | undefined): void {
+  shared = pool;
+}
+
 export async function closePool(): Promise<void> {
   if (!shared) return;
   const pool = shared;

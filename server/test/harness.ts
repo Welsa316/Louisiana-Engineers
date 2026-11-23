@@ -1,7 +1,9 @@
 import pg from "pg";
 import { env } from "../src/env";
-import { createPool, type Pool, type PoolClient } from "../src/db/pool";
+import { Hono, type Env, type Schema } from "hono";
+import { createPool, setPool, type Pool, type PoolClient } from "../src/db/pool";
 import { runMigrations } from "../src/db/migrate";
+import { apiErrorHandler, apiNotFound } from "../src/http/errors";
 
 /**
  * Test database helpers. Each agent (worktree) gets its own database named
@@ -33,9 +35,14 @@ function testBaseUrl(): string {
   return base;
 }
 
+/** The test pool `withUser` and `withSystem` currently reach. */
+let activePool: Pool | undefined;
+
 /**
  * Drops and recreates the worktree's test database from the maintenance
- * connection, runs every migration, and returns a pool connected to it.
+ * connection, runs every migration, and returns a pool connected to it. The
+ * pool also becomes the process-wide one, so `withUser`, `withSystem` and
+ * every route under test run against this database.
  */
 export async function createTestDb(): Promise<TestDb> {
   const name = testDbName();
@@ -54,12 +61,34 @@ export async function createTestDb(): Promise<TestDb> {
   url.pathname = `/${name}`;
   const pool = createPool(url.toString(), { max: 5 });
   await runMigrations(pool);
+  setPool(pool);
+  activePool = pool;
   return {
     pool,
     url: url.toString(),
     name,
-    close: () => pool.end(),
+    close: async () => {
+      if (activePool === pool) {
+        setPool(undefined);
+        activePool = undefined;
+      }
+      await pool.end();
+    },
   };
+}
+
+/**
+ * A Hono app shaped like the real one around `/api`: the API error handler,
+ * `subApp` mounted at `/api`, and the JSON 404 for unknown API paths. Route
+ * tests mount their own sub-app with it, so they never need the aggregator in
+ * `server/src/routes/index.ts`.
+ */
+export function testApp<E extends Env, S extends Schema, B extends string>(subApp: Hono<E, S, B>): Hono {
+  const app = new Hono();
+  app.onError(apiErrorHandler);
+  app.route("/api", subApp);
+  app.all("/api/*", apiNotFound);
+  return app;
 }
 
 /**
