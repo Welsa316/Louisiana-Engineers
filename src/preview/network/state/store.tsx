@@ -69,7 +69,7 @@ export type Action =
   | { type: "clearToast" }
   | { type: "reset" };
 
-const STORAGE_KEY = "mest-network-prototype-v1";
+const STORAGE_KEY = "mest-network-prototype-v2";
 
 function initialState(): State {
   return {

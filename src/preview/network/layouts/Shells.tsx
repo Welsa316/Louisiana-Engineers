@@ -28,7 +28,7 @@ import { Link, useRouter } from "../router";
 import { useStore } from "../state/store";
 import { fullName, initials } from "../data/mock";
 import type { Role } from "../data/types";
-import { Monogram, Toast } from "../components/ui";
+import { Monogram, Toast } from "../../../network/ui/ui";
 
 const ROLE_LABEL: Record<Role, string> = {
   visitor: "Visitor",

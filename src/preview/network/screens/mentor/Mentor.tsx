@@ -2,11 +2,11 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarPlus, Check, Clock, Pause, Play, X } from "lucide-react";
 import { Link, useRouter } from "../../router";
 import { useStore, activeMenteeCount, daysUntil, isMentorAvailable } from "../../state/store";
-import { audiences, contactMethods, disciplines, disciplineGroups, mentorshipTopics, participationOptions, type AudienceId, type ContactMethodId, type MentorshipTopic, type ParticipationId } from "../../data/taxonomy";
-import { fullName, initials, TODAY } from "../../data/mock";
+import { audiences, contactMethods, disciplines, disciplineGroups, mentorshipTopics, participationOptions, type AudienceId, type ContactMethodId, type ParticipationId } from "@shared/taxonomy";
+import { fullName, initials, TODAY, topicLabel } from "../../data/mock";
 import type { MentorshipRequest, Student } from "../../data/types";
 import { MeetingRow } from "../mentee/Mentee";
-import { Card, Chip, Drawer, Empty, Field, fmtDate, fmtRelative, fmtRelativeLower, Input, Modal, Monogram, Notice, Option, PageHead, Select, Stat, Status, SwitchRow, Tabs, Textarea } from "../../components/ui";
+import { Card, Chip, Drawer, Empty, Field, fmtDate, fmtRelative, fmtRelativeLower, Input, Modal, Monogram, Notice, Option, PageHead, Select, Stat, Status, SwitchRow, Tabs, Textarea } from "../../../../network/ui/ui";
 
 /* ====================================================================
    16. Mentor dashboard
@@ -77,7 +77,7 @@ export function MentorDashboard() {
           <Card title="Your mentorship profile" aside={<Status tone={isMentorAvailable(m, state.requests) ? "active" : paused ? "paused" : "off"} label={isMentorAvailable(m, state.requests) ? "Taking requests" : paused ? "Paused" : "Full"} />}>
             <dl className="pn-dl t-small">
               <dt>Topics</dt>
-              <dd>{m.mentorship?.topics.join(", ")}</dd>
+              <dd>{m.mentorship?.topics.map(topicLabel).join(", ")}</dd>
               <dt>Usually</dt>
               <dd>{m.mentorship?.availability}</dd>
               <dt>Cap</dt>
@@ -122,7 +122,7 @@ function IncomingRow({ r }: { r: MentorshipRequest }) {
         <span className="min-w-0">
           <span className="pn-row-title block truncate">{fullName(s)}</span>
           <span className="pn-row-meta block truncate">
-            {r.topic} · {s.program}
+            {topicLabel(r.topic)} · {s.program}
           </span>
         </span>
         <span className="pn-status" data-tone={days <= 4 ? "pending" : "expired"}>
@@ -179,7 +179,7 @@ export function MentorRequests({ selectedId }: { selectedId?: string }) {
                     <span className="min-w-0">
                       <span className="pn-row-title block truncate">{fullName(s)}</span>
                       <span className="pn-row-meta block truncate">
-                        {r.topic} · {r.status === "pending" ? `${daysUntil(r.expiresAt)} days left` : fmtRelativeLower(r.respondedAt ?? r.createdAt, TODAY)}
+                        {topicLabel(r.topic)} · {r.status === "pending" ? `${daysUntil(r.expiresAt)} days left` : fmtRelativeLower(r.respondedAt ?? r.createdAt, TODAY)}
                       </span>
                     </span>
                     <Status tone={r.status} />
@@ -282,7 +282,7 @@ function RequestDrawer({ r, onClose }: { r?: MentorshipRequest; onClose: () => v
               )}
               <section>
                 <h3 className="pn-kicker pn-kicker-plain mb-3">Asking about</h3>
-                <p className="t-heading">{r.topic}</p>
+                <p className="t-heading">{topicLabel(r.topic)}</p>
                 <p className="t-small text-fg-2 mt-1">
                   {r.format === "one-time" ? "One conversation" : "Recurring"} · {r.mode === "either" ? "online or in person" : r.mode}
                   {r.schedulingNote && ` · ${r.schedulingNote}`}
@@ -364,7 +364,7 @@ export function MentorAvailability() {
   const active = activeMenteeCount(m.id, state.requests);
   const changed = JSON.stringify(draft) !== JSON.stringify(ms);
 
-  const toggleTopic = (t: MentorshipTopic) => setDraft((d) => ({ ...d, topics: d.topics.includes(t) ? d.topics.filter((x) => x !== t) : [...d.topics, t] }));
+  const toggleTopic = (t: string) => setDraft((d) => ({ ...d, topics: d.topics.includes(t) ? d.topics.filter((x) => x !== t) : [...d.topics, t] }));
   const toggleAudience = (a: AudienceId) => setDraft((d) => ({ ...d, audience: d.audience.includes(a) ? d.audience.filter((x) => x !== a) : [...d.audience, a] }));
 
   return (
@@ -411,9 +411,9 @@ export function MentorAvailability() {
               <fieldset className="pn-fieldset">
                 <legend className="t-small">Topics</legend>
                 <div className="pn-chips">
-                  {mentorshipTopics.map((t) => (
+                  {mentorshipTopics.map(({ id: t, label }) => (
                     <Chip key={t} pressed={draft.topics.includes(t)} onClick={() => toggleTopic(t)}>
-                      {t}
+                      {label}
                     </Chip>
                   ))}
                 </div>
@@ -518,7 +518,7 @@ export function MentorMentees({ selectedId }: { selectedId?: string }) {
                       <div className="min-w-0 flex-1">
                         <h3 className="pn-row-title">{fullName(s)}</h3>
                         <p className="pn-row-meta">{s.program}</p>
-                        <p className="t-small mt-3">{r.topic}</p>
+                        <p className="t-small mt-3">{topicLabel(r.topic)}</p>
                         <p className="t-small text-fg-2 mt-1">{next ? `Next: ${fmtDate(next.startsAt)} · ${next.agenda}` : "No meeting scheduled"}</p>
                       </div>
                     </div>
@@ -555,7 +555,7 @@ export function MentorMentees({ selectedId }: { selectedId?: string }) {
                         <Monogram initials={initials(s)} size="sm" student />
                         <span className="min-w-0">
                           <span className="pn-row-title block truncate">{fullName(s)}</span>
-                          <span className="pn-row-meta block truncate">{r.topic}</span>
+                          <span className="pn-row-meta block truncate">{topicLabel(r.topic)}</span>
                         </span>
                         <Status tone="completed" />
                       </button>
@@ -625,7 +625,7 @@ function Relationship({ r }: { r: MentorshipRequest }) {
           </Card>
           <Card title="The request" flush>
             <div className="p-5 grid gap-3">
-              <p className="t-heading">{r.topic}</p>
+              <p className="t-heading">{topicLabel(r.topic)}</p>
               <p className="t-body">{r.why}</p>
               {r.goals && (
                 <p className="t-body text-fg-2">

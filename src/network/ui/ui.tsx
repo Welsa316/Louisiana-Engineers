@@ -1,19 +1,53 @@
 /**
- * Shared building blocks for the network prototype. Each one is small and
- * self-contained so it can be lifted into the real build unchanged.
+ * Shared building blocks for the MEST Network, lifted from the design
+ * prototype. Each one is small, self-contained and router-agnostic: links go
+ * through `UiLink`, which the app binds to React Router and the prototype to
+ * its own hash router.
  */
 
 import {
+  createContext,
+  useContext,
   useEffect,
   useId,
   useRef,
   type ButtonHTMLAttributes,
+  type ComponentType,
   type InputHTMLAttributes,
   type ReactNode,
   type TextareaHTMLAttributes,
 } from "react";
 import { Check, CheckCircle2, ChevronDown, Eye, Lock, Users, X } from "lucide-react";
-import type { RequestStatus } from "../data/types";
+import type { RequestStatus } from "@shared/types/common";
+
+/* ---------- Links ---------- */
+
+export interface UiLinkProps {
+  to: string;
+  className?: string;
+  children: ReactNode;
+}
+
+export type UiLinkComponent = ComponentType<UiLinkProps>;
+
+function PlainLink({ to, className, children }: UiLinkProps) {
+  return (
+    <a href={to} className={className}>
+      {children}
+    </a>
+  );
+}
+
+const UiLinkContext = createContext<UiLinkComponent>(PlainLink);
+
+/** Supplies the router's link component to every `UiLink` below it. */
+export const UiLinkProvider = UiLinkContext.Provider;
+
+/** An in-app link rendered with whatever router the host provides. */
+export function UiLink(props: UiLinkProps) {
+  const Component = useContext(UiLinkContext);
+  return <Component {...props} />;
+}
 
 /* ---------- Eight-pointed star, the network's one ornament ---------- */
 

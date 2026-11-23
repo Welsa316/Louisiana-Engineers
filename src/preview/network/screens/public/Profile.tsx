@@ -2,9 +2,9 @@ import { useState } from "react";
 import { ArrowLeft, ArrowUpRight, Bookmark, BookmarkCheck, Briefcase, CalendarDays, Flag, Globe, GraduationCap, Lock, MapPin, ShieldCheck } from "lucide-react";
 import { Link, useRouter } from "../../router";
 import { useStore, isMentorAvailable, activeMenteeCount, openRequestCount, MAX_OPEN_REQUESTS } from "../../state/store";
-import { audiences, contactMethods, disciplineById } from "../../data/taxonomy";
-import { fullName, initials } from "../../data/mock";
-import { Card, Empty, Modal, Monogram, Notice, Status, Textarea } from "../../components/ui";
+import { audiences, contactMethods, disciplineById } from "@shared/taxonomy";
+import { fullName, initials, topicLabel } from "../../data/mock";
+import { Card, Empty, Modal, Monogram, Notice, Status, Textarea } from "../../../../network/ui/ui";
 
 /**
  * 3. Detailed professional profile (public) and 11. detailed mentor profile
@@ -216,7 +216,7 @@ export function Profile({ id, back }: { id: string; back: { to: string; label: s
                     <span className="text-accent" aria-hidden="true">
                       ·
                     </span>
-                    {t}
+                    {topicLabel(t)}
                   </li>
                 ))}
               </ul>

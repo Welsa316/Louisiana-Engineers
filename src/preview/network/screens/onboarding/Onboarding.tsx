@@ -11,10 +11,9 @@ import {
   participationOptions,
   type AudienceId,
   type ContactMethodId,
-  type MentorshipTopic,
   type ParticipationId,
-} from "../../data/taxonomy";
-import { Card, Chip, Field, Input, Notice, Option, PrivacyMark, Select, Steps, SwitchRow, Textarea } from "../../components/ui";
+} from "@shared/taxonomy";
+import { Card, Chip, Field, Input, Notice, Option, PrivacyMark, Select, Steps, SwitchRow, Textarea } from "../../../../network/ui/ui";
 
 /* ====================================================================
    5. Student / mentee onboarding
@@ -35,7 +34,7 @@ export function StudentOnboarding() {
     institution: "",
     location: "New Orleans, LA",
     goals: "",
-    topics: [] as MentorshipTopic[],
+    topics: [] as string[],
     interests: "",
     showToMentors: true,
     emailNotifications: true,
@@ -104,9 +103,9 @@ export function StudentOnboarding() {
                 <fieldset className="pn-fieldset">
                   <legend className="t-small">Topics you want help with</legend>
                   <div className="pn-chips">
-                    {mentorshipTopics.map((t) => (
+                    {mentorshipTopics.map(({ id: t, label }) => (
                       <Chip key={t} pressed={form.topics.includes(t)} onClick={() => set("topics", form.topics.includes(t) ? form.topics.filter((x) => x !== t) : [...form.topics, t])}>
-                        {t}
+                        {label}
                       </Chip>
                     ))}
                   </div>
@@ -240,7 +239,7 @@ interface ProForm {
   education: string;
   interests: string;
   participation: ParticipationId[];
-  mentorTopics: MentorshipTopic[];
+  mentorTopics: string[];
   audience: AudienceId[];
   format: "one-time" | "recurring" | "either";
   mode: "online" | "in-person" | "either";
@@ -449,9 +448,9 @@ export function ProfessionalOnboarding() {
                 <fieldset className="pn-fieldset">
                   <legend className="t-small">Topics you will talk about</legend>
                   <div className="pn-chips">
-                    {mentorshipTopics.map((t) => (
+                    {mentorshipTopics.map(({ id: t, label }) => (
                       <Chip key={t} pressed={form.mentorTopics.includes(t)} onClick={() => toggleIn("mentorTopics", t)}>
-                        {t}
+                        {label}
                       </Chip>
                     ))}
                   </div>

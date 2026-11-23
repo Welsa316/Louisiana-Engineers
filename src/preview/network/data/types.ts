@@ -1,4 +1,7 @@
-import type { AudienceId, ContactMethodId, MentorshipTopic, ParticipationId } from "./taxonomy";
+import type { AudienceId, ContactMethodId, ParticipationId } from "@shared/taxonomy";
+
+/** A mentorship topic id from @shared/taxonomy (labels come from `topicLabel`). */
+export type TopicId = string;
 
 /** Who can see a professional's directory entry. */
 export type Visibility = "public" | "members" | "hidden";
@@ -16,7 +19,7 @@ export interface Education {
 
 export interface MentorshipSettings {
   status: MentorStatus;
-  topics: MentorshipTopic[];
+  topics: TopicId[];
   audience: AudienceId[];
   /** One-time guidance, recurring mentoring, or either. */
   format: "one-time" | "recurring" | "either";
@@ -67,7 +70,7 @@ export interface Student {
   location: string;
   goals: string;
   interests: string[];
-  topicsNeeded: MentorshipTopic[];
+  topicsNeeded: TopicId[];
   joinedAt: string;
 }
 
@@ -77,7 +80,7 @@ export interface MentorshipRequest {
   id: string;
   menteeId: string;
   mentorId: string;
-  topic: MentorshipTopic;
+  topic: TopicId;
   why: string;
   goals: string;
   format: "one-time" | "recurring";

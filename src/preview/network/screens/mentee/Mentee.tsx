@@ -2,11 +2,11 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Bookmark, CalendarDays, Check, Clock, ExternalLink, Lock, Mail, MapPin, Video } from "lucide-react";
 import { Link } from "../../router";
 import { useStore, isMentorAvailable, isListed, openRequestCount, MAX_OPEN_REQUESTS, daysUntil, newId } from "../../state/store";
-import { contactMethods, mentorshipTopics, type MentorshipTopic } from "../../data/taxonomy";
-import { fullName, initials, TODAY } from "../../data/mock";
+import { contactMethods, mentorshipTopics } from "@shared/taxonomy";
+import { fullName, initials, TODAY, topicLabel } from "../../data/mock";
 import type { MentorshipRequest, RequestStatus } from "../../data/types";
-import { ProfileCard } from "../../components/directory";
-import { Card, Empty, Field, fmtDate, fmtDateTime, fmtDayMonth, fmtRelative, fmtRelativeLower, Input, Modal, Monogram, Notice, Option, PageHead, Stat, Status, Steps, SwitchRow, Tabs, Textarea } from "../../components/ui";
+import { ProfileCard } from "../../components/prototype-directory";
+import { Card, Empty, Field, fmtDate, fmtDateTime, fmtDayMonth, fmtRelative, fmtRelativeLower, Input, Modal, Monogram, Notice, Option, PageHead, Stat, Status, Steps, SwitchRow, Tabs, Textarea } from "../../../../network/ui/ui";
 
 /* ====================================================================
    9. Mentee dashboard
@@ -197,7 +197,7 @@ function RequestList({ requests, empty }: { requests: MentorshipRequest[]; empty
               <span className="min-w-0">
                 <span className="pn-row-title block truncate">{fullName(p)}</span>
                 <span className="pn-row-meta block truncate">
-                  {r.topic} · {r.status === "pending" ? `expires in ${daysUntil(r.expiresAt)} days` : `${fmtRelativeLower(r.respondedAt ?? r.createdAt, TODAY)}`}
+                  {topicLabel(r.topic)} · {r.status === "pending" ? `expires in ${daysUntil(r.expiresAt)} days` : `${fmtRelativeLower(r.respondedAt ?? r.createdAt, TODAY)}`}
                 </span>
               </span>
               <Status tone={r.status} />
@@ -221,7 +221,7 @@ export function RequestForm({ mentorId }: { mentorId: string }) {
   const [step, setStep] = useState(0);
   const [sentId, setSentId] = useState<string | null>(null);
   const [form, setForm] = useState({
-    topic: "" as MentorshipTopic | "",
+    topic: "",
     why: "",
     goals: "",
     format: "one-time" as "one-time" | "recurring",
@@ -303,7 +303,7 @@ export function RequestForm({ mentorId }: { mentorId: string }) {
       request: {
         menteeId: me.mentee.id,
         mentorId: p.id,
-        topic: form.topic as MentorshipTopic,
+        topic: form.topic,
         why: form.why.trim(),
         goals: form.goals.trim(),
         format: form.format,
@@ -331,7 +331,7 @@ export function RequestForm({ mentorId }: { mentorId: string }) {
             <p className="pn-wizard-lead">These are the topics {p.firstName} offered. Pick the closest one.</p>
             <div className="pn-wizard-body pn-options" role="radiogroup">
               {p.mentorship.topics.map((t) => (
-                <Option key={t} name="topic" checked={form.topic === t} title={t} onClick={() => set("topic", t)} />
+                <Option key={t} name="topic" checked={form.topic === t} title={topicLabel(t)} onClick={() => set("topic", t)} />
               ))}
             </div>
           </>
@@ -392,7 +392,7 @@ export function RequestForm({ mentorId }: { mentorId: string }) {
                   <dt>To</dt>
                   <dd>{fullName(p, true)}</dd>
                   <dt>Topic</dt>
-                  <dd>{form.topic}</dd>
+                  <dd>{topicLabel(form.topic)}</dd>
                   <dt>Why</dt>
                   <dd>{form.why}</dd>
                   {form.goals && (
@@ -529,7 +529,7 @@ export function MenteeRequestDetail({ id }: { id: string }) {
             <Status tone={r.status} pill />
             <h1 className="mt-3">{fullName(p, true)}</h1>
             <p>
-              {r.topic} · sent {fmtRelativeLower(r.createdAt, TODAY)}
+              {topicLabel(r.topic)} · sent {fmtRelativeLower(r.createdAt, TODAY)}
               {r.status === "pending" && ` · expires in ${daysUntil(r.expiresAt)} days`}
             </p>
           </div>
@@ -754,7 +754,7 @@ export function MenteeSaved() {
 
 export function MenteeSettings() {
   const { me, state, dispatch } = useStore();
-  const [topics, setTopics] = useState<MentorshipTopic[]>(me.mentee.topicsNeeded);
+  const [topics, setTopics] = useState<string[]>(me.mentee.topicsNeeded);
   const [goals, setGoals] = useState(me.mentee.goals);
   return (
     <>
@@ -778,9 +778,9 @@ export function MenteeSettings() {
               <fieldset className="pn-fieldset">
                 <legend className="t-small">Topics you want help with</legend>
                 <div className="pn-chips">
-                  {mentorshipTopics.map((t) => (
+                  {mentorshipTopics.map(({ id: t, label }) => (
                     <button key={t} type="button" className="pn-chip" aria-pressed={topics.includes(t)} onClick={() => setTopics((ts) => (ts.includes(t) ? ts.filter((x) => x !== t) : [...ts, t]))}>
-                      {t}
+                      {label}
                     </button>
                   ))}
                 </div>
