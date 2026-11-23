@@ -84,7 +84,7 @@ CREATE FUNCTION enqueue_email(
   notification_id uuid DEFAULT NULL
 ) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   new_id uuid;
@@ -131,7 +131,7 @@ CREATE FUNCTION create_notification(
   subject_id uuid DEFAULT NULL
 ) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   new_id uuid;

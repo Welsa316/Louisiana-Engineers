@@ -18,7 +18,7 @@ CREATE TYPE approval_state AS ENUM ('pending', 'approved', 'declined');
 
 CREATE FUNCTION set_updated_at() RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   NEW.updated_at := now();
@@ -33,7 +33,7 @@ $$;
 -- SECURITY DEFINER: it must see the caller's `current_user`.
 CREATE FUNCTION acting_as_table_owner(rel regclass) RETURNS boolean
 LANGUAGE sql STABLE
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT current_user = (SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid = rel)
 $$;
@@ -146,7 +146,7 @@ CREATE TRIGGER profiles_set_updated_at BEFORE UPDATE ON profiles
 -- that only the functions in section 4.5 may change.
 CREATE FUNCTION profiles_guard_protected_columns() RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF acting_as_table_owner(TG_RELID) THEN
@@ -198,7 +198,7 @@ CREATE INDEX audit_log_created_at_idx ON audit_log (created_at);
 -- Append-only for everyone, the table owner included.
 CREATE FUNCTION audit_log_append_only() RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   RAISE EXCEPTION 'mest.audit_append_only' USING ERRCODE = '42501';
@@ -233,7 +233,7 @@ CREATE INDEX account_deletions_due_idx ON account_deletions (execute_after)
 
 CREATE FUNCTION is_member() RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT EXISTS (
     SELECT 1
@@ -253,9 +253,11 @@ $$;
 
 CREATE FUNCTION is_admin() RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
-  SELECT EXISTS (
+  -- An administrator is first a member: suspension, a pending deletion or
+  -- an unverified address ends admin rights too.
+  SELECT is_member() AND EXISTS (
     SELECT 1 FROM admin_roles WHERE profile_id = app_uid() AND revoked_at IS NULL
   )
 $$;
@@ -267,7 +269,7 @@ $$;
 -- details table's own policy). Until then every profile participates.
 CREATE FUNCTION profile_in_directory(profile_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT profile_id IS NOT NULL
 $$;
@@ -278,7 +280,7 @@ $$;
 -- SELECT policies below; Task 19 adds the counterparty case to both.
 CREATE FUNCTION profile_access(id uuid) RETURNS text
 LANGUAGE plpgsql STABLE SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   p profiles%ROWTYPE;
@@ -313,7 +315,7 @@ $$;
 -- and request text cannot reach the log by mistake.
 CREATE FUNCTION audit_strip_private(detail jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   CASE jsonb_typeof(detail)
@@ -343,7 +345,7 @@ $$;
 CREATE FUNCTION write_audit(action text, subject_type text, subject_id uuid, detail jsonb DEFAULT '{}')
 RETURNS bigint
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   new_id bigint;
@@ -362,7 +364,7 @@ $$;
 
 CREATE FUNCTION config_is_int_between(value jsonb, low int, high int) RETURNS boolean
 LANGUAGE sql IMMUTABLE
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT jsonb_typeof(value) = 'number'
      AND value::numeric = trunc(value::numeric)
@@ -372,7 +374,7 @@ $$;
 -- Validates per key (ranges in section 4.3), writes, audits `config.updated`.
 CREATE FUNCTION admin_update_config(key text, value jsonb) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   previous jsonb;
@@ -469,6 +471,15 @@ REVOKE ALL ON users, sessions, auth_tokens, job_runs FROM app_user;
 -- owner but still see the caller's app.user_id) and from system jobs.
 REVOKE EXECUTE ON FUNCTION write_audit(text, text, uuid, jsonb) FROM PUBLIC, app_user;
 REVOKE INSERT, DELETE ON profiles FROM app_user;
+-- linkedin_url leaves only through release_contact (a definer function), so
+-- requests get every column but that one. A later migration that adds a
+-- profiles column must grant SELECT on it explicitly.
+REVOKE SELECT ON profiles FROM app_user;
+GRANT SELECT (
+  id, first_name, last_name, credentials, kind, region, location, bio, website_url,
+  visibility, approval_state, mission_accepted_at, admin_hidden_at, last_active_at,
+  anonymized_at, search_tsv, created_at, updated_at
+) ON profiles TO app_user;
 REVOKE INSERT, UPDATE, DELETE ON config, admin_roles, audit_log, account_deletions FROM app_user;
 
 -- Row-level security ----------------------------------------------------------
@@ -512,8 +523,10 @@ CREATE POLICY profiles_owner_read ON profiles FOR SELECT TO app_user USING (id =
 CREATE POLICY profiles_admin_read ON profiles FOR SELECT TO app_user USING (is_admin());
 
 -- Owner and admin updates; the guard trigger keeps the protected columns out of reach.
+-- Only a member in good standing edits their profile: a member with a
+-- deletion open (hidden for the grace period) cannot re-list themselves.
 CREATE POLICY profiles_owner_update ON profiles FOR UPDATE TO app_user
-  USING (id = app_uid()) WITH CHECK (id = app_uid());
+  USING (id = app_uid() AND is_member()) WITH CHECK (id = app_uid() AND is_member());
 CREATE POLICY profiles_admin_update ON profiles FOR UPDATE TO app_user
   USING (is_admin()) WITH CHECK (is_admin());
 

@@ -1,7 +1,7 @@
 import pg from "pg";
 import { env } from "../src/env";
 import { Hono, type Env, type Schema } from "hono";
-import { createPool, setPool, type Pool, type PoolClient } from "../src/db/pool";
+import { createPool, requestUrlFor, setPool, setRequestPool, type Pool, type PoolClient } from "../src/db/pool";
 import { runMigrations } from "../src/db/migrate";
 import { apiErrorHandler, apiNotFound } from "../src/http/errors";
 
@@ -20,6 +20,8 @@ export const MIGRATION_SEEDED_TABLES: string[] = ["schema_migrations", "config"]
 
 export interface TestDb {
   pool: Pool;
+  /** Logs in as mest_request, as the API's request pool does. */
+  requestPool: Pool;
   url: string;
   name: string;
   close(): Promise<void>;
@@ -37,6 +39,9 @@ function testBaseUrl(): string {
 
 /** The test pool `withUser` and `withSystem` currently reach. */
 let activePool: Pool | undefined;
+
+/** Each owner pool's matching request pool, so `asUser(db.pool, ...)` logs in as mest_request. */
+const requestPools = new WeakMap<Pool, Pool>();
 
 /**
  * Drops and recreates the worktree's test database from the maintenance
@@ -61,18 +66,23 @@ export async function createTestDb(): Promise<TestDb> {
   url.pathname = `/${name}`;
   const pool = createPool(url.toString(), { max: 5 });
   await runMigrations(pool);
+  const requestPool = createPool(requestUrlFor(url.toString()), { max: 5 });
+  requestPools.set(pool, requestPool);
   setPool(pool);
+  setRequestPool(requestPool);
   activePool = pool;
   return {
     pool,
+    requestPool,
     url: url.toString(),
     name,
     close: async () => {
       if (activePool === pool) {
         setPool(undefined);
+        setRequestPool(undefined);
         activePool = undefined;
       }
-      await pool.end();
+      await Promise.all([pool.end(), requestPool.end()]);
     },
   };
 }
@@ -101,7 +111,9 @@ export async function asUser<T>(
   userId: string | null,
   fn: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
-  const client = await pool.connect();
+  // Log in as mest_request, as the API does; an owner pool maps to its
+  // request pool, so a RESET ROLE in `fn` cannot reach the owner.
+  const client = await (requestPools.get(pool) ?? pool).connect();
   try {
     await client.query("BEGIN");
     try {

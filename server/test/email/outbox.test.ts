@@ -328,6 +328,25 @@ describe("outbox sender", () => {
       log.mockRestore();
     }
 
+    // In test mode (CI, Playwright) nothing is printed: test runs read links
+    // from the test-only dev-last-link route, and CI logs must not carry
+    // working sign-in links or addresses.
+    const quiet = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await withSystem((tx) =>
+        tx.query("SELECT enqueue_email('ci@example.test', 'magic-link', $1::jsonb)", [
+          JSON.stringify({ link: "http://127.0.0.1:8787/api/auth/callback?token=ci-token" }),
+        ]),
+      );
+      const ci = await withSystem((tx) => sendOutboxBatch(tx, 50, createLogMailer("test")));
+      expect(ci).toEqual({ sent: 1, failed: 0, gaveUp: 0 });
+      const printed = quiet.mock.calls.map((args) => args.join(" ")).join("\n");
+      expect(printed).not.toContain("ci-token");
+      expect(printed).not.toContain("ci@example.test");
+    } finally {
+      quiet.mockRestore();
+    }
+
     // In production, a missing key is a failure, never a printed sign-in link.
     await withSystem((tx) => tx.query("SELECT enqueue_email('prod@example.test', 'magic-link', '{\"link\":\"x\"}')"));
     const prod = await withSystem((tx) => sendOutboxBatch(tx, 50, createLogMailer("production")));

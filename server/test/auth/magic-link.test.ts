@@ -250,6 +250,17 @@ describe("magic link", () => {
     expect((await requestLink("fresh@example.test", "192.0.2.98")).status).toBe(429);
   });
 
+  it("concurrent_requests_from_one_ip_respect_the_ip_limit", async () => {
+    // Different addresses take different address locks, so without an IP
+    // lock all of these would read the same count and slip through.
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, i) => requestLink(`burst${i}@example.test`, "198.51.100.77")),
+    );
+    const statuses = results.map((res) => res.status).sort();
+    expect(statuses.filter((status) => status === 202)).toHaveLength(5);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(3);
+  });
+
   it("spoofed_forwarded_for_entries_cannot_dodge_the_ip_limit", async () => {
     // A client can prepend anything to X-Forwarded-For; the trusted proxy
     // appends the real peer address last. Rotating the leading entries must

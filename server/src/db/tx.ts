@@ -1,5 +1,5 @@
 import type pg from "pg";
-import { getPool, type PoolClient } from "./pool";
+import { getPool, getRequestPool, type Pool, type PoolClient } from "./pool";
 
 /**
  * One transaction's connection. Services receive a `Db`, never a pool, so
@@ -44,8 +44,12 @@ export function wrapClient(client: PoolClient): Db {
  * A connection whose rollback fails is destroyed rather than returned to the
  * pool, so a broken session can never serve the next request.
  */
-async function transaction<T>(setup: (client: PoolClient) => Promise<void>, fn: (db: Db) => Promise<T>): Promise<T> {
-  const client = await getPool().connect();
+async function transaction<T>(
+  pool: Pool,
+  setup: (client: PoolClient) => Promise<void>,
+  fn: (db: Db) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
   let broken: Error | undefined;
   try {
     try {
@@ -81,7 +85,9 @@ async function transaction<T>(setup: (client: PoolClient) => Promise<void>, fn: 
  * with the COMMIT or ROLLBACK.
  */
 export function withUser<T>(userId: string | null, fn: (db: Db) => Promise<T>): Promise<T> {
-  return transaction(async (client) => {
+  // The request pool logs in as mest_request, so a RESET ROLE inside `fn`
+  // cannot leave app_user's rights.
+  return transaction(getRequestPool(), async (client) => {
     await client.query("SET LOCAL ROLE app_user");
     await client.query("SELECT set_config('app.user_id', $1, true)", [userId ?? ""]);
   }, fn);
@@ -93,5 +99,5 @@ export function withUser<T>(userId: string | null, fn: (db: Db) => Promise<T>): 
  * (`server/src/auth/*`), the seed and the `admin-grant` CLI.
  */
 export function withSystem<T>(fn: (db: Db) => Promise<T>): Promise<T> {
-  return transaction(async () => {}, fn);
+  return transaction(getPool(), async () => {}, fn);
 }

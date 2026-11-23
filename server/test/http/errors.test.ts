@@ -126,3 +126,19 @@ describe("http errors and validation", () => {
     expect(await wrongMethod.json()).toEqual({ code: "not_found" });
   });
 });
+
+describe("error log redaction", () => {
+  it("safe_error_summary_drops_postgres_detail_values", async () => {
+    const { safeErrorSummary } = await import("../../src/http/errors");
+    const pgError = Object.assign(new Error('duplicate key value violates unique constraint "users_email_key"'), {
+      code: "23505",
+      constraint: "users_email_key",
+      table: "users",
+      detail: "Key (email)=(layla@example.test) already exists.",
+      where: "SQL statement INSERT INTO users VALUES ('layla@example.test')",
+    });
+    const summary = safeErrorSummary(pgError);
+    expect(summary).toMatchObject({ code: "23505", constraint: "users_email_key", table: "users" });
+    expect(JSON.stringify(summary)).not.toContain("layla@example.test");
+  });
+});

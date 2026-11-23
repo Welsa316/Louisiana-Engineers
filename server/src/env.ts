@@ -29,6 +29,9 @@ const optionalString = z
 const schema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   DATABASE_URL_TEST: optionalString,
+  // The request pool's connection (role mest_request). Required in production;
+  // locally it is derived from DATABASE_URL with the user swapped.
+  REQUEST_DATABASE_URL: optionalString,
   APP_ORIGIN: z.string().url("APP_ORIGIN must be a URL such as http://127.0.0.1:8787"),
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
   RESEND_API_KEY: optionalString,

@@ -73,7 +73,25 @@ export const apiErrorHandler: ErrorHandler = (error, c) => {
 };
 
 function logUnhandled(c: Context, error: unknown): void {
-  console.error(`[http] ${c.req.method} ${c.req.path} failed`, error);
+  console.error(`[http] ${c.req.method} ${c.req.path} failed`, safeErrorSummary(error));
+}
+
+/**
+ * What an error log may carry. A Postgres error's `detail` and `where` can
+ * quote row values (`Key (email)=(...)`), so only the code, constraint,
+ * message and stack are kept.
+ */
+export function safeErrorSummary(error: unknown): Record<string, unknown> {
+  if (!(error instanceof Error)) return { error: typeof error };
+  const pg = error as Error & { code?: string; constraint?: string; table?: string };
+  return {
+    name: error.name,
+    message: error.message,
+    ...(pg.code ? { code: pg.code } : {}),
+    ...(pg.constraint ? { constraint: pg.constraint } : {}),
+    ...(pg.table ? { table: pg.table } : {}),
+    stack: error.stack,
+  };
 }
 
 /** Unknown paths under `/api` answer JSON, unlike the rest of the site. */

@@ -35,7 +35,7 @@ The planning phase produced the docs above and a frontend-only prototype at `/pr
 - Node 22 or newer; dependencies pinned to exact versions; every dependency the whole plan needs is installed in Task 2 so no later task edits `package.json` or the lockfile.
 - No passwords stored. Sign-in is magic link or Google only.
 - The account email lives only in `users`; no other table, view or list endpoint carries it.
-- Every API request runs inside `withUser`: `BEGIN; SET LOCAL ROLE app_user; set_config('app.user_id', ...)`. `withSystem` (table owner, bypasses RLS) is allowed only in: jobs (`server/src/jobs/*`), the pre-identity auth module (`server/src/auth/*`: token consumption, session lookup, user creation, rate-limit counts), the seed and the `admin-grant` CLI. Nothing else.
+- Every API request runs inside `withUser`: `BEGIN; SET LOCAL ROLE app_user; set_config('app.user_id', ...)` on the request pool, which logs in as `mest_request` (never the owner), so `RESET ROLE` cannot escape. Every `SECURITY DEFINER` function declares `SET search_path = public, pg_temp` (a test fails otherwise). `profiles` grants SELECT per column with `linkedin_url` withheld; a migration that adds a `profiles` column must grant SELECT on it explicitly. `withSystem` (table owner, bypasses RLS) is allowed only in: jobs (`server/src/jobs/*`), the pre-identity auth module (`server/src/auth/*`: token consumption, session lookup, user creation, rate-limit counts), the seed and the `admin-grant` CLI. Nothing else.
 - Every status transition and cross-user write is one `SECURITY DEFINER` SQL function with `SET search_path = public` whose first statement checks the caller; routes, services and jobs never `UPDATE` a status column themselves. Owner-guard triggers pass when `current_user` is the table owner (which is how definer functions get through).
 - Every task lists `Depends on:`; the workflow orders tasks by it and runs the rest in parallel.
 - Error responses: `401 { code: 'unauthenticated' }` from `requireUser`; `403 { code: 'not_member' }` from `requireMember`; `403 { code: 'not_admin' }` from `requireAdmin`; domain errors `409 { code }` from the `mest.<code>` SQL exceptions; validation `400 { code: 'validation', issues }`.
@@ -278,6 +278,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 
 ### Task 12: Profile services and routes
 
+> **Handoff from the Phase 1A audit:** requests cannot select `profiles.linkedin_url` (column grant withheld). `GET /api/me/profile` returns the owner's own LinkedIn link through a definer function (for example `my_profile_private()` returning `linkedin_url` for `app_uid()`), with a test that a visitor and another member still get permission denied on the column. A member with an open deletion can no longer update their profile at all (`profiles_owner_update` requires `is_member()`).
+
 **Depends on:** Task 11 (parallel with Task 13).
 
 **Files:** Create `server/src/services/profiles.ts`, `server/src/routes/me.ts`; Test `server/test/services/profiles.test.ts`.
@@ -453,6 +455,8 @@ All suites; e2e loop end to end with every email printed by the development mail
 
 ### Task 27: Data export
 
+> **Handoff from the Phase 1A audit:** `audit_log` is administrator-read only, and routes may not use `withSystem`. Add a definer function `my_audit_entries()` returning the caller's rows (`subject_id = app_uid()`, `detail` already stripped), granted to `app_user`, and use it for the export's audit section, with a test that another member's entries never appear.
+
 **Depends on:** Phase 1C complete (parallel with Task 26).
 
 **Files:** Create `server/src/services/export.ts`, `server/src/routes/export.ts` (`GET /api/me/export`, JSON attachment: profile, settings, requests in both directions with the counterparty as a display name, relationships, notifications, audit entries about the caller); Test `server/test/services/export.test.ts` (`export_contains_own_data_and_only_display_names_for_others`).
@@ -470,6 +474,8 @@ All suites; e2e loop end to end with every email printed by the development mail
 - [ ] **Step 3:** Commit: `Pass the accessibility and overflow checks`.
 
 ### Task 29: Runbook, deployment files, prototype removal
+
+> **Handoff from the Phase 1A audit:** The runbook must cover creating the request login: `ALTER ROLE mest_request PASSWORD '<generated>'` on the Railway database and setting `REQUEST_DATABASE_URL` (same host and database, user `mest_request`); the server refuses to start in production without it.
 
 > **Handoff from integration (wave 3):** The runbook must tell the operator to confirm, on the live Railway service, how many proxies append to `X-Forwarded-For` (send a request with a fake leading entry and read the stored `auth_tokens.ip`), and set `TRUST_PROXY=true` and `TRUST_PROXY_HOPS` to match. The per-IP magic-link limit depends on it.
 

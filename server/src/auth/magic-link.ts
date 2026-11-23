@@ -34,8 +34,12 @@ export function callbackLink(appOrigin: string, token: string): string {
  */
 export async function requestMagicLink(input: MagicLinkRequest): Promise<MagicLinkResult> {
   return withSystem(async (db) => {
-    // Serialize requests for one address so concurrent sends cannot both
-    // slip under the limit.
+    // Serialize requests for one IP, then for one address, so concurrent
+    // sends cannot all read the same count and slip under either limit.
+    // Always IP first, then address: one fixed order means no deadlock.
+    if (input.ip) {
+      await db.query("SELECT pg_advisory_xact_lock(hashtextextended('magic-link-ip:' || $1, 0))", [input.ip]);
+    }
     await db.query("SELECT pg_advisory_xact_lock(hashtextextended('magic-link:' || lower($1), 0))", [input.email]);
 
     const { limit } = await db.one<{ limit: number }>(

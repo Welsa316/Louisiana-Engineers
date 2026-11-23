@@ -2,6 +2,7 @@ import { withSystem } from "../db/tx";
 import { MAX_ATTEMPTS, recordOutboxFailure, sendOutboxRow } from "../email/outbox";
 import { defaultMailer, type Mailer } from "../email/resend";
 import type { Job } from "./scheduler";
+import { safeErrorSummary } from "../http/errors";
 
 export interface SendEmailsResult {
   sent: number;
@@ -49,7 +50,7 @@ export function createSendEmailsJob(options: SendEmailsOptions = {}): Job {
           totals.failed += result.failed;
           totals.gaveUp += result.gaveUp;
         } catch (error) {
-          console.error(`[jobs] send-emails: outbox row ${id} failed`, error);
+          console.error(`[jobs] send-emails: outbox row ${id} failed`, safeErrorSummary(error));
           totals.errored += 1;
           // If even this fails the database is unreachable: stop the run and
           // let the scheduler retry on the next interval.

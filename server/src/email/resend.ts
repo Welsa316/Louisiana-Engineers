@@ -37,14 +37,18 @@ export function createResendMailer(apiKey: string, from: string): Mailer {
 }
 
 /**
- * Prints instead of sending. Refuses in production: a missing key there must
- * fail visibly in the outbox, never put working sign-in links in the log.
+ * Stands in for Resend when there is no key. In development it prints the
+ * message (how a local magic link is read). In test mode it prints nothing:
+ * test runs read links from the test-only dev-last-link route, and CI logs
+ * must not carry working sign-in links or addresses. In production it
+ * refuses, so a missing key fails visibly in the outbox.
  */
 export function createLogMailer(nodeEnv: Env["NODE_ENV"] = env.NODE_ENV): Mailer {
   return {
     kind: "log",
     async send(message) {
       if (nodeEnv === "production") throw new Error("RESEND_API_KEY is not set; email not sent");
+      if (nodeEnv !== "development") return;
       console.log(`[email] to ${message.to}: ${message.subject}\n${message.text}\n[email] end`);
     },
   };
