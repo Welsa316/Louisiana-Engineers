@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mest
+          POSTGRES_PASSWORD: mest
+          POSTGRES_DB: mest
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U mest -d mest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgres://mest:mest@127.0.0.1:54329/mest
+      DATABASE_URL_TEST: postgres://mest:mest@127.0.0.1:54329/mest_test
+      APP_ORIGIN: http://127.0.0.1:8787
+      SESSION_SECRET: ci-session-secret-ci-session-secret-ci
+      EMAIL_FROM: MEST Network <network@example.test>
+      WORKTREE_ID: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run test:server
+      - run: npm run build
+      - run: npm run build -w server
+      - name: Serve the built app and check it answers
+        run: |
+          node server/dist/index.js &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/api/health; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8787/api/health | grep -q '"ok":true'
+          curl -fsS http://127.0.0.1:8787/ | grep -q '<div id="root">'
+          curl -fsS http://127.0.0.1:8787/network/directory | grep -q '<div id="root">'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/nothing-here)" = "404"
+          kill $SERVER_PID
+      - run: docker build -t mest .

@@ -1,0 +1,16 @@
+node_modules
+server/node_modules
+dist
+server/dist
+.git
+.claude
+.github
+.sites-runtime
+qa
+docs
+e2e
+playwright-report
+test-results
+.env
+*.local
+*.md
