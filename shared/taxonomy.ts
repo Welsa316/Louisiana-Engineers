@@ -94,11 +94,11 @@ export function experienceBandFor(years: number): ExperienceBandId {
 }
 
 export const contactMethods = [
-  { id: "mest", label: "Requests through MEST", note: "Members send a request; you decide whether to reply. Nothing personal is shown." },
-  { id: "email", label: "Email", note: "Shown only to members you have accepted." },
-  { id: "linkedin", label: "LinkedIn", note: "Your public profile link." },
-  { id: "booking", label: "Scheduling link", note: "Calendly, Cal.com or similar. Shown after you accept a request." },
-  { id: "phone", label: "Phone or text", note: "Never shown publicly. Shared only with accepted mentees." },
+  { id: "mest", label: "Requests through MEST", note: "Members send a request through MEST; you decide whether to reply. Nothing personal is shown." },
+  { id: "email", label: "Email", note: "Never public. Shown to signed-in members only if you share it with them, and to mentees you accept." },
+  { id: "linkedin", label: "LinkedIn", note: "Never public. Shown to signed-in members only if you share it with them, and to mentees you accept." },
+  { id: "booking", label: "Scheduling link", note: "Calendly, Cal.com or similar. Shown to signed-in members if you share it, and to mentees you accept." },
+  { id: "phone", label: "Phone or text", note: "Never public, and off unless you turn it on. Shared with signed-in members only if you choose to, and otherwise only with mentees you accept." },
 ] as const;
 
 export type ContactMethodId = (typeof contactMethods)[number]["id"];

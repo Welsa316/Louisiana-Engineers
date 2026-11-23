@@ -71,7 +71,7 @@ const configInt = (key: NumericConfigKey) =>
 export const configPatchSchema = z
   .object({
     request_expiry_days: configInt("request_expiry_days"),
-    reminder_days: z.array(z.number().int().min(1)).max(10).optional(),
+    reminder_days: z.array(z.number().int().min(1)).max(configLimits.reminder_days.maxCount).optional(),
     pending_cap: configInt("pending_cap"),
     default_max_active: configInt("default_max_active"),
     daily_request_limit: configInt("daily_request_limit"),

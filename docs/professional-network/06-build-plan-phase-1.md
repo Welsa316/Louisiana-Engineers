@@ -255,6 +255,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 
 ### Task 11: Profile schema: details, vocabularies, expertise, settings, contact, reviews, saved, dashboard view
 
+> **Handoff from integration (wave 2):** Migration 0002 ships `profile_in_directory(profile_id uuid)` as a SECURITY DEFINER stub that returns true; the profiles read policies and `profile_access` call it. This task must `CREATE OR REPLACE` its body with `EXISTS (SELECT 1 FROM professional_details d WHERE d.profile_id = $1 AND 'directory' = ANY(d.participation))`, keep it SECURITY DEFINER, and add a test that a professional without `directory` participation is invisible to visitors and members. Also: `write_audit` is not executable by `app_user`, so every audited action must happen inside a definer function; a professional's `bio` is required (enforce in `complete_onboarding` and by a trigger on professional_details or profiles, with a test); `profiles.linkedin_url` is readable through row policies on `profiles`, so the profile and directory endpoints must never select it (Task 13's tests guard this); the prototype's Musa Grant bio is under 120 characters and must be lengthened in the seed.
+
 **Depends on:** Tasks 5, 7 and 10.
 
 **Files:** Create `server/migrations/0004_profiles.sql`, `server/seed/profiles-details.ts`, `shared/types/profiles.ts`; Test `server/test/policies/{details,contact,settings,saved,reviews}.test.ts`.
@@ -352,6 +354,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 
 ### Task 19: Requests and relationships: schema, functions, lifecycle functions, routes
 
+> **Handoff from integration (wave 2):** When re-creating the profiles policies with the counterparty case, also `CREATE OR REPLACE profile_access(id)` so a counterparty gets `visible` rather than `none`, with a test.
+
 **Depends on:** Phase 1B complete.
 
 **Files:** Create `server/migrations/0005_requests.sql`, `server/src/services/requests.ts`, `server/src/routes/requests.ts`, `server/seed/requests.ts`, `shared/types/requests.ts`; Test `server/test/services/requests.test.ts`, `server/test/policies/requests.test.ts`.
@@ -430,6 +434,8 @@ All suites; e2e loop end to end with every email printed by the development mail
 ## Phase 1D: Launch hardening
 
 ### Task 26: Account deletion with grace period and the sweep
+
+> **Handoff from integration (wave 2):** `visibility` is an ordinary owner column, so an owner could set it back to `public` during the grace period. Guard it: while an open `account_deletions` row exists, the owner-guard trigger rejects visibility changes (or the listing rule excludes profiles with an open deletion through a definer helper), with a test.
 
 **Depends on:** Phase 1C complete.
 

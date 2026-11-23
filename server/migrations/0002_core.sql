@@ -114,11 +114,12 @@ CREATE TABLE profiles (
   last_name text CHECK (char_length(last_name) BETWEEN 1 AND 60),
   credentials text CHECK (char_length(credentials) <= 20),
   kind profile_kind, -- null until onboarding
-  region text NOT NULL DEFAULT 'greater-new-orleans' CHECK (region ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
+  region text NOT NULL DEFAULT 'greater-new-orleans'
+    CHECK (char_length(region) <= 60 AND region ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   location text CHECK (char_length(location) BETWEEN 1 AND 80),
   bio text CHECK (char_length(bio) BETWEEN 120 AND 1200),
   linkedin_url text CHECK (
-    char_length(linkedin_url) <= 300 AND linkedin_url ~* '^https?://(www\.)?linkedin\.com(/|$)'
+    char_length(linkedin_url) <= 300 AND linkedin_url ~* '^https://(www\.)?linkedin\.com(/|$)'
   ),
   website_url text CHECK (char_length(website_url) <= 300 AND website_url ~* '^https://[^/\s]+'),
   visibility visibility NOT NULL DEFAULT 'public',
@@ -156,10 +157,12 @@ BEGIN
      OR NEW.kind IS DISTINCT FROM OLD.kind
      OR NEW.anonymized_at IS DISTINCT FROM OLD.anonymized_at
      OR NEW.admin_hidden_at IS DISTINCT FROM OLD.admin_hidden_at
-     OR NEW.mission_accepted_at IS DISTINCT FROM OLD.mission_accepted_at THEN
+     OR NEW.mission_accepted_at IS DISTINCT FROM OLD.mission_accepted_at
+     OR NEW.last_active_at IS DISTINCT FROM OLD.last_active_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
     RAISE EXCEPTION 'mest.protected_field'
       USING ERRCODE = '42501',
-            DETAIL = 'id, approval_state, kind, anonymized_at, admin_hidden_at and mission_accepted_at change only through their functions';
+            DETAIL = 'id, approval_state, kind, anonymized_at, admin_hidden_at, mission_accepted_at, last_active_at and created_at change only through their functions';
   END IF;
   RETURN NEW;
 END
@@ -382,6 +385,10 @@ BEGIN
     RAISE EXCEPTION 'mest.forbidden' USING ERRCODE = '42501';
   END IF;
 
+  -- Expiry and reminder days validate against each other, so lock both rows
+  -- (in a fixed order) before reading either; concurrent edits cannot then
+  -- each pass and leave a reminder at or past the expiry.
+  PERFORM 1 FROM config c WHERE c.key IN ('reminder_days', 'request_expiry_days') ORDER BY c.key FOR UPDATE;
   SELECT c.value INTO previous FROM config c WHERE c.key = admin_update_config.key FOR UPDATE;
   IF NOT FOUND OR value IS NULL THEN
     RAISE EXCEPTION 'mest.invalid_config' USING ERRCODE = '22023', DETAIL = 'unknown key';
@@ -401,8 +408,9 @@ BEGIN
           DETAIL = 'request_expiry_days must be above every reminder day';
       END IF;
     WHEN 'reminder_days' THEN
-      IF jsonb_typeof(value) <> 'array' THEN
-        RAISE EXCEPTION 'mest.invalid_config' USING ERRCODE = '22023', DETAIL = 'reminder_days is an array';
+      IF jsonb_typeof(value) <> 'array' OR jsonb_array_length(value) > 2 THEN
+        RAISE EXCEPTION 'mest.invalid_config' USING ERRCODE = '22023',
+          DETAIL = 'reminder_days is an array of at most 2 days (reminders_sent counts to 2)';
       END IF;
       SELECT c.value::int INTO expiry FROM config c WHERE c.key = 'request_expiry_days';
       FOR item IN SELECT a.value FROM jsonb_array_elements(admin_update_config.value) WITH ORDINALITY AS a ORDER BY a.ordinality LOOP
@@ -457,6 +465,9 @@ $$;
 -- DELETE on every new table; take back what this schema does not allow.
 
 REVOKE ALL ON users, sessions, auth_tokens, job_runs FROM app_user;
+-- Audit entries come only from SECURITY DEFINER functions (which run as the
+-- owner but still see the caller's app.user_id) and from system jobs.
+REVOKE EXECUTE ON FUNCTION write_audit(text, text, uuid, jsonb) FROM PUBLIC, app_user;
 REVOKE INSERT, DELETE ON profiles FROM app_user;
 REVOKE INSERT, UPDATE, DELETE ON config, admin_roles, audit_log, account_deletions FROM app_user;
 

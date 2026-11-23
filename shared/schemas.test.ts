@@ -626,6 +626,8 @@ describe("configPatchSchema", () => {
     bad(s, { reminder_days: [5, 14], request_expiry_days: 14 }, ["reminder_days"]);
     ok(s, { reminder_days: [5, 13], request_expiry_days: 14 });
     bad(s, { reminder_days: [60] }, ["reminder_days"]);
+    // reminders_sent counts to 2, so a third day could never be sent.
+    bad(s, { reminder_days: [3, 6, 9] }, ["reminder_days"]);
   });
   it("rejects_unknown_keys_and_empty_patch", () => {
     bad(s, {}, []);

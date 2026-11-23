@@ -92,7 +92,8 @@ export const paging = { defaultSize: 20, maxSize: 50 } as const;
  */
 export const configLimits = {
   request_expiry_days: { default: 14, min: 3, max: 60 },
-  reminder_days: { default: [5, 10] as readonly number[] },
+  // At most 2: mentorship_requests.reminders_sent counts to 2.
+  reminder_days: { default: [5, 10] as readonly number[], maxCount: 2 },
   pending_cap: { default: 3, min: 1, max: 10 },
   default_max_active: { default: 3, min: 1, max: 10 },
   daily_request_limit: { default: 5, min: 1, max: 50 },

@@ -21,7 +21,10 @@ beforeEach(async () => {
     client.query(
       `UPDATE config SET value = d.value
          FROM (VALUES ('request_expiry_days', '14'::jsonb), ('reminder_days', '[5, 10]'::jsonb),
-                      ('pending_cap', '3'::jsonb), ('platform_paused', 'false'::jsonb)) AS d(key, value)
+                      ('pending_cap', '3'::jsonb), ('default_max_active', '3'::jsonb),
+                      ('daily_request_limit', '5'::jsonb), ('daily_report_limit', '3'::jsonb),
+                      ('magic_links_per_hour', '5'::jsonb), ('platform_paused', 'false'::jsonb),
+                      ('retention_months', '24'::jsonb)) AS d(key, value)
         WHERE config.key = d.key`,
     ),
   );
@@ -110,15 +113,22 @@ describe("audit", () => {
       nested: { email: "nested@example.test", keep: 1, deeper: [{ phone: "504-555-0199", ok: true }] },
     };
 
-    await asUser(db.pool, actor, (client) =>
-      client.query("SELECT write_audit('profile.updated', 'profile', $1, $2)", [subject, detail]),
+    // Real callers are SECURITY DEFINER functions (section 4.5); this wrapper
+    // stands in for one, so the actor comes from the caller's app.user_id.
+    await asSystem(db.pool, (client) =>
+      client.query(`
+        CREATE OR REPLACE FUNCTION test_definer_audit(subject uuid, detail jsonb) RETURNS bigint
+        LANGUAGE sql SECURITY DEFINER SET search_path = public
+        AS $$ SELECT write_audit('profile.updated', 'profile', subject, detail) $$;
+        GRANT EXECUTE ON FUNCTION test_definer_audit(uuid, jsonb) TO app_user;`),
     );
+    await asUser(db.pool, actor, (client) => client.query("SELECT test_definer_audit($1, $2)", [subject, detail]));
     // System context (jobs, the seed) records no actor.
     await asSystem(db.pool, (client) =>
       client.query("SELECT write_audit('request.expired', 'profile', $1, $2)", [subject, { why: "secret", n: 2 }]),
     );
-    // The TypeScript helper is a thin caller of the same function.
-    const id = await asUser(db.pool, actor, (client) =>
+    // The TypeScript helper is a thin caller of the same function, for jobs.
+    const id = await asSystem(db.pool, (client) =>
       audit(client, "contact.viewed", "profile", subject, { goals: "secret", method: "email" }),
     );
     expect(typeof id).toBe("string");
@@ -137,7 +147,7 @@ describe("audit", () => {
         detail: { field: "visibility", before: "public", nested: { keep: 1, deeper: [{ ok: true }] } },
       },
       { actor_id: null, action: "request.expired", subject_id: subject, detail: { n: 2 } },
-      { actor_id: actor, action: "contact.viewed", subject_id: subject, detail: { method: "email" } },
+      { actor_id: null, action: "contact.viewed", subject_id: subject, detail: { method: "email" } },
     ]);
     const serialized = JSON.stringify(rows);
     for (const secret of ["example.test", "504-555", "levee", "PE exam", "Weekday", "Happy", "secret"]) {
@@ -265,5 +275,60 @@ describe("config", () => {
     expect(entries).toHaveLength(accepted.length);
     expect(entries.every((entry) => entry.actor_id === admin && entry.action === "config.updated")).toBe(true);
     expect(entries[0].detail).toMatchObject({ key: "request_expiry_days", previous: 14, value: 11 });
+  });
+});
+
+describe("integration review hardening", () => {
+  it("write_audit_refused_to_app_user", async () => {
+    // Entries come only from SECURITY DEFINER functions and system jobs, so a
+    // request cannot forge one, and an anonymous request cannot pass off a
+    // null-actor entry as a job's.
+    const member = await makePerson(db.pool);
+    for (const viewer of [member, null]) {
+      await expect(
+        asUser(db.pool, viewer, (client) =>
+          client.query("SELECT write_audit('forged.entry', 'profile', NULL, '{}')"),
+        ),
+      ).rejects.toThrow(/permission denied/);
+    }
+  });
+
+  it("owner_cannot_move_last_active_or_created_at", async () => {
+    // Directory relevance sorts by last_active_at; only touch_last_active()
+    // may move it.
+    const owner = await makePerson(db.pool);
+    for (const sql of [
+      "UPDATE profiles SET last_active_at = now() + interval '1 year' WHERE id = app_uid()",
+      "UPDATE profiles SET created_at = now() - interval '5 years' WHERE id = app_uid()",
+    ]) {
+      await expect(asUser(db.pool, owner, (client) => client.query(sql))).rejects.toThrow(/mest\.protected_field/);
+    }
+  });
+
+  it("linkedin_url_must_be_https_and_region_is_capped", async () => {
+    const owner = await makePerson(db.pool);
+    await expect(
+      asUser(db.pool, owner, (client) =>
+        client.query("UPDATE profiles SET linkedin_url = 'http://linkedin.com/in/x' WHERE id = app_uid()"),
+      ),
+    ).rejects.toThrow(/check constraint/);
+    await asUser(db.pool, owner, (client) =>
+      client.query("UPDATE profiles SET linkedin_url = 'https://www.linkedin.com/in/x' WHERE id = app_uid()"),
+    );
+    await expect(
+      asSystem(db.pool, (client) =>
+        client.query("UPDATE profiles SET region = $1 WHERE id = $2", ["a".repeat(61), owner]),
+      ),
+    ).rejects.toThrow(/check constraint/);
+  });
+
+  it("reminder_days_capped_at_two", async () => {
+    // mentorship_requests.reminders_sent counts to 2, so a third day could
+    // never be sent.
+    const admin = await makePerson(db.pool, { admin: true });
+    await expect(
+      asUser(db.pool, admin, (client) => client.query("SELECT admin_update_config('reminder_days', '[3, 6, 9]')")),
+    ).rejects.toThrow(/mest\.invalid_config/);
+    await asUser(db.pool, admin, (client) => client.query("SELECT admin_update_config('reminder_days', '[4]')"));
   });
 });
