@@ -37,12 +37,21 @@ export const mission = {
   ],
 };
 
-/** Suggested navigation from the content plan. */
+/**
+ * Suggested navigation from the content plan. `#` links are sections of this
+ * page; anything else (the network directory) is an ordinary page link.
+ */
 export const navigation = [
   { label: "Mission", href: "#mission" },
   { label: "Events", href: "#events" },
   { label: "Get Involved", href: "#get-involved" },
+  { label: "Directory", href: "/network/directory" },
 ] as const;
+
+/** True for a link to a section of the landing page rather than another page. */
+export function isSectionLink(href: string): href is `#${string}` {
+  return href.startsWith("#");
+}
 
 export const pillars = [
   {
