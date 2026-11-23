@@ -55,12 +55,22 @@ export function createApp({ webDist, pool, cacheIndex = true }: AppOptions): Hon
   app.get("/network/*", async (c) => c.html(await readIndex(), 200, { "Cache-Control": "no-cache" }));
 
   app.get("*", async (c, next) => {
-    const pathname = decodeURIComponent(new URL(c.req.url).pathname);
-    const isStatic = STATIC_FILES.has(pathname) || STATIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-    if (!isStatic) return next();
+    let pathname: string;
+    try {
+      pathname = decodeURIComponent(new URL(c.req.url).pathname);
+    } catch {
+      return next(); // malformed escape: not a file we serve
+    }
+    // Encoded slashes survive URL normalisation, so check the decoded path:
+    // no backslashes, no ".." segments, and the file must stay inside the
+    // directory its prefix names.
+    if (pathname.includes("\\") || pathname.split("/").includes("..")) return next();
+    const prefix = STATIC_PREFIXES.find((p) => pathname.startsWith(p));
+    if (!prefix && !STATIC_FILES.has(pathname)) return next();
 
     const file = resolve(webDist, `.${pathname}`);
-    if (!file.startsWith(webDist + sep)) return next();
+    const root = prefix ? resolve(webDist, `.${prefix}`) : webDist;
+    if (!file.startsWith(root + sep)) return next();
     let info;
     try {
       info = await stat(file);

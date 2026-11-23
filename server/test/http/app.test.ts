@@ -81,4 +81,21 @@ describe("http skeleton", () => {
       expect(await res.text(), path).toBe("Not found");
     }
   });
+
+  it("encoded_slashes_cannot_leave_a_static_prefix", async () => {
+    // A percent-encoded slash survives URL normalisation, so after decoding
+    // it would walk out of /assets/ to any file in the build root.
+    for (const path of ["/assets/..%2fsecret.txt", "/images/..%2F..%2Fsecret.txt", "/assets/..%5csecret.txt"]) {
+      const res = await app.request(path);
+      expect(res.status, path).toBe(404);
+      expect(await res.text(), path).toBe("Not found");
+    }
+  });
+
+  it("malformed_escapes_are_a_404_not_a_500", async () => {
+    for (const path of ["/assets/%zz", "/images/%E0%A4%A"]) {
+      const res = await app.request(path);
+      expect(res.status, path).toBe(404);
+    }
+  });
 });

@@ -428,7 +428,7 @@ erDiagram
   }
 ```
 
-`users` is our own table and the only one that holds the account email. No other table, view or list endpoint carries it; the email reaches a counterparty only through `release_contact` when the member chose to share `email` and set no separate `contact_email`.
+`users` is our own table and the only one that holds the account email permanently. `auth_tokens.email` and `email_outbox.to_email` hold an address transiently, are unreadable by `app_user`, and are deleted for that address by the deletion sweep (section 8). No other table, view or list endpoint carries it; the email reaches a counterparty only through `release_contact` when the member chose to share `email` and set no separate `contact_email`.
 
 ### 4.2 Enumerated types
 
@@ -800,7 +800,7 @@ Rows store the template name and data; the `send-emails` job renders at send tim
 | --- | --- | --- |
 | `id` | uuid PK | |
 | `notification_id` | uuid FK notifications, nullable | Null for emails with no in-app row (magic links) |
-| `to_email` | citext | The only place outside `users` that holds an address, and only until the row is sent and the account is deleted (section 8) |
+| `to_email` | citext | A transient copy of the address (as is `auth_tokens.email`); unreadable by `app_user` and deleted with the account (section 8) |
 | `template` | text | |
 | `payload` | jsonb | Same privacy rule as `notifications.payload` |
 | `attempts` | int | Default 0; the job gives up after 3 and records `last_error` |
@@ -927,7 +927,7 @@ All functions below are `SECURITY DEFINER` with `SET search_path = public`, and 
 | `touch_last_active()` | Owner | Updates `last_active_at` at most daily |
 | `create_mentorship_request(mentor uuid, kind request_kind, topic text, why text, goals text, format mentoring_format, mode meeting_mode, scheduling_note text)` | Member | Under `SELECT ... FOR UPDATE` on the mentor's settings row, checks in order: `platform_paused`; mentor listed and a member; for `mentorship`, status `active`, topic offered, accepted count below `max_active`; for `introduction`, `networking` in participation; caller's pending count below `pending_cap`; no pending or accepted pair; daily count below `daily_request_limit`. Raises `mest.platform_paused`, `mest.mentor_unavailable`, `mest.topic_not_offered`, `mest.mentor_full`, `mest.pending_cap`, `mest.duplicate` or `mest.rate_limited`. Sets `expires_at`; notifies the mentor (`request`, template `request-received`, email) |
 | `cancel_request(request_id uuid)` | Mentee | `pending` to `canceled`; notifies the mentor in-app only |
-| `respond_to_request(request_id uuid, decision review_decision, note text, decline_reason text, share_methods contact_method[])` | Mentor | `pending` to `accepted` or `declined`; `share_methods` must be a subset of the mentor's methods with a value; on accept re-checks capacity under the lock and creates the relationship with `shared_methods`; notifies the mentee (`response`, template `request-accepted` or `request-declined`, email) |
+| `respond_to_request(request_id uuid, decision text CHECK (decision IN ('accept','decline')), note text, decline_reason text, share_methods contact_method[])` | Mentor | `pending` to `accepted` or `declined`; `share_methods` must be a subset of the mentor's methods with a value; on accept re-checks capacity under the lock and creates the relationship with `shared_methods`; notifies the mentee (`response`, template `request-accepted` or `request-declined`, email) |
 | `complete_relationship(request_id uuid)` | Mentor or mentee | Sets `completed_at`; marks the request `completed`; notifies the other party in-app only |
 | `get_request_handoff(request_id uuid)` | Mentee of an accepted request | Returns the `shared_methods` values through `release_contact`'s resolution; audits `contact.viewed` |
 | `expire_request(request_id uuid)` | Jobs (`withSystem`) | `pending` to `expired`; notifies the mentee (`response`, template `request-expired`, email); audits `request.expired` |
@@ -1037,7 +1037,7 @@ A single reference for the question that matters most. "Masked" means the row is
 
 | Table | Visitor | Authenticated member | Owner | Mentor or mentee counterparty | Administrator |
 | --- | --- | --- | --- | --- | --- |
-| users (email) | None | None | Own address, through `GET /api/auth/me` only | Only when the mentor shared `email` and set no `contact_email`, through `release_contact` | The sign-up domain only, through `admin_list_members`; never the address |
+| users (email) | None | None | Not returned by any Phase 1 endpoint (`GET /api/auth/me` carries no address); the member sees it only in the email they receive | Only when the mentor shared `email` and set no `contact_email`, through `release_contact` | The sign-up domain only, through `admin_list_members`; never the address |
 | profiles | Approved, listed, `public` professionals, not admin-hidden | Plus `members` professionals | Own row, any state (with a "waiting for review" state while `pending`) | Other party's row | All |
 | professional_details | As above | As above | Own | Other party's | All |
 | student_details | None | None | Own | Mentor sees the student who requested them | All |
