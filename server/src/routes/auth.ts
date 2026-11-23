@@ -1,6 +1,8 @@
 import { Hono, type Context } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { devLoginSchema, magicLinkSchema } from "@shared/schemas/auth";
 import {
+  GOOGLE_SIGN_IN_FAILED_PATH,
   SIGN_IN_FAILED_PATH,
   type DevLastLinkResponse,
   type DevLoginResponse,
@@ -8,6 +10,14 @@ import {
   type SessionUser,
 } from "@shared/types/auth";
 import type { ApprovalState, ProfileKind } from "@shared/types/common";
+import {
+  beginGoogleSignIn,
+  completeGoogleSignIn,
+  GOOGLE_STATE_COOKIE,
+  GOOGLE_STATE_MINUTES,
+  googleClient,
+  type GoogleConfig,
+} from "../auth/google";
 import { consumeMagicLink, devLinks, devSignIn, endSession, requestMagicLink, type SignIn } from "../auth/magic-link";
 import { allowedOrigins, originAllowed, originCheck, sessionUserId } from "../auth/middleware";
 import { clearSessionCookie, cookieIsSecure, isSecretShaped, readSessionCookie, setSessionCookie } from "../auth/session";
@@ -17,8 +27,8 @@ import { AppError } from "../http/errors";
 import { validate } from "../http/validate";
 
 /**
- * `/api/auth/*`: magic-link sign-in, sign-out and the current session
- * (section 5.1). Mounted by the aggregator at `/auth`.
+ * `/api/auth/*`: magic-link and Google sign-in, sign-out and the current
+ * session (section 5.1). Mounted by the aggregator at `/auth`.
  */
 
 export interface AuthRouteOptions {
@@ -28,6 +38,12 @@ export interface AuthRouteOptions {
   /** Trusted proxies that append to `X-Forwarded-For` (see `clientIp`). */
   trustProxyHops?: number;
   appOrigin?: string;
+  /**
+   * Google OAuth client values; defaults to `GOOGLE_CLIENT_ID` and
+   * `GOOGLE_CLIENT_SECRET`. null, or either value missing, turns both Google
+   * routes into 404s.
+   */
+  google?: GoogleConfig | null;
 }
 
 export function createAuthRoutes(options: AuthRouteOptions = {}): Hono {
@@ -38,6 +54,10 @@ export function createAuthRoutes(options: AuthRouteOptions = {}): Hono {
   const secure = cookieIsSecure(nodeEnv, appOrigin);
   const origins = allowedOrigins(appOrigin, nodeEnv);
   const testMode = nodeEnv === "test";
+  const googleConfig =
+    options.google !== undefined ? options.google : { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET };
+  const google = googleClient(googleConfig, appOrigin);
+  const googleCookie = { httpOnly: true, secure, sameSite: "Lax", path: "/api/auth/google" } as const;
 
   const signedInResponse = (c: Context, signIn: SignIn) => {
     setSessionCookie(c, signIn.session.value, secure);
@@ -77,6 +97,36 @@ export function createAuthRoutes(options: AuthRouteOptions = {}): Hono {
       : null;
     if (!signIn) return c.redirect(SIGN_IN_FAILED_PATH, 303);
     return signedInResponse(c, signIn);
+  });
+
+  // Google sign-in. Both routes answer 404 unless the client id and secret are set.
+  app.get("/google", (c) => {
+    if (!google) throw new AppError(404, "not_found", "google sign-in is not configured");
+    const start = beginGoogleSignIn(google);
+    // Lax: Google's redirect back is a top-level GET from another site.
+    setCookie(c, GOOGLE_STATE_COOKIE, start.cookie, { ...googleCookie, maxAge: GOOGLE_STATE_MINUTES * 60 });
+    c.header("Cache-Control", "no-store");
+    return c.redirect(start.url.toString(), 302);
+  });
+
+  app.get("/google/callback", async (c) => {
+    if (!google || !googleConfig?.clientId) throw new AppError(404, "not_found", "google sign-in is not configured");
+    const stateCookie = getCookie(c, GOOGLE_STATE_COOKIE);
+    // The state is single use: cleared whatever the outcome.
+    deleteCookie(c, GOOGLE_STATE_COOKIE, googleCookie);
+    c.header("Cache-Control", "no-store");
+    // Google reports a cancel or a refusal as `?error=`; nothing is exchanged then.
+    const signIn = c.req.query("error")
+      ? null
+      : await completeGoogleSignIn(
+          google,
+          googleConfig.clientId,
+          { code: c.req.query("code"), state: c.req.query("state"), cookie: stateCookie },
+          { previousCookie: readSessionCookie(c), userAgent: c.req.header("user-agent") },
+        );
+    if (!signIn) return c.redirect(GOOGLE_SIGN_IN_FAILED_PATH, 302);
+    setSessionCookie(c, signIn.session.value, secure);
+    return c.redirect(signIn.redirect, 302);
   });
 
   app.post("/signout", originCheck(origins), async (c) => {

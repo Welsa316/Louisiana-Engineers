@@ -42,5 +42,8 @@ export interface DevLastLinkResponse {
 /** Where a successful sign-in lands. */
 export type SignInRedirect = "/network/onboarding" | "/network/scheduled-for-deletion" | "/network/me";
 
-/** Where a failed sign-in lands. */
+/** Where a failed magic-link sign-in lands. */
 export const SIGN_IN_FAILED_PATH = "/network/signin?error=link";
+
+/** Where a failed or canceled Google sign-in lands. */
+export const GOOGLE_SIGN_IN_FAILED_PATH = "/network/signin?error=google";
