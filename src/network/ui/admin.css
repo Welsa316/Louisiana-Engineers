@@ -1,0 +1,79 @@
+/* Administration area additions (admin-controls.tsx). Everything else on the
+   admin pages uses the shared pn-* rules in network.css. */
+
+/* Section links reuse .pn-tab; a link marks the current page with
+   aria-current rather than aria-pressed. */
+.pn-admin-nav .pn-tab[aria-current="page"] {
+  color: var(--color-fg);
+}
+.pn-admin-nav .pn-tab[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+.pn-admin-nav .pn-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.pn-admin-audit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  color: var(--color-fg-2);
+}
+
+.pn-admin-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--pn-line);
+}
+
+/* A row of actions in a drawer footer or a form that wraps on a phone. */
+.pn-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Number inputs in the settings form stay a sensible width on desktop. */
+.pn-admin-number {
+  max-width: 10rem;
+}
+
+/* Desktop tables: several row actions stack in one narrow column, and the
+   person column keeps room for a name and a role line. */
+@media (min-width: 48rem) {
+  .pn-admin-stack {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .pn-admin-person {
+    min-width: 14rem;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .pn-admin-stack {
+    flex-wrap: wrap;
+  }
+  .pn-admin-pager {
+    justify-content: space-between;
+  }
+  .pn-admin-number {
+    max-width: none;
+  }
+  /* In card mode a flush card's rows would touch its border; give them the
+     card's own inset. */
+  .pn-admin .pn-card-flush .pn-table tr {
+    padding-inline: 1.25rem;
+  }
+  /* Primary actions take the full width on a phone (03 section 12). */
+  .pn-admin-actions > .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
