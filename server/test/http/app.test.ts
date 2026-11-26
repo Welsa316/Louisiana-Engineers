@@ -41,7 +41,12 @@ describe("http skeleton", () => {
       const res = await app.request(path);
       expect(res.status, path).toBe(200);
       expect(res.headers.get("content-type"), path).toContain("text/html");
-      expect(await res.text(), path).toBe(INDEX);
+      // The landing page is served as built; network pages are the same
+      // document with `noindex` added (a public profile gets its own tags,
+      // tested in server/test/services/directory.test.ts).
+      const expected =
+        path === "/" ? INDEX : INDEX.replace("</head>", '<meta name="robots" content="noindex" />\n  </head>');
+      expect(await res.text(), path).toBe(expected);
     }
   });
 
