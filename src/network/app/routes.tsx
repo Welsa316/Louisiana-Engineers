@@ -16,35 +16,37 @@ import type { ReactNode } from "react";
 import { Outlet, type RouteObject } from "react-router";
 import { adminRoutes } from "../features/admin/routes";
 import { authRoutes } from "../features/auth/routes";
+import { discoverRoutes } from "../features/me/discover-routes";
+import { meRoutes } from "../features/me/routes";
+import { NotificationsAppLayout, notificationRoutes } from "../features/notifications/routes";
+import { onboardingRoutes } from "../features/onboarding/routes";
+import { directoryRoutes } from "../features/public/directory-routes";
 import { publicRoutes } from "../features/public/routes";
+import { settingsRoutes } from "../features/settings/routes";
 import { Stub } from "../features/public/Stub";
 import { RequireAdmin, RequireMember, RequireOnboarded } from "./guards";
 import type { NavBadges } from "./nav";
-import { AppLayout, NotFoundPage, PublicLayout } from "./shells";
+import { NotFoundPage, PublicLayout } from "./shells";
 
-/** Controls mounted in the app shell's header (Task 18 mounts the notification bell here). */
+/** Controls mounted in the app shell's header, beside the notification bell. */
 const appHeaderSlot: ReactNode = null;
 
 /** Rail and tab bar counts (requests waiting, unread notifications), once their tasks land. */
 const appBadges: NavBadges = {};
 
-/* Task 9's public and sign-in pages; Task 15 replaces the directory and profile stubs. */
-const publicPages: RouteObject[] = [
-  ...publicRoutes,
-  { path: "directory", element: <Stub title="Directory" /> },
-  { path: "directory/:id", element: <Stub title="Profile" /> },
-  ...authRoutes,
-];
+/* Task 9's public and sign-in pages and Task 15's directory and profile. */
+const publicPages: RouteObject[] = [...publicRoutes, ...directoryRoutes, ...authRoutes];
 
-/* Task 14 (features/onboarding) replaces this. */
-const onboardingPages: RouteObject[] = [{ path: "onboarding/*", element: <Stub title="Onboarding" /> }];
+/* Task 14's onboarding wizard. */
+const onboardingPages: RouteObject[] = onboardingRoutes;
 
-/* Tasks 15, 16, 18, 22 and 23 (features/me, settings, notifications, mentor) replace these. */
+/* Home, discovery, settings and notifications; Tasks 22 and 23 replace the mentoring stub. */
 const memberPages: RouteObject[] = [
-  { path: "me/*", element: <Stub inApp title="Home" /> },
+  ...meRoutes,
+  ...discoverRoutes,
   { path: "mentor/*", element: <Stub inApp title="Mentoring" /> },
-  { path: "settings/*", element: <Stub inApp title="Profile and settings" /> },
-  { path: "notifications", element: <Stub inApp title="Notifications" /> },
+  ...settingsRoutes,
+  ...notificationRoutes,
 ];
 
 /* Task 17 (features/admin) replaces this. */
@@ -70,7 +72,7 @@ export const routes: RouteObject[] = [
     element: (
       <RequireMember>
         <RequireOnboarded>
-          <AppLayout headerSlot={appHeaderSlot} badges={appBadges} />
+          <NotificationsAppLayout headerSlot={appHeaderSlot} badges={appBadges} />
         </RequireOnboarded>
       </RequireMember>
     ),

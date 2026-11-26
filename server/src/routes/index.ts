@@ -4,6 +4,7 @@ import { authRoutes } from "./auth";
 import { configRoutes } from "./config";
 import { directoryRoutes } from "./directory";
 import { meRoutes } from "./me";
+import { notificationRoutes } from "./notifications";
 import { profileRoutes } from "./profiles";
 
 /**
@@ -23,6 +24,7 @@ export function createApiRoutes(): Hono {
   api.route("/me", meRoutes);
   api.route("/directory", directoryRoutes);
   api.route("/profiles", profileRoutes);
+  api.route("/notifications", notificationRoutes);
   api.route("/admin", adminRoutes);
   return api;
 }
