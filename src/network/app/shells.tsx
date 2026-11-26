@@ -103,6 +103,10 @@ export function PublicShell({ children, headerSlot }: { children: ReactNode; hea
   const closeMenu = () => setMenuOpen(false);
   // "Join the network" means nothing to someone already signed in.
   const publicNav = user ? PUBLIC_NAV.filter((item) => item.to !== "/join") : PUBLIC_NAV;
+  // No "Finish signing up" button on the onboarding page itself: it would
+  // point at the current page (and it crowds the phone header there).
+  const { pathname } = useLocation();
+  const onAccountPage = user ? pathname === accountPath(user) || pathname.startsWith(`${accountPath(user)}/`) : false;
 
   return (
     <>
@@ -126,7 +130,7 @@ export function PublicShell({ children, headerSlot }: { children: ReactNode; hea
           </nav>
           <div className="pn-header-actions">
             {headerSlot}
-            {status === "loading" ? null : user ? (
+            {status === "loading" || onAccountPage ? null : user ? (
               <Link to={accountPath(user)} className="btn btn-outline">
                 {user.kind === null ? "Finish signing up" : "My dashboard"}
                 <ArrowUpRight size={15} aria-hidden="true" />

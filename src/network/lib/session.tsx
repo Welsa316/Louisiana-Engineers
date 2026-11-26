@@ -7,6 +7,7 @@ import { hashKey, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import type { MeResponse, PublicConfig, SessionUser } from "@shared/types/auth";
 import { api } from "./api";
+import { clearOnboardingDrafts } from "./onboarding-draft";
 import { queryKeys } from "./query";
 
 export type SessionStatus = "loading" | "anon" | "ready";
@@ -50,6 +51,8 @@ export function useSignOut(): () => Promise<void> {
     // Only forget the session locally once the server has ended it; if the
     // request fails the cookie is still valid, so the caller shows an error.
     await api("/auth/signout", { method: "POST" });
+    // Unfinished onboarding stays on this device only while its owner is signed in.
+    clearOnboardingDrafts();
     // Drop every other answer, but keep the session query itself and set it
     // to signed out: `clear()` would detach the mounted `useSession` callers
     // from the cache, so a page that stays put kept showing the old account.
