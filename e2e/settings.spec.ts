@@ -136,6 +136,11 @@ test.describe("member settings", () => {
         return (await res.json()).mentorship;
       });
       expect(shown).toMatchObject({ status: "paused", pausedUntil: resumeOn });
+      // And the public profile page says so, with the date.
+      await withContext(browser, origin, async (visitor) => {
+        await visitor.goto(`/network/directory/${LAYLA}`);
+        await expect(visitor.getByText(/Not taking new requests right now, until/)).toBeVisible();
+      });
 
       // Turn the phone on and show it to signed-in members.
       await page.goto("/network/settings/privacy");
@@ -172,7 +177,8 @@ test.describe("member settings", () => {
       await viewer.getByRole("button", { name: "Visitor" }).click();
       const preview = page.getByRole("region", { name: "Profile preview" });
       await expect(preview.getByRole("heading", { name: /Layla Haddad/ })).toBeVisible();
-      await expect(preview.getByText("Paused", { exact: true })).toBeVisible();
+      // The preview is the profile page itself, so it carries the same pause line.
+      await expect(preview.getByText(/Not taking new requests right now, until/)).toBeVisible();
       await expect(preview.getByText("Sign in to see how to reach Layla.")).toBeVisible();
       await expect(preview.getByText(PHONE_STORED)).toHaveCount(0);
 

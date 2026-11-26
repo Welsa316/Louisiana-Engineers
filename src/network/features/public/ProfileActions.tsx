@@ -94,6 +94,20 @@ export function ProfileActions({
     );
   }
 
+  // Signed in but not onboarded: the same offers, pointing at onboarding.
+  if (viewer && viewer.kind === null) {
+    return (
+      <div className="pn-profile-actions">
+        {(taking || networking) && (
+          <Link to="/onboarding" className="btn btn-solid">
+            Finish joining to send requests
+            <ArrowUpRight size={16} aria-hidden="true" />
+          </Link>
+        )}
+      </div>
+    );
+  }
+
   if (!viewer) {
     return (
       <div className="pn-profile-actions">

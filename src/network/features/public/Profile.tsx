@@ -15,12 +15,14 @@ import { Link, useLocation, useParams } from "react-router";
 import { ArrowLeft, Briefcase, CalendarDays, Clock, GraduationCap, MapPin, ShieldCheck } from "lucide-react";
 import { audiences, experienceBands, participationOptions } from "@shared/taxonomy";
 import type { ProfileMentorship, ProfileView } from "@shared/types/directory";
+import type { ContactValue } from "@shared/types/profiles";
 import { isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
+import type { SessionUser } from "@shared/types/auth";
 import { useSession } from "../../lib/session";
 import { Card, Empty, Monogram, Notice, Status } from "../../ui/ui";
 import "../../ui/directory-pages.css";
-import { ContactPanel } from "./ContactPanel";
+import { ContactPanel, ContactPreview } from "./ContactPanel";
 import { displayName, initialsOf, topicLabels, type DirectoryMode } from "./Directory";
 import { useProfile } from "./directory-api";
 import { isTakingRequests, offersMentorship, ProfileActions, type ProfileSlot } from "./ProfileActions";
@@ -220,11 +222,7 @@ export function ProfileBody({
   reportSlot?: ProfileSlot;
 }) {
   const { user } = useSession();
-  const aboutId = useId();
-  const firstName = profile.firstName ?? "This member";
   const name = displayName({ firstName: profile.firstName, lastName: profile.lastName });
-  const band = experienceBands.find((b) => b.id === profile.experienceBand)?.label;
-  const openTo = profile.participation.filter((p) => p !== "directory");
   const listed = profile.approvalState === undefined || profile.approvalState === "approved";
   const indexable = mode === "directory" && profile.visibility === "public" && listed;
 
@@ -239,13 +237,46 @@ export function ProfileBody({
   return (
     <>
       <OwnerBanner profile={profile} />
+      <ProfileContent profile={profile} viewer={user} slot={slot} reportSlot={reportSlot} />
+    </>
+  );
+}
+
+/**
+ * The profile itself, for a given viewer. The profile page passes the
+ * session; the settings preview passes the previewed viewer and the contact
+ * list its answer carries, so both render one component and cannot drift.
+ */
+export function ProfileContent({
+  profile,
+  viewer,
+  slot,
+  reportSlot,
+  preview,
+}: {
+  profile: ProfileView;
+  viewer: SessionUser | null;
+  slot?: ProfileSlot;
+  reportSlot?: ProfileSlot;
+  /** Settings preview: the name becomes a level-2 heading and contact comes from the preview answer. */
+  preview?: { as: "visitor" | "member"; contact: ContactValue[] };
+}) {
+  const aboutId = useId();
+  const firstName = profile.firstName ?? "This member";
+  const name = displayName({ firstName: profile.firstName, lastName: profile.lastName });
+  const band = experienceBands.find((b) => b.id === profile.experienceBand)?.label;
+  const openTo = profile.participation.filter((p) => p !== "directory");
+  const Name = preview ? "h2" : "h1";
+
+  return (
+    <>
       <header className="pn-profile-head">
         <Monogram initials={initialsOf(profile)} size="xl" />
         <div className="min-w-0">
-          <h1 className="pn-profile-name">
+          <Name className="pn-profile-name">
             {name}
             {profile.credentials && <small>{profile.credentials}</small>}
-          </h1>
+          </Name>
           {(profile.title || profile.organization) && (
             <p className="pn-profile-title">{[profile.title, profile.organization].filter(Boolean).join(" · ")}</p>
           )}
@@ -279,7 +310,10 @@ export function ProfileBody({
             )}
           </div>
         </div>
-        <ProfileActions profile={profile} viewer={user} slot={slot} reportSlot={reportSlot} />
+        {/* In a preview the actions are shown as the viewer would see them, but do nothing. */}
+        <div inert={preview ? true : undefined} className="contents">
+          <ProfileActions profile={profile} viewer={viewer} slot={slot} reportSlot={reportSlot} />
+        </div>
       </header>
 
       <div className="pn-profile-body">
@@ -341,7 +375,11 @@ export function ProfileBody({
               </ul>
             </section>
           )}
-          <ContactPanel profileId={profile.id} firstName={firstName} isOwner={profile.isOwner} />
+          {preview ? (
+            <ContactPreview as={preview.as} methods={preview.contact} firstName={firstName} />
+          ) : (
+            <ContactPanel profileId={profile.id} firstName={firstName} isOwner={profile.isOwner} />
+          )}
         </div>
 
         <aside aria-label="Mentorship">

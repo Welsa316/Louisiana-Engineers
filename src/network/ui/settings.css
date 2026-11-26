@@ -236,6 +236,10 @@
 .pn-settings-preview .pn-profile-head {
   grid-template-columns: auto minmax(0, 1fr);
 }
+.pn-settings-preview .pn-profile-actions {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
 .pn-settings-preview .pn-section h3 {
   font-size: 0.75rem;
   letter-spacing: 0.14em;
@@ -245,6 +249,12 @@
 }
 .pn-settings-preview .pn-tags {
   list-style: none;
+}
+@container (max-width: 30rem) {
+  .pn-settings-preview .pn-profile-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
 }
 @container (max-width: 44rem) {
   .pn-settings-preview .pn-profile-body {

@@ -1,6 +1,7 @@
 /**
  * The Contact section of a profile (A1, hybrid visibility). A visitor is
- * asked to sign in and the contact endpoint is never called for them; a
+ * asked to sign in and the contact endpoint is never called for them;
+ * someone signed in who has not finished joining is sent to onboarding; a
  * signed-in member sees only the methods the professional chose to share
  * with members, each with a copy button. The values come from
  * `GET /api/profiles/:id/contact`, which is `release_contact` on the server
@@ -78,18 +79,103 @@ function SignInPrompt({ firstName }: { firstName: string }) {
   );
 }
 
+function FinishJoiningPrompt({ firstName }: { firstName: string }) {
+  return (
+    <div className="pn-contact-signin">
+      <p className="t-body">Finish joining to see how to reach {firstName}.</p>
+      <p className="t-small text-fg-2 measure-wide">
+        Contact details are shown to members once they have finished signing up, and only the ones {firstName} chose to share.
+      </p>
+      <Link to="/onboarding" className="btn btn-outline btn-sm mt-4">
+        Finish joining
+      </Link>
+    </div>
+  );
+}
+
+/** The shared methods, each with a copy button. */
+function ContactList({ methods, firstName, isOwner }: { methods: ContactValue[]; firstName: string; isOwner: boolean }) {
+  return (
+    <>
+      <ul className="pn-contact-list">
+        {methods.map(({ method, value }) => {
+          const meta = METHOD[method];
+          const href = meta.href(value);
+          const text = shown(method, value);
+          return (
+            <li key={method} className="pn-contact-item">
+              <span className="pn-contact-label">{meta.label}</span>
+              <span className="pn-contact-value">
+                {href ? (
+                  <a
+                    className="link"
+                    href={href}
+                    {...(method === "booking" || method === "linkedin" ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  >
+                    {text}
+                  </a>
+                ) : (
+                  text
+                )}
+              </span>
+              <CopyButton label={meta.copy} value={value} />
+            </li>
+          );
+        })}
+      </ul>
+      <p className="t-small text-fg-2 mt-4 measure-wide">
+        {isOwner
+          ? "Signed-in members see these. Change what you share in your settings."
+          : `${firstName} shares these with signed-in members. Please keep them to professional contact.`}
+      </p>
+    </>
+  );
+}
+
+function NothingShared({ firstName, isOwner }: { firstName: string; isOwner: boolean }) {
+  return (
+    <p className="t-body text-fg-2 measure-wide">
+      {isOwner
+        ? "You are not sharing any contact details with members. Members can still reach you through MEST requests."
+        : `${firstName} has not shared contact details with members and prefers requests through MEST.`}
+    </p>
+  );
+}
+
+/** What the settings preview shows a visitor or a member, from the preview answer (no request is made). */
+export function ContactPreview({ as, methods, firstName }: { as: "visitor" | "member"; methods: ContactValue[]; firstName: string }) {
+  const headingId = useId();
+  const sorted = [...methods].sort((a, b) => ORDER.indexOf(a.method) - ORDER.indexOf(b.method));
+  return (
+    <section className="pn-section" aria-labelledby={headingId}>
+      <h2 id={headingId}>Contact</h2>
+      {as === "visitor" ? (
+        <SignInPrompt firstName={firstName} />
+      ) : sorted.length ? (
+        <ContactList methods={sorted} firstName={firstName} isOwner={false} />
+      ) : (
+        <NothingShared firstName={firstName} isOwner={false} />
+      )}
+    </section>
+  );
+}
+
 export function ContactPanel({ profileId, firstName, isOwner }: { profileId: string; firstName: string; isOwner: boolean }) {
   const { user, status } = useSession();
   const headingId = useId();
-  const member = Boolean(user);
+  // Signed in but not yet onboarded is not a member: the contact endpoint
+  // would refuse, so it is never called and the person is sent to finish.
+  const member = Boolean(user && user.kind !== null);
   const contact = useProfileContact(profileId, member);
   const methods = [...(contact.data?.methods ?? [])].sort((a, b) => ORDER.indexOf(a.method) - ORDER.indexOf(b.method));
 
   let body;
   if (status === "loading") {
     body = null;
-  } else if (!member || isApiError(contact.error, "unauthenticated")) {
+  } else if (!user || isApiError(contact.error, "unauthenticated")) {
     body = <SignInPrompt firstName={firstName} />;
+  } else if (!member || isApiError(contact.error, "not_member")) {
+    body = <FinishJoiningPrompt firstName={firstName} />;
   } else if (contact.isPending) {
     body = (
       <p className="t-small text-fg-2" role="status">
@@ -106,51 +192,9 @@ export function ContactPanel({ profileId, firstName, isOwner }: { profileId: str
       </p>
     );
   } else if (!methods.length) {
-    body = (
-      <p className="t-body text-fg-2 measure-wide">
-        {isOwner
-          ? "You are not sharing any contact details with members. Members can still reach you through MEST requests."
-          : `${firstName} has not shared contact details with members and prefers requests through MEST.`}
-      </p>
-    );
+    body = <NothingShared firstName={firstName} isOwner={isOwner} />;
   } else {
-    body = (
-      <>
-        <ul className="pn-contact-list">
-          {methods.map(({ method, value }) => {
-            const meta = METHOD[method];
-            const href = meta.href(value);
-            const text = shown(method, value);
-            return (
-              <li key={method} className="pn-contact-item">
-                <span className="pn-contact-label">{meta.label}</span>
-                <span className="pn-contact-value">
-                  {href ? (
-                    <a
-                      className="link"
-                      href={href}
-                      {...(method === "booking" || method === "linkedin"
-                        ? { target: "_blank", rel: "noopener noreferrer" }
-                        : {})}
-                    >
-                      {text}
-                    </a>
-                  ) : (
-                    text
-                  )}
-                </span>
-                <CopyButton label={meta.copy} value={value} />
-              </li>
-            );
-          })}
-        </ul>
-        <p className="t-small text-fg-2 mt-4 measure-wide">
-          {isOwner
-            ? "Signed-in members see these. Change what you share in your settings."
-            : `${firstName} shares these with signed-in members. Please keep them to professional contact.`}
-        </p>
-      </>
-    );
+    body = <ContactList methods={methods} firstName={firstName} isOwner={isOwner} />;
   }
 
   return (
