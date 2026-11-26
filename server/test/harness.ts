@@ -16,7 +16,7 @@ export const WORKTREE_ID = process.env.WORKTREE_ID ?? "local";
  * Tables filled by migrations rather than by tests. `truncateAll` leaves them
  * alone; later schema tasks add theirs here.
  */
-export const MIGRATION_SEEDED_TABLES: string[] = ["schema_migrations", "config"];
+export const MIGRATION_SEEDED_TABLES: string[] = ["schema_migrations", "config", "disciplines", "mentorship_topics"];
 
 export interface TestDb {
   pool: Pool;
