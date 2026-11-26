@@ -199,6 +199,14 @@ describe("administrator roles", () => {
     // Members cannot call it.
     await expect(runAs(db.pool, student, "SELECT * FROM admin_list_members(1, 20, NULL)")).rejects.toThrow(/mest\.forbidden/);
   });
+
+  it("admin_member_domain_returns_only_the_domain_to_administrators", async () => {
+    const admin = await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    // Looked up by id, so a common name or a long members list cannot hide it.
+    const nameless = await makePerson(db.pool, { email: "quiet@harbor.example.test" });
+    expect(await scalarAs(db.pool, admin, "SELECT admin_member_domain($1) AS value", [nameless])).toBe("harbor.example.test");
+    await expect(runAs(db.pool, nameless, "SELECT admin_member_domain($1)", [nameless])).rejects.toThrow(/mest\.forbidden/);
+  });
 });
 
 describe("vocabulary administration", () => {

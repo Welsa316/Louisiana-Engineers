@@ -17,10 +17,10 @@ import type {
   OwnMentorshipSettings,
   ProfessionalDetails,
   ProfileAccess,
-  ProfileEntry,
   ProfileReviewSummary,
   StudentDetails,
 } from "./profiles";
+import type { ProfileView } from "./directory";
 
 /** `GET /api/me/settings`, and the `settings` part of the own profile. */
 export interface OwnSettings {
@@ -61,8 +61,8 @@ export interface OwnProfile {
   settings: OwnSettings;
 }
 
-/** What a viewer would see of the owner's profile: the public layers and education. */
-export type PreviewProfile = ProfileEntry & { education: Education[] };
+/** What a viewer would see of the owner's profile: the `GET /api/profiles/:id` view without owner-only fields. */
+export type PreviewProfile = Omit<ProfileView, "approvalState">;
 
 /** `GET /api/me/preview?as=visitor|member` (PRO-13). */
 export interface PreviewResponse {

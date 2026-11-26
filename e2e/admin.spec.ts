@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { seedEmail, seedUserId } from "../server/seed/users";
+import { reseed } from "./reseed";
 
 /**
  * The administration area against the seed: Dawud Jenkins, Samira Benali and
@@ -7,9 +8,9 @@ import { seedEmail, seedUserId } from "../server/seed/users";
  * appears in the directory) and declines Musa with notes (Musa reads them).
  *
  * The decisions change seeded rows, so they run once per run, in the
- * desktop project, and need a fresh `npm run seed` (which reopens the three
- * reviews). Dawud is hidden again afterwards so later specs see the seeded
- * directory. The phone project checks the same screens read-only.
+ * desktop project, and re-seed afterwards so every other spec (in either
+ * project, in any order) sees the seeded queue and directory. The phone
+ * project checks the same screens read-only.
  */
 
 const DAWUD = seedUserId("dawud-jenkins");
@@ -78,7 +79,7 @@ test.describe("administration", () => {
 
     const open = await page.request.get("/api/admin/reviews?status=pending");
     const waiting = JSON.stringify(await open.json());
-    expect(waiting.includes(DAWUD) && waiting.includes(MUSA), "Dawud and Musa must be waiting: run `npm run seed` first").toBe(
+    expect(waiting.includes(DAWUD) && waiting.includes(MUSA), "Dawud and Musa must be waiting (the global setup re-seeds)").toBe(
       true,
     );
 
@@ -124,8 +125,8 @@ test.describe("administration", () => {
       const musaSearch = await visitor.request.get("/api/directory?q=Musa");
       expect(JSON.stringify(await musaSearch.json())).not.toContain(MUSA);
     } finally {
-      // Put the directory back the way the seed left it for the specs that follow.
-      await page.request.post(`/api/admin/profiles/${DAWUD}/hide`, { headers: { origin } });
+      // Put the queue and directory back the way the seed left them.
+      await reseed();
       await visitor.close();
       await musa.close();
     }

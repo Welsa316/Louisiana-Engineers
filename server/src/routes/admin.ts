@@ -90,9 +90,10 @@ export function createAdminRoutes(): Hono {
 
   /* Administrators */
 
-  app.get("/admins", async (c) => {
+  app.get("/admins", validate(pageQuerySchema, "query"), async (c) => {
     const viewer = userIdOf(c);
-    return c.json(await withUser(viewer, (db) => admin.listAdmins(db, viewer)));
+    const { page, size } = c.req.valid("query");
+    return c.json(await withUser(viewer, (db) => admin.listAdmins(db, viewer, { page, size })));
   });
 
   app.post("/admins", validate(grantSchema), async (c) => {

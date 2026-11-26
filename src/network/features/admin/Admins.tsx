@@ -20,7 +20,7 @@ export function Admins() {
   const [revoking, setRevoking] = useState<AdminRole | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const revoke = useAdminAction((a: AdminRole) => ({ path: `/admin/admins/${a.profileId}`, method: "DELETE" }));
-  const atMinimum = (admins.data?.length ?? 0) <= MINIMUM;
+  const atMinimum = (admins.data?.total ?? 0) <= MINIMUM;
 
   return (
     <>
@@ -55,14 +55,14 @@ export function Admins() {
           </div>
         ) : !admins.data ? (
           <p className="p-5 t-small text-fg-2">Loading administrators</p>
-        ) : admins.data.length === 0 ? (
+        ) : admins.data.items.length === 0 ? (
           <div className="p-5">
             <Empty inline title="No administrators." />
           </div>
         ) : (
           <div className="pn-table-wrap">
             <table className="pn-table">
-              <caption className="sr-only">Administrators, {admins.data.length} in all</caption>
+              <caption className="sr-only">Administrators, {admins.data.total} in all</caption>
               <thead>
                 <tr>
                   <th scope="col">Administrator</th>
@@ -74,7 +74,7 @@ export function Admins() {
                 </tr>
               </thead>
               <tbody>
-                {admins.data.map((a) => (
+                {admins.data.items.map((a) => (
                   <tr key={a.profileId}>
                     <td>
                       <div className="pn-table-person">

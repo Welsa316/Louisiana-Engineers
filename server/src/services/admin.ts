@@ -186,7 +186,7 @@ export async function getReview(db: Db, id: string): Promise<AdminReviewDetail> 
   return {
     ...reviewItem(row),
     snapshot: row.snapshot ?? {},
-    emailDomain: await emailDomainOf(db, row.profile_id, row.first_name, row.last_name),
+    emailDomain: await emailDomainOf(db, row.profile_id),
     verifiedMethod: row.verified_method,
     visibility: row.visibility,
     adminHidden: row.admin_hidden,
@@ -203,23 +203,10 @@ export async function getReview(db: Db, id: string): Promise<AdminReviewDetail> 
   };
 }
 
-/**
- * The sign-up address's domain for one profile. `admin_list_members` is the
- * only path to it (a definer function that never returns the address), so
- * this searches it by the member's name and picks the row by id.
- */
-async function emailDomainOf(db: Db, profileId: string, first: string | null, last: string | null): Promise<string | null> {
-  const q = [first, last].filter(Boolean).join(" ") || null;
-  for (let page = 1; page <= 5; page++) {
-    const rows = await db.query<{ id: string; email_domain: string; total: number }>(
-      "SELECT id, email_domain, total FROM admin_list_members($1, 50, $2)",
-      [page, q],
-    );
-    const match = rows.find((r) => r.id === profileId);
-    if (match) return match.email_domain || null;
-    if (rows.length < 50) return null;
-  }
-  return null;
+/** The sign-up address's domain for one profile, never the address. */
+async function emailDomainOf(db: Db, profileId: string): Promise<string | null> {
+  const row = await db.one<{ domain: string | null }>("SELECT admin_member_domain($1) AS domain", [profileId]);
+  return row.domain;
 }
 
 export async function decideReview(db: Db, id: string, decision: ReviewDecision, notes: string | undefined): Promise<void> {
@@ -309,23 +296,27 @@ export async function listMembers(db: Db, q: string | undefined, paging: PageArg
 
 /* --------------------------------------------------------- administrators */
 
-export async function listAdmins(db: Db, viewerId: string): Promise<AdminRole[]> {
+export async function listAdmins(db: Db, viewerId: string, paging: PageArgs): Promise<Paged<AdminRole>> {
   const rows = await db.query<{
     profile_id: string;
     first_name: string | null;
     last_name: string | null;
     granted_at: Date;
     granted_by_name: string | null;
+    total: number;
   }>(
-    `SELECT a.profile_id, p.first_name, p.last_name, a.granted_at,
+    `SELECT a.profile_id, p.first_name, p.last_name, a.granted_at, count(*) OVER ()::int AS total,
             nullif(btrim(coalesce(g.first_name, '') || ' ' || coalesce(g.last_name, '')), '') AS granted_by_name
        FROM admin_roles a
        JOIN profiles p ON p.id = a.profile_id
        LEFT JOIN profiles g ON g.id = a.granted_by
       WHERE a.revoked_at IS NULL
-      ORDER BY a.granted_at, p.last_name, a.profile_id`,
+      ORDER BY a.granted_at, p.last_name, a.profile_id
+      LIMIT $1 OFFSET $2`,
+    [paging.size, offset(paging)],
   );
-  return rows.map((r) => ({
+  const total = rows[0]?.total ?? (await db.one<{ n: number }>("SELECT count(*)::int AS n FROM admin_roles WHERE revoked_at IS NULL")).n;
+  const items = rows.map((r) => ({
     profileId: r.profile_id,
     firstName: r.first_name,
     lastName: r.last_name,
@@ -333,6 +324,7 @@ export async function listAdmins(db: Db, viewerId: string): Promise<AdminRole[]>
     grantedByName: r.granted_by_name,
     isSelf: r.profile_id === viewerId,
   }));
+  return { items, total };
 }
 
 export async function grantAdmin(db: Db, profileId: string): Promise<void> {

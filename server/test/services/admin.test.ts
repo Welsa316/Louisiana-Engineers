@@ -234,7 +234,9 @@ describe("administrators", () => {
     const { admin, admin2, cookie } = await admins();
     const candidate = await makePerson(db.pool, { firstName: "Cara", lastName: "Candidate" });
 
-    const listed = await json<AdminRole[]>(await call(cookie, "GET", "/admins"));
+    const page = await json<Paged<AdminRole>>(await call(cookie, "GET", "/admins"));
+    expect(page.total).toBe(2);
+    const listed = page.items;
     expect(listed.map((a) => a.profileId).sort()).toEqual([admin, admin2].sort());
     expect(listed.find((a) => a.profileId === admin)?.isSelf).toBe(true);
 
@@ -242,11 +244,14 @@ describe("administrators", () => {
     expect(await json(await call(cookie, "DELETE", `/admins/${admin2}`), 409)).toEqual({ code: "admin_minimum" });
 
     expect((await call(cookie, "POST", "/admins", { profileId: candidate })).status).toBe(200);
-    const three = await json<AdminRole[]>(await call(cookie, "GET", "/admins"));
-    expect(three.find((a) => a.profileId === candidate)).toMatchObject({ grantedByName: "Ada Admin" });
+    const three = (await json<Paged<AdminRole>>(await call(cookie, "GET", "/admins?page=1&size=2")));
+    expect(three.total).toBe(3);
+    expect(three.items).toHaveLength(2);
+    const all = (await json<Paged<AdminRole>>(await call(cookie, "GET", "/admins"))).items;
+    expect(all.find((a) => a.profileId === candidate)).toMatchObject({ grantedByName: "Ada Admin" });
 
     expect((await call(cookie, "DELETE", `/admins/${candidate}`)).status).toBe(200);
-    expect((await json<AdminRole[]>(await call(cookie, "GET", "/admins"))).map((a) => a.profileId)).not.toContain(candidate);
+    expect((await json<Paged<AdminRole>>(await call(cookie, "GET", "/admins"))).items.map((a) => a.profileId)).not.toContain(candidate);
     expect((await call(cookie, "POST", "/admins", { profileId: "nope" })).status).toBe(400);
   });
 });

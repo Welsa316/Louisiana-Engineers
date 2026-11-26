@@ -468,6 +468,10 @@ describe("preview", () => {
     expect(member.profile?.firstName).toBe("Noor");
     // The owner's own proposed tag is not part of what others see.
     expect(member.profile?.tags).toEqual(["Hydraulic modeling"]);
+    // The same shape a viewer gets from GET /api/profiles/:id, without the owner-only fields.
+    expect(member.profile).toMatchObject({ isOwner: false, saved: false });
+    expect(member.profile).not.toHaveProperty("approvalState");
+    expect(member.profile?.mentorship).toMatchObject({ status: "active" });
     // The shared method only, resolved to the sign-in address; the phone is not shared.
     expect(member.contact).toEqual([{ method: "email", value: "noor@example.test" }]);
     // The preview reads, it does not release: no contact.viewed entry.

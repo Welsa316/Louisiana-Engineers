@@ -1497,6 +1497,20 @@ BEGIN
 END
 $$;
 
+-- One member's sign-up domain for the review drawer, never the address.
+CREATE FUNCTION admin_member_domain(profile_id uuid) RETURNS text
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NOT is_admin() THEN
+    RAISE EXCEPTION 'mest.forbidden' USING ERRCODE = '42501';
+  END IF;
+  RETURN (SELECT nullif(split_part(u.email::text, '@', 2), '')
+            FROM users u WHERE u.id = admin_member_domain.profile_id AND u.deleted_at IS NULL);
+END
+$$;
+
 -- Views (section 4.4) ---------------------------------------------------------------------
 
 -- Every profile the caller can read, with its public layers joined and no

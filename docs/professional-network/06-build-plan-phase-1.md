@@ -320,6 +320,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 
 ### Task 15: Directory and profile screens
 
+> **Handoff from integration (Phase 1B wave 2):** `GET /api/profiles/:id/contact` answers a visitor with `401 { code: 'unauthenticated' }` (it requires membership), not an empty list; ContactPanel shows the sign-in prompt on 401 and never calls it for an anonymous session. `ProfileView` (shared/types/directory.ts) carries the experience band, never exact years. `/network/*` pages already get a server-injected `noindex`; profile pages get their own title, description, canonical and Open Graph tags from `renderMeta(profileId, indexHtml, origin)`.
+
 **Depends on:** Task 13 (parallel with Tasks 14, 16 to 18).
 
 **Files:** Create `src/network/features/public/{Directory,Profile,ContactPanel,ProfileActions}.tsx` and `src/network/features/me/discover-routes.tsx` (ported; filters in URL search params; `/me/discover` renders Directory with `mentoring=available` preset and is owned here, not by Task 22; the owner's own profile shows a "Waiting for review" banner while `approvalState` is `pending`; ContactPanel shows "Sign in to see how to reach Layla" to visitors and the shared methods with copy buttons to members; `ProfileActions` renders the request buttons as "Available soon" tags with a `slot` prop that Task 22 fills, and a `reportSlot` that Task 24 fills); Test `e2e/directory.spec.ts`.
@@ -328,6 +330,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 - [ ] **Step 2:** Implement; PASS. Commit: `Add the directory and profile pages`.
 
 ### Task 16: Settings screens
+
+> **Handoff from integration (Phase 1B wave 2):** `GET /api/me/preview?as=visitor|member` returns `{ as, access, profile?, contact? }` where `profile` is the same `ProfileView` a viewer gets from `GET /api/profiles/:id` (without `approvalState`, with approved tags only), so render the preview with Task 15's profile components. `GET|PATCH /api/me/settings` shapes are in shared/types/me.ts; a refused status change rolls the whole patch back (409 with the code).
 
 **Depends on:** Task 12 (parallel with Tasks 14, 15, 17, 18).
 
@@ -367,6 +371,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 ## Phase 1C: Mentorship and moderation
 
 ### Task 19: Requests and relationships: schema, functions, lifecycle functions, routes
+
+> **Handoff from integration (Phase 1B wave 2):** Strengthen `lowering_max_active_keeps_relationships` (server/test/services/profiles.test.ts): add an accepted mentee, lower `maxActive` below the active count, and assert the relationship survives and new accepts are refused with `mentor_full`. When re-creating `release_contact` and `profile_access`, update `preview_my_contact()` and `preview_my_access(viewer)` in `0004_self_reads.sql` to match (the preview copies their rules), with a test comparing the preview against what a second member actually gets for pending, hidden, members-only, public and admin-hidden profiles.
 
 > **Handoff from integration (wave 2):** When re-creating the profiles policies with the counterparty case, also `CREATE OR REPLACE profile_access(id)` so a counterparty gets `visible` rather than `none`, with a test.
 
@@ -472,6 +478,8 @@ All suites; e2e loop end to end with every email printed by the development mail
 - [ ] Implement; PASS. Commit: `Add the personal data export`.
 
 ### Task 28: Accessibility, overflow, performance pass
+
+> **Handoff from integration (Phase 1B wave 2):** `directory_entries.search_tsv` is the concatenation of `profiles.search_tsv` and `professional_details.search_tsv`, so no GIN index can serve `search_tsv @@ query` against the view, and step 2's EXPLAIN check will fail as written. Match the base columns (`p.search_tsv @@ q OR d.search_tsv @@ q`, exposed through the view) or keep one combined indexed column, then re-run the EXPLAIN.
 
 **Depends on:** Tasks 26 and 27.
 

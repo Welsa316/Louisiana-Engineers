@@ -71,7 +71,7 @@ export function useMembers(q: string, page: number) {
 }
 
 export function useAdmins() {
-  return useQuery({ queryKey: adminKeys.admins, queryFn: () => api<AdminRole[]>("/admin/admins") });
+  return useQuery({ queryKey: adminKeys.admins, queryFn: () => api<Paged<AdminRole>>("/admin/admins?size=50") });
 }
 
 export function useTags(status: TagStatus, page: number, size = ADMIN_PAGE_SIZE) {

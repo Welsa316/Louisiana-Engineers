@@ -2,15 +2,16 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * End-to-end tests run against the built server on 8787 and the seeded local
- * database. Build and seed first:
- *   npm run build && npm run build -w server && npm run seed
- * then `npm run e2e`. The server runs in test mode so the dev-login and
+ * database. Build and migrate first:
+ *   npm run build && npm run build -w server && npm run migrate
+ * then `npm run e2e` (the global setup re-seeds before every run). The server runs in test mode so the dev-login and
  * dev-last-link routes exist.
  */
 const origin = "http://127.0.0.1:8787";
 
 export default defineConfig({
   testDir: "e2e",
+  globalSetup: "./e2e/reseed.ts",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

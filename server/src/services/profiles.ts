@@ -12,6 +12,7 @@ import type {
   TagStatus,
   Visibility,
 } from "@shared/types/common";
+import { getProfile } from "./directory";
 import type { OwnProfile, OwnSettings, PreviewProfile, PreviewResponse } from "@shared/types/me";
 import type {
   ContactValue,
@@ -19,7 +20,6 @@ import type {
   ExpertiseTag,
   NotificationPreferences,
   ProfileAccess,
-  ProfileEntry,
   StudentDetails,
 } from "@shared/types/profiles";
 import type { Db } from "../db/tx";
@@ -563,44 +563,12 @@ async function patchNotifications(db: Db, patch: NotificationPatch): Promise<voi
 
 /* ---------------------------------------------------------------- preview */
 
-interface EntryRow {
-  id: string;
-  kind: ProfileKind | null;
-  approval_state: ApprovalState;
-  visibility: Visibility;
-  first_name: string | null;
-  last_name: string | null;
-  credentials: string | null;
-  region: string;
-  location: string | null;
-  bio: string | null;
-  website_url: string | null;
-  last_active_at: Date | null;
-  title: string | null;
-  organization: string | null;
-  discipline_id: string | null;
-  discipline_label: string | null;
-  discipline_group: ProfileEntry["disciplineGroup"];
-  experience_band: ProfileEntry["experienceBand"];
-  participation: ParticipationId[];
-  interests: string[];
-  verified: boolean;
-  tags: string[];
-  mentor_status: MentorStatus | null;
-  mentor_topics: string[];
-  audience: AudienceId[];
-  format: MentoringFormat | null;
-  mode: MeetingMode | null;
-  availability: string | null;
-  duration_min: number | null;
-  has_capacity: boolean;
-}
-
 /**
  * `GET /api/me/preview?as=visitor|member` (PRO-13): what someone else would
  * get. Access mirrors `profile_access` for that viewer
- * (`preview_my_access`); the profile is the owner's own `profile_entries`
- * row with approved tags only (the owner's proposed tags are theirs alone);
+ * (`preview_my_access`); the profile is the `GET /api/profiles/:id` view of
+ * the owner without the owner-only fields, with approved tags only (the
+ * owner's proposed tags are theirs alone);
  * a member's contact list is what `release_contact` would hand them
  * (`preview_my_contact`, which writes no audit entry). A visitor never gets
  * contact values.
@@ -609,52 +577,17 @@ export async function previewProfile(db: Db, viewer: "visitor" | "member"): Prom
   const { access } = await db.one<{ access: ProfileAccess }>("SELECT preview_my_access($1) AS access", [viewer]);
   if (access !== "visible") return { as: viewer, access };
 
-  const row = await db.one<EntryRow>(
-    `SELECT e.id, e.kind, e.approval_state, e.visibility, e.first_name, e.last_name, e.credentials, e.region,
-            e.location, e.bio, e.website_url, e.last_active_at, e.title, e.organization, e.discipline_id,
-            e.discipline_label, e.discipline_group, e.experience_band, e.participation, e.interests, e.verified,
-            coalesce((
-              SELECT array_agg(t.label ORDER BY t.label)
-                FROM profile_expertise pe JOIN expertise_tags t ON t.id = pe.tag_id
-               WHERE pe.profile_id = e.id AND t.status = 'approved'
-            ), '{}') AS tags,
-            e.mentor_status, e.mentor_topics, e.audience, e.format, e.mode, e.availability, e.duration_min,
-            e.has_capacity
-       FROM profile_entries e WHERE e.id = app_uid()`,
+  // The same serializer as GET /api/profiles/:id, then the owner-only parts
+  // removed: what the owner sees of themselves is not what others get.
+  const own = await db.one<{ id: string }>("SELECT app_uid() AS id");
+  const view = await getProfile(db, own.id);
+  if (!view) return { as: viewer, access: "none" };
+  const { approvalState: _ownerOnly, ...shared } = view;
+  const approved = await db.query<{ label: string }>(
+    `SELECT t.label FROM profile_expertise pe JOIN expertise_tags t ON t.id = pe.tag_id
+      WHERE pe.profile_id = app_uid() AND t.status = 'approved' ORDER BY t.label`,
   );
-  const profile: PreviewProfile = {
-    id: row.id,
-    kind: row.kind,
-    approvalState: row.approval_state,
-    visibility: row.visibility,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    credentials: row.credentials,
-    region: row.region,
-    location: row.location,
-    bio: row.bio,
-    websiteUrl: row.website_url,
-    lastActiveAt: iso(row.last_active_at),
-    title: row.title,
-    organization: row.organization,
-    disciplineId: row.discipline_id,
-    disciplineLabel: row.discipline_label,
-    disciplineGroup: row.discipline_group,
-    experienceBand: row.experience_band,
-    participation: row.participation,
-    interests: row.interests,
-    verified: row.verified,
-    tags: row.tags,
-    mentorStatus: row.mentor_status,
-    mentorTopics: row.mentor_topics,
-    audience: row.audience,
-    format: row.format,
-    mode: row.mode,
-    availability: row.availability,
-    durationMin: row.duration_min,
-    hasCapacity: row.has_capacity,
-    education: await education(db, row.id),
-  };
+  const profile: PreviewProfile = { ...shared, isOwner: false, saved: false, tags: approved.map((t) => t.label) };
 
   if (viewer === "visitor") return { as: viewer, access, profile };
   const contact = await db.query<ContactValue>("SELECT method::text AS method, value FROM preview_my_contact()");
