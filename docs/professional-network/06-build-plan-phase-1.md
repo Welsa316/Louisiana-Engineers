@@ -278,6 +278,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 
 ### Task 12: Profile services and routes
 
+> **Handoff from integration (Phase 1B wave 1):** Read `server/migrations/0004_profiles.sql` before writing SQL against it. Enum array columns (`participation`, `audience`, `methods`, `share_with_members`) come back from `pg` as strings like `'{email}'`; cast them to `text[]` in every select (the views already do). `mentorship_settings.max_active` is column-withheld from requests; the owner reads it through `my_mentorship_settings()`, everyone else through `directory_entries.has_capacity`. `profile_entries` is the unfiltered companion view to `directory_entries` (same columns, no listing filter; RLS still applies). `GET /api/auth/me` now returns `mentorStatus`. `complete_onboarding(payload jsonb)` takes the camelCase output of the shared onboarding schema as is. `set_my_expertise(labels text[])` exists for the profile patch (unknown labels become `proposed`; a rejected label raises `mest.tag_rejected`). `release_contact` now follows the member-visible rule (approved, listed, not hidden), so for `GET /api/me/preview?as=member` compute the contact list from the owner's own `contact_preferences.share_with_members` resolved the same way, not by calling `release_contact` as the owner; `as=visitor` has no contact. Students get `visibility = 'hidden'` and no mentorship row; every professional has a mentorship row.
+
 > **Handoff from the Phase 1A audit:** requests cannot select `profiles.linkedin_url` (column grant withheld). `GET /api/me/profile` returns the owner's own LinkedIn link through a definer function (for example `my_profile_private()` returning `linkedin_url` for `app_uid()`), with a test that a visitor and another member still get permission denied on the column. A member with an open deletion can no longer update their profile at all (`profiles_owner_update` requires `is_member()`).
 
 **Depends on:** Task 11 (parallel with Task 13).
@@ -289,6 +291,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 - [ ] **Step 1:** Failing tests `student_onboarding_lands_approved`, `professional_onboarding_pending_with_review`, `unknown_expertise_becomes_proposed`, `set_kind_keeps_saved` (Task 19 adds `set_kind_keeps_requests`), `mentoring_requires_participation`, `lowering_max_active_keeps_relationships`, `preview_as_visitor_hides_members_only_profile`. Implement; PASS. Commit: `Add onboarding and profile services`.
 
 ### Task 13: Directory, profile and contact reads; meta injection
+
+> **Handoff from integration (Phase 1B wave 1):** Read `server/migrations/0004_profiles.sql` before writing SQL against it. Enum array columns (`participation`, `audience`, `methods`, `share_with_members`) come back from `pg` as strings like `'{email}'`; cast them to `text[]` in every select (the views already do). `mentorship_settings.max_active` is column-withheld from requests; the owner reads it through `my_mentorship_settings()`, everyone else through `directory_entries.has_capacity`. `profile_entries` is the unfiltered companion view to `directory_entries` (same columns, no listing filter; RLS still applies). `GET /api/auth/me` now returns `mentorStatus`. `release_contact(profile_id)` returns nothing to administrators beyond what a member gets (tested), so the contact route can call it directly. Never select `linkedin_url` from `profiles`; it is not granted.
 
 **Depends on:** Task 11 (parallel with Task 12).
 
@@ -333,6 +337,8 @@ docs/professional-network/       02 and 05 revised; runbook.md added
 - [ ] **Step 2:** Implement; PASS. Commit: `Add member settings`.
 
 ### Task 17: Administration area
+
+> **Handoff from integration (Phase 1B wave 1):** Read `server/migrations/0004_profiles.sql` before writing SQL against it. Enum array columns (`participation`, `audience`, `methods`, `share_with_members`) come back from `pg` as strings like `'{email}'`; cast them to `text[]` in every select (the views already do). `mentorship_settings.max_active` is column-withheld from requests; the owner reads it through `my_mentorship_settings()`, everyone else through `directory_entries.has_capacity`. `profile_entries` is the unfiltered companion view to `directory_entries` (same columns, no listing filter; RLS still applies). `GET /api/auth/me` now returns `mentorStatus`. Use the admin functions from 0004 as they are: `admin_review_profile`, `admin_set_verified`, `admin_hide_profile`, `admin_restore_profile` (a profile whose owner dropped mentoring while hidden comes back with mentoring off), `admin_grant`, `admin_revoke`, `admin_review_tag`, `admin_add_vocabulary(kind, id, label, group_name default null)`, `admin_list_members(page, size, q)` and the `admin_dashboard` view. Members can no longer insert expertise tags directly. Administrators have no contact access; do not add any.
 
 **Depends on:** Task 11 (parallel with Tasks 12 to 16, 18).
 
