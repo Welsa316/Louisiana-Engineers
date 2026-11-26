@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import type { Pool } from "./db/pool";
 import { apiErrorHandler, apiNotFound, safeErrorSummary } from "./http/errors";
+import { landingHtml, noindexHtml, renderMeta } from "./meta";
 import { createApiRoutes } from "./routes/index";
 
 export interface AppOptions {
@@ -56,9 +57,13 @@ export function createApp({ webDist, pool, cacheIndex = true }: AppOptions): Hon
   app.all("/api", apiNotFound);
   app.all("/api/*", apiNotFound);
 
-  app.get("/", async (c) => c.html(await readIndex(), 200, { "Cache-Control": "no-cache" }));
-  app.get("/network", async (c) => c.html(await readIndex(), 200, { "Cache-Control": "no-cache" }));
-  app.get("/network/*", async (c) => c.html(await readIndex(), 200, { "Cache-Control": "no-cache" }));
+  // The landing page keeps its own tags; every network page is noindex
+  // except a public profile, which gets its own title and Open Graph tags.
+  const html = { "Cache-Control": "no-cache" };
+  app.get("/", async (c) => c.html(landingHtml(await readIndex()), 200, html));
+  app.get("/network/directory/:id", async (c) => c.html(await renderMeta(c.req.param("id"), await readIndex()), 200, html));
+  app.get("/network", async (c) => c.html(noindexHtml(await readIndex()), 200, html));
+  app.get("/network/*", async (c) => c.html(noindexHtml(await readIndex()), 200, html));
 
   app.get("*", async (c, next) => {
     let pathname: string;
