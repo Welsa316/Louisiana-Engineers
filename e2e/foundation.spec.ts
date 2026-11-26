@@ -103,6 +103,16 @@ test.describe("foundation", () => {
     }
   });
 
+  test("the app header shows the logo and kind on phones only", async ({ page }) => {
+    expect((await page.request.post("/api/auth/dev-login", { data: { email: "layla-haddad@example.test" } })).ok()).toBe(true);
+    await page.goto("/network/me");
+    await expect(page.locator("main h1:visible").first()).toBeVisible();
+    const head = page.getByTestId("app-head");
+    const phone = (page.viewportSize()?.width ?? 0) < 768;
+    await expect(head.getByRole("link", { name: "MEST Network home" })).toBeVisible({ visible: phone });
+    await expect(head.getByText("Professional", { exact: true })).toBeVisible({ visible: phone });
+  });
+
   test("an unknown network path shows the app's not-found page", async ({ page }) => {
     await page.goto("/network/no-such-page");
     await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();

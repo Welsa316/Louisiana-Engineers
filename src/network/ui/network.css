@@ -2390,6 +2390,13 @@
   gap: 0.75rem;
   margin: -0.5rem 0 1rem;
 }
+/* The rail carries the logo on wider screens. The landing page's unlayered
+   .wordmark rule outranks Tailwind's md:hidden, so hide it here. */
+@media (min-width: 48rem) {
+  .pn-main-head .wordmark {
+    display: none;
+  }
+}
 
 /* The public header's Menu button, shown once the nav links fold away. */
 .pn-header-menu {
