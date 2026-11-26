@@ -1,6 +1,10 @@
 import { Hono } from "hono";
+import { adminRoutes } from "./admin";
 import { authRoutes } from "./auth";
 import { configRoutes } from "./config";
+import { directoryRoutes } from "./directory";
+import { meRoutes } from "./me";
+import { profileRoutes } from "./profiles";
 
 /**
  * Every API area, mounted under `/api` by `createApp`. Each area lives in its
@@ -16,5 +20,9 @@ export function createApiRoutes(): Hono {
   const api = new Hono();
   api.route("/auth", authRoutes);
   api.route("/config", configRoutes);
+  api.route("/me", meRoutes);
+  api.route("/directory", directoryRoutes);
+  api.route("/profiles", profileRoutes);
+  api.route("/admin", adminRoutes);
   return api;
 }

@@ -14,6 +14,7 @@
 
 import type { ReactNode } from "react";
 import { Outlet, type RouteObject } from "react-router";
+import { adminRoutes } from "../features/admin/routes";
 import { authRoutes } from "../features/auth/routes";
 import { publicRoutes } from "../features/public/routes";
 import { Stub } from "../features/public/Stub";
@@ -47,7 +48,7 @@ const memberPages: RouteObject[] = [
 ];
 
 /* Task 17 (features/admin) replaces this. */
-const adminPages: RouteObject[] = [{ path: "admin/*", element: <Stub inApp title="Administration" /> }];
+const adminPages: RouteObject[] = adminRoutes;
 
 export const routes: RouteObject[] = [
   {
