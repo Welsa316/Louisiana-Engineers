@@ -1,0 +1,118 @@
+/* Directory and profile page additions (directory-filters.tsx, the
+   directory and profile screens). Everything else on these pages uses the
+   shared pn-* rules in network.css. */
+
+/* Results are a list; each item holds one card and fills its grid cell.
+   Columns follow the space the list actually has (the app shell's rail
+   leaves less of it than the public page), never narrower than a card. */
+.pn-cards.pn-cards-list {
+  list-style: none;
+  margin-inline: 0;
+  padding: 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+}
+.pn-cards-list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.pn-cards-list > li > * {
+  min-width: 0;
+}
+
+/* The verified and location filters follow the shared panel. */
+.pn-filters-more {
+  margin-top: 1.75rem;
+}
+.pn-filter-input {
+  min-height: 2.75rem;
+  font-size: 0.9375rem;
+}
+
+.pn-dir-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1rem;
+  margin-top: 2rem;
+}
+
+/* Quiet placeholder while the first answer loads, so the layout does not jump. */
+.pn-dir-loading {
+  min-height: 17rem;
+  border: 1px solid var(--pn-line);
+  border-radius: var(--pn-radius);
+  background: var(--pn-surface-1);
+}
+
+/* Profile: members-only and not-available screens. */
+.pn-profile-gate {
+  padding: clamp(2.5rem, 6vw, 5rem) 0 2rem;
+  max-width: 40rem;
+}
+
+.pn-profile-bio {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* A request button that arrives with the mentorship phase. */
+.pn-action-soon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px dashed var(--pn-line-strong);
+  border-radius: var(--pn-radius);
+  font-size: 0.9375rem;
+  color: var(--color-fg-2);
+}
+
+/* Contact methods shared with members. */
+.pn-contact-list {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--pn-line);
+}
+.pn-contact-item {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-height: 3rem;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--pn-line);
+  font-size: 0.9375rem;
+}
+.pn-contact-label {
+  color: var(--color-fg-2);
+}
+.pn-contact-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pn-contact-copy {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+.pn-contact-signin {
+  max-width: 40rem;
+}
+
+@media (max-width: 767px) {
+  .pn-contact-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.625rem 0;
+  }
+  .pn-contact-label {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+  }
+}
