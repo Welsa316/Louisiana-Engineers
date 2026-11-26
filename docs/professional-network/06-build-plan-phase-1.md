@@ -411,6 +411,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 
 ### Task 22: Mentee screens
 
+> **Handoff from integration (Phase 1B wave 3):** Task 15 owns `src/network/features/public/directory-routes.tsx` and `src/network/features/me/discover-routes.tsx`; pass the request buttons as `slot` to `<Profile>` in both (a ReactNode or `(profile: ProfileView) => ReactNode`). `ProfileActions` already treats a signed-in account with `kind === null` as "finish joining"; keep that branch. Use the query key `["me", "profile"]` for `GET /api/me/profile` (onboarding invalidates `["me"]`).
+
 **Depends on:** Task 19 (parallel with Tasks 20, 21, 24).
 
 **Files:** Create `src/network/features/me/{RequestForm,Requests,RequestDetail,Saved,RequestActions,mentee-routes}.tsx` (ported from the prototype; `RequestActions` fills Task 15's `ProfileActions` slot with the real buttons using `GET /api/mentors/:id/availability`; `RequestForm` maps every `409` code to the prototype's gating copy; `RequestDetail` shows the handoff for accepted requests and `GET /api/me/suggested-mentors` on decline or expiry); Test `e2e/request-flow-mentee.spec.ts`.
@@ -478,6 +480,8 @@ All suites; e2e loop end to end with every email printed by the development mail
 - [ ] Implement; PASS. Commit: `Add the personal data export`.
 
 ### Task 28: Accessibility, overflow, performance pass
+
+> **Deferred from the Phase 1B reviews (do these here):** (1) The profile page has no sticky action bar on phones (03 section 12); its actions sit in the profile header. Add the bar below 768px. (2) The admin members list searches by name only; 03 also lists kind, approval, mentor status, verified and region filters, which need `admin_list_members` to grow parameters. (3) Onboarding prefills "mentees at once" with 3 rather than `config.default_max_active`; expose the default in `GET /api/config/public` and prefill from it. (4) Mentorship topic choices in settings and onboarding come from `shared/taxonomy.ts`, so a topic an administrator adds is not offered; add a public vocabulary read and use it.
 
 > **Handoff from integration (Phase 1B wave 2):** `directory_entries.search_tsv` is the concatenation of `profiles.search_tsv` and `professional_details.search_tsv`, so no GIN index can serve `search_tsv @@ query` against the view, and step 2's EXPLAIN check will fail as written. Match the base columns (`p.search_tsv @@ q OR d.search_tsv @@ q`, exposed through the view) or keep one combined indexed column, then re-run the EXPLAIN.
 
