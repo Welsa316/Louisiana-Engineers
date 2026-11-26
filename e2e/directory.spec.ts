@@ -18,21 +18,22 @@ async function signIn(page: Page, key: string) {
   expect(res.ok()).toBe(true);
 }
 
-/**
- * No element of the page's own content wider than the viewport (03 section
- * 12). Measured inside `main`: the signed-in public header at 375px is the
- * shell's, and is checked by the shell's own spec.
- */
+/** No horizontal scroll and no element wider than the viewport, header included (03 section 12). */
 async function expectNoHorizontalOverflow(page: Page) {
   const overflow = await page.evaluate(() => {
     const width = document.documentElement.clientWidth;
-    const wide = [...document.querySelectorAll<HTMLElement>("main, main *")].filter((el) => {
+    const wide = [...document.querySelectorAll<HTMLElement>("body *")].filter((el) => {
       const rect = el.getBoundingClientRect();
       return rect.width > 0 && rect.right > width + 1;
     });
-    return { width, wide: wide.slice(0, 5).map((el) => el.outerHTML.slice(0, 120)) };
+    return {
+      width,
+      scroll: document.documentElement.scrollWidth,
+      wide: wide.slice(0, 5).map((el) => el.outerHTML.slice(0, 120)),
+    };
   });
   expect(overflow.width).toBe(page.viewportSize()?.width ?? overflow.width);
+  expect(overflow.scroll).toBeLessThanOrEqual(overflow.width);
   expect(overflow.wide, overflow.wide.join("\n")).toEqual([]);
 }
 
@@ -108,6 +109,24 @@ test.describe("directory", () => {
     const api = await page.request.get("/api/directory?size=50");
     const body = (await api.json()) as { facets: { disciplines: { id: string; count: number }[] } };
     expect(body.facets.disciplines.find((d) => d.id === "coastal")?.count).toBe(shown);
+  });
+
+  test("Back undoes a filter change, and a page past the end offers page 1", async ({ page }) => {
+    await page.goto("/network/directory");
+    await expect(results(page)).toHaveCount(14);
+    const filters = await openFilters(page);
+    await filters.getByRole("button", { name: /Coastal & environmental/ }).click();
+    await expect(page).toHaveURL(/[?&]discipline=coastal/);
+    if (isPhone(page)) await page.keyboard.press("Escape");
+    await page.goBack();
+    await expect(page).not.toHaveURL(/discipline=/);
+    await expect(results(page)).toHaveCount(14);
+
+    await page.goto("/network/directory?page=99");
+    await expect(page.getByText("This page is past the end of the results.")).toBeVisible();
+    await expect(page.getByText("The directory is new.")).toHaveCount(0);
+    await page.getByRole("button", { name: "Back to page 1" }).click();
+    await expect(results(page)).toHaveCount(14);
   });
 
   test("the filter sheet applies on a phone", async ({ page }) => {
@@ -187,6 +206,24 @@ test.describe("profile", () => {
     await expect(contact.getByText("Sign in to see how to reach Layla")).toHaveCount(0);
     // The request buttons wait for the mentorship phase.
     await expect(page.getByText("Available soon").first()).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("someone signed in who has not finished joining is pointed to onboarding, not an error", async ({ page }, testInfo) => {
+    const email = `unfinished-${testInfo.project.name}-${Date.now()}@example.test`;
+    expect((await page.request.post("/api/auth/dev-login", { data: { email } })).ok()).toBe(true);
+    const contactCalls: string[] = [];
+    page.on("request", (req) => {
+      if (req.url().includes("/contact")) contactCalls.push(req.url());
+    });
+    await page.goto(`/network/directory/${LAYLA}`);
+    await expect(page.getByRole("heading", { level: 1, name: /Layla Haddad/ })).toBeVisible();
+    const contact = page.getByRole("region", { name: "Contact" });
+    await expect(contact.getByText("Finish joining to see how to reach Layla")).toBeVisible();
+    await expect(contact.getByRole("link", { name: "Finish joining" })).toHaveAttribute("href", "/network/onboarding");
+    await expect(page.getByText("did not load")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Save profile/ })).toHaveCount(0);
+    expect(contactCalls).toEqual([]);
     await expectNoHorizontalOverflow(page);
   });
 

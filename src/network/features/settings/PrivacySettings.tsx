@@ -155,6 +155,11 @@ function PrivacyForm({ profile, settings }: { profile: OwnProfile; settings: Own
     setDraft(next);
   }, [stored]);
 
+  // The first checkbox in each column a person can change (MEST is fixed; LinkedIn needs a link; sharing needs use).
+  const usable = (id: ContactMethodId) => id !== "mest" && !(id === "linkedin" && !hasLinkedin && !draft.methods.includes("linkedin"));
+  const firstUse = contactMethods.find((m) => usable(m.id))?.id;
+  const firstShare = contactMethods.find((m) => m.id !== "mest" && draft.methods.includes(m.id))?.id;
+
   const dirty = JSON.stringify(saved) !== JSON.stringify(draft);
   const touch = (keys: string[]) => {
     keys.forEach(clear);
@@ -269,15 +274,20 @@ function PrivacyForm({ profile, settings }: { profile: OwnProfile; settings: Own
               Turn on the ways you are happy to be reached, then choose which of them signed-in members may see. Mentees you
               accept can be given more when you accept them.
             </p>
+            {/* Error-summary links land on the first checkbox a person can change in each column. */}
             <table className="pn-settings-matrix mt-6" aria-describedby={methodsError || shareError ? fieldId(FORM, "contact.methods") + "-error" : undefined}>
               <caption className="sr-only">Contact methods: which you use, and which signed-in members see</caption>
               <thead>
                 <tr>
                   <th scope="col">Method</th>
-                  <th scope="col" id={fieldId(FORM, "contact.methods")} tabIndex={-1}>
+                  <th scope="col" id={firstUse ? undefined : fieldId(FORM, "contact.methods")} tabIndex={firstUse ? undefined : -1}>
                     I use it
                   </th>
-                  <th scope="col" id={fieldId(FORM, "contact.shareWithMembers")} tabIndex={-1}>
+                  <th
+                    scope="col"
+                    id={firstShare ? undefined : fieldId(FORM, "contact.shareWithMembers")}
+                    tabIndex={firstShare ? undefined : -1}
+                  >
                     Members see it
                   </th>
                 </tr>
@@ -303,6 +313,7 @@ function PrivacyForm({ profile, settings }: { profile: OwnProfile; settings: Own
                         <label className="pn-settings-cell">
                           <input
                             type="checkbox"
+                            id={m.id === firstUse ? fieldId(FORM, "contact.methods") : undefined}
                             aria-label={`Use ${m.label}`}
                             checked={used}
                             disabled={lockedOn || noLink}
@@ -312,13 +323,15 @@ function PrivacyForm({ profile, settings }: { profile: OwnProfile; settings: Own
                       </td>
                       <td>
                         {m.id === "mest" ? (
-                          <span className="text-fg-2" aria-label="Not a contact detail">
-                            &ndash;
+                          <span className="text-fg-2">
+                            <span aria-hidden="true">&ndash;</span>
+                            <span className="sr-only">Not a contact detail</span>
                           </span>
                         ) : (
                           <label className="pn-settings-cell">
                             <input
                               type="checkbox"
+                              id={m.id === firstShare ? fieldId(FORM, "contact.shareWithMembers") : undefined}
                               aria-label={`Show ${m.label} to signed-in members`}
                               checked={draft.share.includes(m.id as Sharable)}
                               disabled={!used}

@@ -33,7 +33,7 @@ const ROWS: Row[] = [
   {
     key: "reminders",
     title: "Reminders about requests waiting for you",
-    note: "A reminder while a request waits for your answer. Off means it simply closes with no reply after 14 days.",
+    note: "A reminder while a request waits for your answer. Off means the request simply expires if you do not answer it in time.",
     for: "professional",
   },
   {

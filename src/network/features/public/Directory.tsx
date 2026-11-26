@@ -80,14 +80,18 @@ export function Directory({ mode = "directory" }: { mode?: DirectoryMode }) {
     canonical: discover ? undefined : "/network/directory",
   });
 
-  const update = (next: DirectoryState, { keepPage = false } = {}) => {
-    setParams(writeDirectoryState(keepPage ? next : { ...next, page: 1 }, defaults), { replace: !keepPage });
+  // Each filter change or page is its own history entry, so Back steps
+  // through them; only the debounced search text replaces as it is typed.
+  const update = (next: DirectoryState, { keepPage = false, replace = false } = {}) => {
+    setParams(writeDirectoryState(keepPage ? next : { ...next, page: 1 }, defaults), { replace });
   };
   const setFilters = (next: Filters | ((f: Filters) => Filters)) =>
     update({ ...state, filters: typeof next === "function" ? next(state.filters) : next });
   const clear = () => update(clearedState(state, defaults));
 
-  const [q, setQ] = useDebouncedText(state.filters.q, (text) => setFilters((f) => ({ ...f, q: text })));
+  const [q, setQ] = useDebouncedText(state.filters.q, (text) =>
+    update({ ...state, filters: { ...state.filters, q: text } }, { replace: true }),
+  );
 
   const query = useDirectorySearch(directoryApiQuery(state));
   const data = query.data;
@@ -190,6 +194,8 @@ export function Directory({ mode = "directory" }: { mode?: DirectoryMode }) {
             searching={searching}
             items={items}
             onClear={clear}
+            pastEnd={state.page > 1 && total > 0}
+            onFirstPage={() => update({ ...state, page: 1 }, { keepPage: true })}
           />
 
           <Pager
@@ -235,6 +241,8 @@ function Results({
   searching,
   items,
   onClear,
+  pastEnd,
+  onFirstPage,
 }: {
   mode: DirectoryMode;
   loading: boolean;
@@ -244,6 +252,9 @@ function Results({
   searching: boolean;
   items: DirectoryEntry[];
   onClear: () => void;
+  /** A page number beyond the last page of a non-empty result. */
+  pastEnd: boolean;
+  onFirstPage: () => void;
 }) {
   if (loading) return <div className="pn-dir-loading mt-6" aria-hidden="true" />;
   if (failed) {
@@ -271,7 +282,18 @@ function Results({
   if (!items.length) {
     return (
       <div className="mt-6">
-        {searching ? (
+        {pastEnd ? (
+          <Empty
+            title="This page is past the end of the results."
+            action={
+              <button type="button" className="btn btn-outline btn-sm" onClick={onFirstPage}>
+                Back to page 1
+              </button>
+            }
+          >
+            The list is shorter than this link expected.
+          </Empty>
+        ) : searching ? (
           <Empty
             title="No profiles match these filters."
             action={

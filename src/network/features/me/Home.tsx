@@ -38,15 +38,10 @@ export function useOwnProfile() {
   });
 }
 
-function visibilityLine(profile: OwnProfile | undefined): string {
-  switch (profile?.visibility) {
-    case "members":
-      return "Signed-in members can find it in the directory.";
-    case "hidden":
-      return "You have hidden it, so nobody finds it in the directory.";
-    default:
-      return "Anyone can find it in the directory.";
-  }
+function visibilityLine(visibility: "public" | "members"): string {
+  return visibility === "members"
+    ? "Signed-in members can find it in the directory."
+    : "Anyone can find it in the directory.";
 }
 
 /** The profile status banner. Students have nothing to wait for, so they get none. */
@@ -97,8 +92,8 @@ export function ProfileStatusBanner({
           </div>
         ) : null}
         <p className="mt-3">
-          <Link to="/settings" className="link t-small">
-            Edit your profile
+          <Link to="/onboarding" className="link t-small">
+            Update and resubmit
             <ArrowRight size={14} aria-hidden="true" />
           </Link>
         </p>
@@ -117,10 +112,39 @@ export function ProfileStatusBanner({
     );
   }
 
+  // Until the own profile loads, claim nothing about who can find it.
+  if (!profile) {
+    return (
+      <Notice tone="info" icon={<CircleCheck size={18} aria-hidden="true" />}>
+        <p>
+          <strong>Your profile is approved.</strong>
+        </p>
+        <p className="mt-2">{ownProfile}</p>
+      </Notice>
+    );
+  }
+
+  if (profile.visibility === "hidden") {
+    return (
+      <Notice tone="info" icon={<EyeOff size={18} aria-hidden="true" />}>
+        <p>
+          <strong>Your profile is approved but hidden.</strong> Nobody finds it in the directory until you choose who
+          can see it.
+        </p>
+        <p className="mt-2">
+          <Link to="/settings/privacy" className="link t-small">
+            Choose who can see it
+            <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+        </p>
+      </Notice>
+    );
+  }
+
   return (
     <Notice tone="ok" icon={<CircleCheck size={18} aria-hidden="true" />}>
       <p>
-        <strong>Your profile is listed.</strong> {visibilityLine(profile)}
+        <strong>Your profile is listed.</strong> {visibilityLine(profile.visibility)}
       </p>
       <p className="mt-2">{ownProfile}</p>
     </Notice>
