@@ -165,6 +165,17 @@ describe("sessions", () => {
     expect(leavingMe.user.hasDeletionScheduled).toBe(true);
   });
 
+  it("me_reports_the_mentor_status", async () => {
+    // The network nav reads mentorStatus to show the Mentoring section.
+    const mentor = await makePerson(db.pool, { email: "mentor@example.test", participation: ["directory", "mentoring"] });
+    await asSystem(db.pool, (client) =>
+      client.query("INSERT INTO mentorship_settings (profile_id, status, max_active) VALUES ($1, 'active', 3)", [mentor]),
+    );
+    const res = await signInByLink("mentor@example.test");
+    const body = (await (await me(cookieValue(cookieFrom(res)))).json()) as { user: { mentorStatus: string | null } };
+    expect(body.user.mentorStatus).toBe("active");
+  });
+
   it("signout_clears_session", async () => {
     const value = cookieValue(cookieFrom(await signInByLink("bye@example.test")));
     expect((await db.pool.query("SELECT 1 FROM sessions")).rowCount).toBe(1);

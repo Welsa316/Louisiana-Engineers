@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { withSystem, type Db } from "../src/db/tx";
 import { SEED_ADMINS, SEED_PEOPLE, joinedAt, lastActiveAt, seedProfiles } from "./profiles";
+import { seedProfilesDetails } from "./profiles-details";
 import { seedEmail, seedUserId, seedUsers } from "./users";
 
 /**
@@ -35,6 +36,7 @@ export async function seedAll(db: Db): Promise<void> {
     })),
   );
   await seedProfiles(db);
+  await seedProfilesDetails(db);
 }
 
 /** Runs the seed against the process pool (`DATABASE_URL`, or the test database under the harness). */

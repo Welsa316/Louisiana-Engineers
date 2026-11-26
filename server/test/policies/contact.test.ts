@@ -165,6 +165,21 @@ describe("release_contact", () => {
     expect((await release(member, account)).map((r) => r.method)).toEqual(["email", "phone"]);
   });
 
+  it("release_contact_gives_administrators_nothing_beyond_members", async () => {
+    // Administrators have no direct contact access (02 section 5.4): a hidden,
+    // pending or admin-hidden professional releases nothing, even to them.
+    const share = { methods: ["mest", "email", "phone"], share: ["email", "phone"], phone: "+15045550100" };
+    const hidden = await professionalWith(share, { visibility: "hidden" });
+    const pending = await professionalWith(share, { approval: "pending" });
+    const listed = await professionalWith(share);
+    const admin = await makePerson(db.pool, { admin: true });
+    await runAs(db.pool, admin, "SELECT admin_hide_profile($1)", [listed]);
+    for (const profile of [hidden, pending, listed]) {
+      expect(await release(admin, profile)).toEqual([]);
+    }
+    expect(await contactViews(hidden)).toEqual([]);
+  });
+
   it("release_contact_audited_once", async () => {
     const pro = await professionalWith({ methods: ["mest", "email", "phone"], share: ["email", "phone"], phone: "+15045550111" });
     const member = await makePerson(db.pool, { kind: "student", visibility: "hidden" });

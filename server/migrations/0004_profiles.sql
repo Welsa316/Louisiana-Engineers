@@ -488,9 +488,11 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF 'mentoring' = ANY (OLD.participation) AND NOT ('mentoring' = ANY (NEW.participation)) THEN
+    -- previous_status too, so an administrator's restore of a hidden
+    -- profile cannot bring back an offer the owner has since withdrawn.
     UPDATE mentorship_settings s
-       SET status = 'off', paused_until = NULL
-     WHERE s.profile_id = NEW.profile_id AND s.status <> 'off';
+       SET status = 'off', paused_until = NULL, previous_status = NULL
+     WHERE s.profile_id = NEW.profile_id AND (s.status <> 'off' OR s.previous_status IS NOT NULL);
   END IF;
   RETURN NULL;
 END
@@ -1128,7 +1130,18 @@ DECLARE
   target uuid := release_contact.profile_id;
   released contact_method[];
 BEGIN
-  IF me IS NULL OR NOT is_member() OR target IS NULL OR profile_access(target) <> 'visible' THEN
+  -- The member-visible rule, not profile_access: administrators see every
+  -- profile but get no contact values a member could not get (02 section 5.4).
+  IF me IS NULL OR NOT is_member() OR target IS NULL OR NOT EXISTS (
+    SELECT 1 FROM profiles p
+     WHERE p.id = target
+       AND p.kind = 'professional'
+       AND p.approval_state = 'approved'
+       AND p.visibility IN ('public', 'members')
+       AND p.admin_hidden_at IS NULL
+       AND p.anonymized_at IS NULL
+       AND profile_in_directory(p.id)
+  ) THEN
     RETURN;
   END IF;
 
@@ -1594,11 +1607,10 @@ REVOKE EXECUTE ON FUNCTION professional_search_document(uuid, text, text) FROM P
 REVOKE ALL ON disciplines, mentorship_topics FROM app_user;
 GRANT SELECT ON disciplines, mentorship_topics TO app_user;
 
--- Expertise tags: read by policy; a member proposes through the onboarding
--- and profile functions or a direct insert as `proposed`.
+-- Expertise tags: read by policy; a member proposes only through the
+-- onboarding and profile functions (where a rate limit can live).
 REVOKE ALL ON expertise_tags FROM app_user;
 GRANT SELECT ON expertise_tags TO app_user;
-GRANT INSERT (label, slug, proposed_by) ON expertise_tags TO app_user;
 
 -- Professional details: the owner inserts and edits everything but the
 -- verification and search columns.
@@ -1674,8 +1686,6 @@ CREATE POLICY expertise_tags_approved_read ON expertise_tags FOR SELECT TO app_u
 CREATE POLICY expertise_tags_proposer_read ON expertise_tags FOR SELECT TO app_user
   USING (status = 'proposed' AND proposed_by = app_uid());
 CREATE POLICY expertise_tags_admin_read ON expertise_tags FOR SELECT TO app_user USING (is_admin());
-CREATE POLICY expertise_tags_member_propose ON expertise_tags FOR INSERT TO app_user
-  WITH CHECK (status = 'proposed' AND proposed_by = app_uid() AND is_member());
 
 -- "Follows the parent profile": readable when the caller can read the
 -- profile row through the profiles policies.

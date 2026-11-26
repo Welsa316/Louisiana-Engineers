@@ -217,6 +217,13 @@ describe("vocabularies and expertise tags", () => {
     ]);
   });
 
+  it("members_propose_tags_only_through_the_profile_functions", async () => {
+    const member = await makePerson(db.pool);
+    await expect(
+      runAs(db.pool, member, "INSERT INTO expertise_tags (label, slug, proposed_by) VALUES ('Direct tag', 'direct-tag', app_uid())"),
+    ).rejects.toThrow(/permission denied/);
+  });
+
   it("expertise_count_and_label_limits", async () => {
     const account = await newAccount(db.pool);
     await expect(onboard(db.pool, account, professionalPayload({ expertise: ["Only one"] }))).rejects.toThrow(

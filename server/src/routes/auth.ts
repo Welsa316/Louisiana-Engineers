@@ -9,7 +9,7 @@ import {
   type MeResponse,
   type SessionUser,
 } from "@shared/types/auth";
-import type { ApprovalState, ProfileKind } from "@shared/types/common";
+import type { ApprovalState, MentorStatus, ProfileKind } from "@shared/types/common";
 import {
   beginGoogleSignIn,
   completeGoogleSignIn,
@@ -180,9 +180,16 @@ export const authRoutes = createAuthRoutes();
 async function loadSessionUser(id: string): Promise<SessionUser | null> {
   // Runs as the user: the owner policies on profiles and account_deletions apply.
   const row = await withUser(id, (db) =>
-    db.maybeOne<{ kind: ProfileKind | null; approval_state: ApprovalState; is_admin: boolean; deleting: boolean }>(
+    db.maybeOne<{
+      kind: ProfileKind | null;
+      approval_state: ApprovalState;
+      is_admin: boolean;
+      mentor_status: MentorStatus | null;
+      deleting: boolean;
+    }>(
       `SELECT p.kind,
               p.approval_state,
+              (SELECT s.status::text FROM mentorship_settings s WHERE s.profile_id = p.id) AS mentor_status,
               is_admin() AS is_admin,
               EXISTS (
                 SELECT 1 FROM account_deletions d
@@ -198,7 +205,7 @@ async function loadSessionUser(id: string): Promise<SessionUser | null> {
     kind: row.kind,
     approvalState: row.approval_state,
     isAdmin: row.is_admin,
-    mentorStatus: null,
+    mentorStatus: row.mentor_status,
     hasDeletionScheduled: row.deleting,
   };
 }

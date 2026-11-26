@@ -187,6 +187,15 @@ describe("administrator hide and restore", () => {
     expect(actions.rows.map((r) => r.action)).toEqual(["profile.submitted", "profile.hidden", "profile.restored"]);
   });
 
+  it("restore_after_mentoring_dropped_while_hidden_stays_off", async () => {
+    const pro = await mentor();
+    const admin = await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    await runAs(db.pool, admin, "SELECT admin_hide_profile($1)", [pro]);
+    await runAs(db.pool, pro, "UPDATE professional_details SET participation = '{directory}' WHERE profile_id = app_uid()");
+    await runAs(db.pool, admin, "SELECT admin_restore_profile($1)", [pro]);
+    expect((await status(pro)).status).toBe("off");
+  });
+
   it("owner_cannot_clear_admin_hidden", async () => {
     const pro = await mentor();
     const admin = await makePerson(db.pool, { admin: true, visibility: "hidden" });
