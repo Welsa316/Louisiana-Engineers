@@ -2446,6 +2446,10 @@
   .pn-header-actions {
     gap: 0.25rem;
   }
+  /* The signed-in account link moves into the menu sheet on phones. */
+  .pn-header-account {
+    display: none;
+  }
   .pn-tabbar button {
     position: relative;
     display: grid;

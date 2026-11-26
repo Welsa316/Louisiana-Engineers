@@ -131,7 +131,7 @@ export function PublicShell({ children, headerSlot }: { children: ReactNode; hea
           <div className="pn-header-actions">
             {headerSlot}
             {status === "loading" || onAccountPage ? null : user ? (
-              <Link to={accountPath(user)} className="btn btn-outline">
+              <Link to={accountPath(user)} className="btn btn-outline pn-header-account">
                 {user.kind === null ? "Finish signing up" : "My dashboard"}
                 <ArrowUpRight size={15} aria-hidden="true" />
               </Link>
@@ -161,6 +161,12 @@ export function PublicShell({ children, headerSlot }: { children: ReactNode; hea
       </header>
       <Sheet open={menuOpen} onClose={closeMenu} title="Menu">
         <nav aria-label="Network menu" className="pn-menu-list">
+          {/* On phones the header has room for the logo and the menu only, so the account link lives here. */}
+          {user && !onAccountPage ? (
+            <Link to={accountPath(user)} className="pn-menu-link" onClick={closeMenu}>
+              {user.kind === null ? "Finish signing up" : "My dashboard"}
+            </Link>
+          ) : null}
           {publicNav.map((item) => (
             <NavLink key={item.to} to={item.to} className="pn-menu-link" onClick={closeMenu}>
               {item.label}
