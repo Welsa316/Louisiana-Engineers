@@ -217,6 +217,19 @@ describe("vocabularies and expertise tags", () => {
     ]);
   });
 
+  it("a_tag_another_member_proposed_first_still_shows_on_your_own_profile", async () => {
+    const first = await newAccount(db.pool);
+    await onboard(db.pool, first, professionalPayload({ expertise: ["Levee design", "Marsh terracing"] }));
+    const second = await newAccount(db.pool);
+    await onboard(db.pool, second, professionalPayload({ expertise: ["Levee design", "Marsh terracing"] }));
+    const own = `SELECT t.label FROM profile_expertise pe JOIN expertise_tags t ON t.id = pe.tag_id
+                  WHERE pe.profile_id = app_uid() ORDER BY t.label`;
+    expect(await rowsAs(db.pool, second, own)).toEqual([{ label: "Levee design" }, { label: "Marsh terracing" }]);
+    // Everyone else still sees proposed tags only once approved.
+    const member = await makePerson(db.pool, { kind: "student", visibility: "hidden" });
+    expect(await rowsAs(db.pool, member, "SELECT label FROM expertise_tags WHERE label = 'Marsh terracing'")).toEqual([]);
+  });
+
   it("members_propose_tags_only_through_the_profile_functions", async () => {
     const member = await makePerson(db.pool);
     await expect(

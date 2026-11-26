@@ -1700,6 +1700,11 @@ CREATE POLICY expertise_tags_approved_read ON expertise_tags FOR SELECT TO app_u
 CREATE POLICY expertise_tags_proposer_read ON expertise_tags FOR SELECT TO app_user
   USING (status = 'proposed' AND proposed_by = app_uid());
 CREATE POLICY expertise_tags_admin_read ON expertise_tags FOR SELECT TO app_user USING (is_admin());
+-- A member who chose a label someone else proposed first still sees it on their own profile.
+CREATE POLICY expertise_tags_own_profile_read ON expertise_tags FOR SELECT TO app_user
+  USING (status = 'proposed' AND EXISTS (
+    SELECT 1 FROM profile_expertise pe WHERE pe.tag_id = expertise_tags.id AND pe.profile_id = app_uid()
+  ));
 
 -- "Follows the parent profile": readable when the caller can read the
 -- profile row through the profiles policies.
