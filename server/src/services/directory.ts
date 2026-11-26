@@ -149,7 +149,8 @@ function orderBy(search: DirectorySearch, rank: string | null): string {
     case "name":
       return tail;
     case "experience":
-      return `e.years_experience DESC NULLS LAST, ${tail}`;
+      // By band, never exact years: order within a band would reveal them.
+      return `CASE e.experience_band WHEN '20+' THEN 4 WHEN '10-19' THEN 3 WHEN '3-9' THEN 2 WHEN '0-2' THEN 1 END DESC NULLS LAST, ${tail}`;
     case "recent":
       return `e.last_active_at DESC NULLS LAST, ${tail}`;
     case "relevance":

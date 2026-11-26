@@ -843,7 +843,7 @@ function KindCard({ profile }: { profile: OwnProfile }) {
                     setOpen(false);
                     setDone(
                       toProfessional
-                        ? "You now have a professional profile. Fill in your work details and save; an administrator reviews it before it is listed."
+                        ? "You now have a professional profile. Fill in your work details and save them to submit it; an administrator reviews it before it is listed."
                         : "You now have a student profile. It is not listed in the directory.",
                     );
                   },
@@ -857,7 +857,7 @@ function KindCard({ profile }: { profile: OwnProfile }) {
       >
         <p>
           {toProfessional
-            ? "Your profile goes to the approval queue and is listed once an administrator approves it. Your saved profiles and your requests stay as they are."
+            ? "Once you save your work details, your profile goes to the approval queue and is listed when an administrator approves it. Your saved profiles and your requests stay as they are."
             : "Your profile leaves the directory and mentorship is turned off. Mentees you already work with keep their history. Your saved profiles and your requests stay as they are."}
         </p>
         {setKind.isError ? (

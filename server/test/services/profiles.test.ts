@@ -171,6 +171,28 @@ describe("onboarding", () => {
 });
 
 describe("own profile", () => {
+  it("own_profile_shows_the_open_review_or_else_the_last_decided", async () => {
+    // Declined, so creating the fixture opens no review of its own.
+    const id = await makePerson(db.pool, { approval: "declined" });
+    const cookie = await cookieFor(id);
+    const at = "2026-01-01T00:00:00Z";
+    await asSystem(db.pool, (client) =>
+      client.query(
+        `INSERT INTO profile_reviews (profile_id, decision, notes, submitted_at, decided_at) VALUES
+           ($1, 'declined', 'first notes', $2, '2026-01-02T00:00:00Z'),
+           ($1, 'declined', 'second notes', $2, '2026-01-05T00:00:00Z')`,
+        [id, at],
+      ),
+    );
+    const decided = (await call(cookie, "GET", "/profile")).body as OwnProfile;
+    expect(decided.review?.notes).toBe("second notes");
+    await asSystem(db.pool, (client) =>
+      client.query("INSERT INTO profile_reviews (profile_id, submitted_at) VALUES ($1, $2)", [id, at]),
+    );
+    const open = (await call(cookie, "GET", "/profile")).body as OwnProfile;
+    expect(open.review?.decision).toBeNull();
+  });
+
   it("own_profile_requires_a_session", async () => {
     expect((await call(null, "GET", "/profile")).status).toBe(401);
     expect((await call(null, "GET", "/settings")).status).toBe(401);
@@ -198,7 +220,7 @@ describe("own profile", () => {
       );
     }
     // The definer function answers for the caller only.
-    expect(await rowsAs(db.pool, other, "SELECT * FROM my_profile_private()")).toEqual([{ linkedin_url: null }]);
+    expect(await rowsAs(db.pool, other, "SELECT * FROM my_profile_private()")).toEqual([{ linkedin_url: null, years_experience: 5 }]);
     expect(await rowsAs(db.pool, null, "SELECT * FROM my_profile_private()")).toEqual([]);
 
     // The owner clears it, which a LinkedIn contact method would forbid.
@@ -285,7 +307,8 @@ describe("kind", () => {
     const profile = res.body as OwnProfile;
     expect(profile.kind).toBe("professional");
     expect(profile.approvalState).toBe("pending");
-    expect(profile.review?.decision).toBeNull();
+    // No review until there is something to review.
+    expect(profile.review).toBeNull();
     expect(profile.settings.mentorship?.status).toBe("off");
 
     // The saved profile is still there.
@@ -305,6 +328,7 @@ describe("kind", () => {
       expertise: ["Stormwater", "Surveying"],
     });
     expect(filled.status).toBe(200);
+    expect(filled.body.review).toMatchObject({ decision: null });
     expect(filled.body.professional.organization).toBe("Delta Drainage Partners");
     expect(filled.body.professional.participation).toEqual(["directory", "networking"]);
 

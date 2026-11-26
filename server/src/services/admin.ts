@@ -350,11 +350,10 @@ export async function listTags(db: Db, status: TagStatus | undefined, paging: Pa
     total: number;
   }>(
     `SELECT t.id, t.label, t.slug, t.status, t.created_at,
-            nullif(btrim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, '')), '') AS proposed_by_name,
+            (SELECT a.proposer_name FROM admin_tag_proposers(ARRAY[t.id]) a) AS proposed_by_name,
             (SELECT count(*) FROM profile_expertise pe WHERE pe.tag_id = t.id)::int AS usage,
             count(*) OVER ()::int AS total
        FROM expertise_tags t
-       LEFT JOIN profiles p ON p.id = t.proposed_by
       WHERE $1::tag_status IS NULL OR t.status = $1::tag_status
       ORDER BY CASE WHEN t.status = 'proposed' THEN t.created_at END ASC NULLS LAST, lower(t.label), t.id
       LIMIT $2 OFFSET $3`,

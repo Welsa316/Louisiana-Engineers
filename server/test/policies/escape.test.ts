@@ -120,3 +120,47 @@ describe("profile columns and rights", () => {
     }
   });
 });
+
+describe("Phase 1B audit", () => {
+  it("exact_years_of_experience_are_not_readable_by_requests", async () => {
+    const owner = await makePerson(db.pool, { yearsExperience: 14 });
+    for (const viewer of [null, await makePerson(db.pool), owner]) {
+      await expect(asUser(db.pool, viewer, (client) => client.query("SELECT years_experience FROM professional_details"))).rejects.toThrow(
+        /permission denied/,
+      );
+      await expect(asUser(db.pool, viewer, (client) => client.query("SELECT years_experience FROM directory_entries"))).rejects.toThrow(
+        /does not exist|permission denied/,
+      );
+    }
+    // Everyone gets the band; the owner alone gets the number.
+    expect(await scalarAs<string>(db.pool, null, "SELECT experience_band AS value FROM directory_entries WHERE id = $1", [owner])).toBe(
+      "10-19",
+    );
+    expect(await scalarAs<number>(db.pool, owner, "SELECT years_experience AS value FROM my_profile_private()")).toBe(14);
+  });
+
+  it("tag_proposers_are_not_readable_by_requests", async () => {
+    const member = await makePerson(db.pool);
+    await expect(asUser(db.pool, member, (client) => client.query("SELECT proposed_by FROM expertise_tags"))).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+
+  it("helpers_say_nothing_about_profiles_the_caller_cannot_see", async () => {
+    const pending = await makePerson(db.pool, { approval: "pending", participation: ["directory", "mentoring"] });
+    const hidden = await makePerson(db.pool, { visibility: "hidden", participation: ["directory", "mentoring"] });
+    await asSystem(db.pool, (client) =>
+      client.query("INSERT INTO mentorship_settings (profile_id, status, max_active) VALUES ($1, 'active', 3), ($2, 'active', 3)", [
+        pending,
+        hidden,
+      ]),
+    );
+    for (const id of [pending, hidden]) {
+      expect(await scalarAs<boolean>(db.pool, null, "SELECT mentor_has_capacity($1) AS value", [id])).toBe(false);
+      expect(await scalarAs<boolean>(db.pool, null, "SELECT profile_in_directory($1) AS value", [id])).toBe(false);
+      // The owner still sees their own capacity.
+      expect(await scalarAs<boolean>(db.pool, id, "SELECT mentor_has_capacity($1) AS value", [id])).toBe(true);
+    }
+  });
+});
+

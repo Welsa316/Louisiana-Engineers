@@ -113,6 +113,16 @@ CREATE TABLE professional_details (
   organization text NOT NULL CHECK (char_length(organization) BETWEEN 1 AND 120),
   discipline_id text NOT NULL REFERENCES disciplines (id),
   years_experience int NOT NULL CHECK (years_experience BETWEEN 0 AND 60),
+  -- The band is public; the exact number is the owner's (03 section 6.2),
+  -- so requests are granted this column and not years_experience.
+  experience_band text GENERATED ALWAYS AS (
+    CASE
+      WHEN years_experience <= 2 THEN '0-2'
+      WHEN years_experience <= 9 THEN '3-9'
+      WHEN years_experience <= 19 THEN '10-19'
+      ELSE '20+'
+    END
+  ) STORED,
   participation participation[] NOT NULL DEFAULT '{}',
   interests text[] NOT NULL DEFAULT '{}'
     CHECK (cardinality(interests) <= 10 AND text_items_between(interests, 1, 40)),
@@ -269,9 +279,15 @@ CREATE OR REPLACE FUNCTION profile_in_directory(profile_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+  -- Also requires the listing rule, so calling it directly says nothing about
+  -- a pending, hidden or admin-hidden profile (every caller adds these anyway).
   SELECT EXISTS (
     SELECT 1 FROM professional_details d
+      JOIN profiles p ON p.id = d.profile_id
      WHERE d.profile_id = $1 AND 'directory' = ANY (d.participation)
+       AND p.kind = 'professional' AND p.approval_state = 'approved'
+       AND p.visibility IN ('public', 'members')
+       AND p.admin_hidden_at IS NULL AND p.anonymized_at IS NULL
   )
 $$;
 
@@ -284,7 +300,8 @@ CREATE FUNCTION mentor_has_capacity(profile_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-  SELECT EXISTS (
+  -- Only for a profile the caller may see, so it cannot be asked about others.
+  SELECT profile_access($1) = 'visible' AND EXISTS (
     SELECT 1 FROM mentorship_settings s
      WHERE s.profile_id = $1 AND s.status = 'active' AND s.max_active > 0
   )
@@ -500,6 +517,23 @@ $$;
 
 CREATE TRIGGER professional_details_mentoring_dropped AFTER UPDATE OF participation ON professional_details
   FOR EACH ROW EXECUTE FUNCTION professional_details_mentoring_dropped();
+
+-- A member who switched to professional submits by saving their details:
+-- the first details row of a pending professional opens the review.
+CREATE FUNCTION professional_details_open_review() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM profiles p WHERE p.id = NEW.profile_id AND p.kind = 'professional' AND p.approval_state = 'pending') THEN
+    PERFORM open_profile_review(NEW.profile_id);
+  END IF;
+  RETURN NULL;
+END
+$$;
+
+CREATE TRIGGER professional_details_open_review AFTER INSERT ON professional_details
+  FOR EACH ROW EXECUTE FUNCTION professional_details_open_review();
 
 -- Mentorship settings exist only for professionals.
 CREATE FUNCTION mentorship_settings_professionals_only() RETURNS trigger
@@ -994,7 +1028,11 @@ BEGIN
     INSERT INTO mentorship_settings (profile_id, max_active) VALUES (me, coalesce(default_max, 3))
     ON CONFLICT (profile_id) DO NOTHING;
     PERFORM write_audit('profile.kind_changed', 'profile', me, jsonb_build_object('from', existing.kind, 'to', set_kind.kind));
-    PERFORM open_profile_review(me);
+    -- Nothing to review until there are professional details: saving them
+    -- opens the review (professional_details_open_review).
+    IF EXISTS (SELECT 1 FROM professional_details d WHERE d.profile_id = me) THEN
+      PERFORM open_profile_review(me);
+    END IF;
   ELSE
     UPDATE mentorship_settings s SET status = 'off', previous_status = NULL, paused_until = NULL WHERE s.profile_id = me;
     DELETE FROM profile_reviews r WHERE r.profile_id = me AND r.decision IS NULL;
@@ -1235,8 +1273,18 @@ BEGIN
     RAISE EXCEPTION 'mest.review_closed' USING ERRCODE = '23514';
   END IF;
 
+  -- Only a complete professional record can be listed.
+  IF admin_review_profile.decision = 'approved' AND NOT EXISTS (
+    SELECT 1 FROM professional_details d JOIN profiles p ON p.id = d.profile_id
+     WHERE d.profile_id = review.profile_id AND p.kind = 'professional' AND p.bio IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'mest.profile_incomplete' USING ERRCODE = '23514';
+  END IF;
+
+  -- The snapshot records what was actually decided on.
   UPDATE profile_reviews r
-     SET reviewer_id = app_uid(), decision = admin_review_profile.decision, notes = clean_notes, decided_at = now()
+     SET reviewer_id = app_uid(), decision = admin_review_profile.decision, notes = clean_notes, decided_at = now(),
+         snapshot = profile_snapshot(review.profile_id)
    WHERE r.id = review_id;
   UPDATE profiles p SET approval_state = admin_review_profile.decision::text::approval_state WHERE p.id = review.profile_id;
   SELECT p.first_name INTO first_name_value FROM profiles p WHERE p.id = review.profile_id;
@@ -1497,6 +1545,22 @@ BEGIN
 END
 $$;
 
+-- Who proposed each tag, by name, for the vocabulary screen.
+CREATE FUNCTION admin_tag_proposers(tag_ids uuid[]) RETURNS TABLE (tag_id uuid, proposer_name text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NOT is_admin() THEN
+    RAISE EXCEPTION 'mest.forbidden' USING ERRCODE = '42501';
+  END IF;
+  RETURN QUERY
+    SELECT t.id, nullif(btrim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, '')), '')
+      FROM expertise_tags t JOIN profiles p ON p.id = t.proposed_by
+     WHERE t.id = ANY (tag_ids);
+END
+$$;
+
 -- One member's sign-up domain for the review drawer, never the address.
 CREATE FUNCTION admin_member_domain(profile_id uuid) RETURNS text
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1537,14 +1601,7 @@ SELECT
   d.discipline_id,
   disc.label AS discipline_label,
   disc.group_name AS discipline_group,
-  d.years_experience,
-  CASE
-    WHEN d.years_experience IS NULL THEN NULL
-    WHEN d.years_experience <= 2 THEN '0-2'
-    WHEN d.years_experience <= 9 THEN '3-9'
-    WHEN d.years_experience <= 19 THEN '10-19'
-    ELSE '20+'
-  END AS experience_band,
+  d.experience_band,
   -- Enum arrays as text[], which the pg driver parses into string arrays.
   coalesce(d.participation, '{}')::text[] AS participation,
   coalesce(d.interests, '{}') AS interests,
@@ -1624,12 +1681,17 @@ GRANT SELECT ON disciplines, mentorship_topics TO app_user;
 -- Expertise tags: read by policy; a member proposes only through the
 -- onboarding and profile functions (where a rate limit can live).
 REVOKE ALL ON expertise_tags FROM app_user;
-GRANT SELECT ON expertise_tags TO app_user;
+-- Not proposed_by: an approved tag would otherwise name the id of a member
+-- nobody else can see. Administrators read proposers through admin_tag_proposers().
+GRANT SELECT (id, label, slug, status, created_at) ON expertise_tags TO app_user;
 
 -- Professional details: the owner inserts and edits everything but the
 -- verification and search columns.
 REVOKE ALL ON professional_details FROM app_user;
-GRANT SELECT ON professional_details TO app_user;
+-- Every column but years_experience (the owner reads it through my_profile_private()).
+GRANT SELECT (profile_id, title, organization, discipline_id, experience_band, participation, interests,
+              verified, verified_method, verified_at, search_tsv, created_at, updated_at)
+  ON professional_details TO app_user;
 GRANT INSERT (profile_id, title, organization, discipline_id, years_experience, participation, interests)
   ON professional_details TO app_user;
 GRANT UPDATE (title, organization, discipline_id, years_experience, participation, interests)

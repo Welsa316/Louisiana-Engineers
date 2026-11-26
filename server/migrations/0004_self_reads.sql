@@ -9,11 +9,13 @@
 
 -- The caller's own private profile columns. Nobody else's: the row is
 -- chosen by app_uid(), never by an argument.
-CREATE FUNCTION my_profile_private() RETURNS TABLE (linkedin_url text)
+CREATE FUNCTION my_profile_private() RETURNS TABLE (linkedin_url text, years_experience int)
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-  SELECT p.linkedin_url FROM profiles p WHERE p.id = app_uid() AND app_uid() IS NOT NULL
+  SELECT p.linkedin_url, d.years_experience
+    FROM profiles p LEFT JOIN professional_details d ON d.profile_id = p.id
+   WHERE p.id = app_uid() AND app_uid() IS NOT NULL
 $$;
 
 -- What profile_access(app_uid()) would answer for a visitor or for a

@@ -778,6 +778,14 @@ async function seedProfessional(db: Db, details: SeedProfessionalDetails, index:
   );
 
   if (core.approval === "pending") {
+    // Saving the details may already have opened the review (the database
+    // opens one when a pending professional's details first appear), so date
+    // it and snapshot it either way: the queue is ordered by submission.
+    await db.query(
+      `UPDATE profile_reviews SET snapshot = profile_snapshot($1), submitted_at = $2
+        WHERE profile_id = $1 AND decision IS NULL`,
+      [id, joinedAt(core)],
+    );
     await db.query(
       `INSERT INTO profile_reviews (profile_id, snapshot, submitted_at)
        SELECT $1, profile_snapshot($1), $2

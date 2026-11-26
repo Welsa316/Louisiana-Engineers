@@ -197,7 +197,7 @@ export async function getOwnProfile(db: Db): Promise<OwnProfile> {
     interests: string[];
     verified: boolean;
   }>(
-    `SELECT d.title, d.organization, d.discipline_id, d.years_experience,
+    `SELECT d.title, d.organization, d.discipline_id, (SELECT m.years_experience FROM my_profile_private() m) AS years_experience,
             d.participation::text[] AS participation, d.interests, d.verified
        FROM professional_details d WHERE d.profile_id = $1`,
     [profile.id],
@@ -229,7 +229,8 @@ export async function getOwnProfile(db: Db): Promise<OwnProfile> {
   }>(
     `SELECT r.id, r.decision::text AS decision, r.notes, r.submitted_at, r.decided_at
        FROM profile_reviews r WHERE r.profile_id = $1
-      ORDER BY r.submitted_at DESC, r.id DESC
+      -- The open review is the current one; otherwise the last decided.
+      ORDER BY r.decision IS NULL DESC, r.decided_at DESC NULLS LAST, r.submitted_at DESC, r.id DESC
       LIMIT 1`,
     [profile.id],
   );

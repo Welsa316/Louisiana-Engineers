@@ -120,6 +120,9 @@ export function adminErrorText(error: unknown): string {
     return "At least two administrators must stay. Grant the role to someone else before removing this one.";
   }
   if (isApiError(error, "review_closed")) return "This submission was already decided, possibly by another administrator.";
+  if (isApiError(error, "profile_incomplete")) {
+    return "This profile has no work details or bio yet, so it cannot be listed. Decline it with a note instead.";
+  }
   if (isApiError(error, "duplicate")) return "That id is already in use. Choose another.";
   if (isApiError(error, "invalid_config")) {
     return "That value is outside what the platform allows. Reminder days must come before the request expires.";

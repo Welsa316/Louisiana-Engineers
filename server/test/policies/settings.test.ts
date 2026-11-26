@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { asSystem, createTestDb, truncateAll, type TestDb } from "../harness";
-import { makePerson, newAccount, onboard, professionalPayload, rowsAs, runAs, scalarAs, sorted, studentPayload } from "./fixtures";
+import { FIXTURE_BIO, makePerson, newAccount, onboard, professionalPayload, rowsAs, runAs, scalarAs, sorted, studentPayload } from "./fixtures";
 
 /**
  * mentorship_settings, mentor_topics and notification_preferences, with the
@@ -211,6 +211,22 @@ describe("administrator hide and restore", () => {
   });
 });
 
+describe("profile review guard", () => {
+  it("admin_cannot_approve_a_profile_with_no_professional_details", async () => {
+    const admin = await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    const bare = await makePerson(db.pool, { approval: "pending", participation: false, bio: null });
+    const review = await asSystem(db.pool, (client) =>
+      client.query<{ id: string }>("INSERT INTO profile_reviews (profile_id, snapshot) VALUES ($1, '{}') RETURNING id", [bare]),
+    );
+    const id = review.rows[0].id;
+    await expect(runAs(db.pool, admin, "SELECT admin_review_profile($1, 'approved', NULL)", [id])).rejects.toThrow(
+      /mest\.profile_incomplete/,
+    );
+    // Sending it back stays possible.
+    await runAs(db.pool, admin, "SELECT admin_review_profile($1, 'declined', 'Add your work details.')", [id]);
+  });
+});
+
 describe("set_kind", () => {
   it("student_to_professional_enters_the_queue_and_back", async () => {
     const admin = await makePerson(db.pool, { admin: true, visibility: "hidden" });
@@ -220,8 +236,23 @@ describe("set_kind", () => {
     await runAs(db.pool, account, "SELECT set_kind('professional')");
     const after = await db.pool.query("SELECT kind, approval_state, visibility FROM profiles WHERE id = $1", [account]);
     expect(after.rows[0]).toEqual({ kind: "professional", approval_state: "pending", visibility: "public" });
-    expect((await db.pool.query("SELECT 1 FROM profile_reviews WHERE profile_id = $1 AND decision IS NULL", [account])).rowCount).toBe(1);
     expect(await status(account)).toMatchObject({ status: "off" });
+    // Nothing to review yet: no professional details, so no review and no notice.
+    const openReview = () => db.pool.query("SELECT snapshot FROM profile_reviews WHERE profile_id = $1 AND decision IS NULL", [account]);
+    expect((await openReview()).rowCount).toBe(0);
+    expect((await db.pool.query("SELECT 1 FROM notifications WHERE template = 'profile-submitted'")).rowCount).toBe(0);
+
+    // Saving the professional details is the submission.
+    await runAs(db.pool, account, "UPDATE profiles SET bio = $1 WHERE id = app_uid()", [FIXTURE_BIO]);
+    await runAs(
+      db.pool,
+      account,
+      `INSERT INTO professional_details (profile_id, title, organization, discipline_id, years_experience, participation, interests)
+       VALUES (app_uid(), 'Engineer in training', 'Delta Drainage', 'civil', 0, '{directory}', '{}')`,
+    );
+    const review = await openReview();
+    expect(review.rowCount).toBe(1);
+    expect(JSON.stringify(review.rows[0].snapshot)).toContain("Engineer in training");
     const notified = await db.pool.query("SELECT recipient_id FROM notifications WHERE template = 'profile-submitted'");
     expect(notified.rows).toEqual([{ recipient_id: admin }]);
 
