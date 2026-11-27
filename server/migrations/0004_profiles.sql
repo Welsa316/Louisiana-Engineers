@@ -519,13 +519,17 @@ CREATE TRIGGER professional_details_mentoring_dropped AFTER UPDATE OF participat
   FOR EACH ROW EXECUTE FUNCTION professional_details_mentoring_dropped();
 
 -- A member who switched to professional submits by saving their details:
--- the first details row of a pending professional opens the review.
+-- the first details row a pending professional writes for themselves opens
+-- the review. Only the member's own insert counts (app_uid() is the
+-- profile), so the seed and other system writes submit nothing.
 CREATE FUNCTION professional_details_open_review() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM profiles p WHERE p.id = NEW.profile_id AND p.kind = 'professional' AND p.approval_state = 'pending') THEN
+  IF NEW.profile_id = app_uid() AND EXISTS (
+    SELECT 1 FROM profiles p WHERE p.id = NEW.profile_id AND p.kind = 'professional' AND p.approval_state = 'pending'
+  ) THEN
     PERFORM open_profile_review(NEW.profile_id);
   END IF;
   RETURN NULL;

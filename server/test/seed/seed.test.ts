@@ -86,6 +86,16 @@ describe("development seed", () => {
     expect(await scalarAs<boolean>(db.pool, SEED["layla-haddad"].id, "SELECT is_member() AS value")).toBe(true);
   });
 
+  it("seed_sends_no_notifications_or_email", async () => {
+    // Seeding writes people; it is not anyone submitting a profile.
+    await runSeed();
+    const notes = await db.pool.query("SELECT template FROM notifications");
+    expect(notes.rows).toEqual([]);
+    expect((await db.pool.query("SELECT 1 FROM email_outbox")).rowCount).toBe(0);
+    // The three pending professionals still wait in the queue.
+    expect((await db.pool.query("SELECT 1 FROM profile_reviews WHERE decision IS NULL")).rowCount).toBe(3);
+  });
+
   it("seed_runs_twice_without_duplicating", async () => {
     await runSeed();
     // A local change the second run puts back.
