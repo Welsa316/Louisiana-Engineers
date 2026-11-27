@@ -11,7 +11,8 @@
  */
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
+import { Link, useSearchParams } from "react-router";
 import { settingsPatchSchema, type SettingsPatchInput } from "@shared/schemas/settings";
 import { contactMethods, type ContactMethodId } from "@shared/taxonomy";
 import type { Visibility } from "@shared/types/common";
@@ -78,6 +79,34 @@ const VISIBILITY: { id: Visibility; title: string; note: string }[] = [
   },
 ];
 
+/**
+ * `?back=/mentor/requests/:id`: the mentor's accept sheet sent them here to
+ * add a method they can hand over (Task 23). Only that one in-app path is
+ * honoured, so the parameter cannot send anyone elsewhere.
+ */
+const BACK_PATTERN = /^\/mentor\/requests\/[0-9a-f-]{36}$/i;
+
+function BackToRequest() {
+  const [params] = useSearchParams();
+  const back = params.get("back");
+  if (!back || !BACK_PATTERN.test(back)) return null;
+  return (
+    <div className="mt-6">
+      <Notice tone="info" icon={<ArrowLeft size={16} aria-hidden="true" />}>
+        <p>
+          Turn on a way to be reached under How people reach you, add its detail and save. Then go back and accept the
+          request.
+        </p>
+        <p className="mt-2">
+          <Link to={back} className="link t-small">
+            Back to the request
+          </Link>
+        </p>
+      </Notice>
+    </div>
+  );
+}
+
 export function PrivacySettings() {
   useMeta({ title: "Privacy and contact" });
   const profile = useOwnProfile();
@@ -91,6 +120,7 @@ export function PrivacySettings() {
         title="Who sees you and how they reach you."
         lead="Being listed, being contactable and mentoring are separate choices. Changing one never changes the others."
       />
+      <BackToRequest />
       {error ? (
         <div role="alert" className="mt-8">
           <Notice tone="warn">{settingsErrorText(error)}</Notice>

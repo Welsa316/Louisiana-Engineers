@@ -1,5 +1,6 @@
 /**
- * Queries and actions behind the mentee's request screens, over
+ * Queries and actions behind the request screens (the mentee's, and the
+ * mentor's answer in `useRespondToRequest`), over
  * `/api/requests`, `/api/mentors/:id/availability`, `/api/me/mentorship`,
  * `/api/me/suggested-mentors` and `/api/me/saved`. Every key carries the
  * viewer's id, so answers never cross accounts. After any request action
@@ -8,7 +9,7 @@
  */
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import type { CreateRequestInput } from "@shared/schemas/request";
+import type { CreateRequestInput, RespondInput } from "@shared/schemas/request";
 import type { RequestStatus } from "@shared/types/common";
 import type {
   MentorAvailability,
@@ -164,6 +165,27 @@ export function useRequestAction(id: string, action: "cancel" | "complete") {
   const { viewer } = useViewer();
   return useMutation({
     mutationFn: () => api<RequestDetail>(`/requests/${encodeURIComponent(id)}/${action}`, { method: "POST" }),
+    onSuccess: (detail) => {
+      client.setQueryData(requestKeys.detail(viewer, id), detail);
+    },
+    onSettled: () => refreshAfterAction(client),
+  });
+}
+
+/**
+ * `POST /api/requests/:id/respond`, the mentor's answer (Task 23). The
+ * answer is the request as it now stands, so the drawer shows the new
+ * status without waiting for the lists.
+ */
+export function useRespondToRequest(id: string) {
+  const client = useQueryClient();
+  const { viewer } = useViewer();
+  return useMutation({
+    mutationFn: (answer: RespondInput) =>
+      api<RequestDetail>(`/requests/${encodeURIComponent(id)}/respond`, {
+        method: "POST",
+        body: answer as unknown as Record<string, unknown>,
+      }),
     onSuccess: (detail) => {
       client.setQueryData(requestKeys.detail(viewer, id), detail);
     },
