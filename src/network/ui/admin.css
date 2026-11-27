@@ -13,6 +13,21 @@
   outline: 2px solid var(--color-accent);
   outline-offset: -2px;
 }
+/* With a mouse there is no easy sideways scroll, so wider screens show every
+   section: tighter tabs fit one row at 1280, and narrower desktops wrap. */
+@media (min-width: 64rem) {
+  .pn-admin-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    mask-image: none;
+  }
+  .pn-admin-nav::after {
+    display: none;
+  }
+  .pn-admin-nav .pn-tab {
+    padding-inline: 0.625rem;
+  }
+}
 
 .pn-admin-audit {
   display: flex;
