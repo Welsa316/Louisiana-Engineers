@@ -3,12 +3,12 @@
  * orchestrator spreads `settingsRoutes` into `memberPages` in
  * src/network/app/routes.tsx in place of the `settings/*` stub; that list
  * already sits behind `RequireMember` and `RequireOnboarded`. `account`
- * stays a stub until Task 26 (export and deletion) replaces it.
+ * holds the data export and account deletion (Task 26).
  */
 
 import type { RouteObject } from "react-router";
 import { NotFoundPage } from "../../app/shells";
-import { Stub } from "../public/Stub";
+import { AccountSettings } from "./Account";
 import { SettingsLayout } from "./Layout";
 import { MentorshipSettings } from "./MentorshipSettings";
 import { NotificationSettings } from "./NotificationSettings";
@@ -28,14 +28,7 @@ export const settingsRoutes: RouteObject[] = [
       { path: "mentorship", element: <MentorshipSettings /> },
       { path: "notifications", element: <NotificationSettings /> },
       { path: "preview", element: <Preview /> },
-      {
-        path: "account",
-        element: (
-          <Stub inApp kicker="Account" title="Your account.">
-            Exporting your data and deleting your account arrive here soon.
-          </Stub>
-        ),
-      },
+      { path: "account", element: <AccountSettings /> },
       { path: "*", element: <NotFoundPage inApp /> },
     ],
   },

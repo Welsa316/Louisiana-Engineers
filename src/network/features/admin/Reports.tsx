@@ -88,8 +88,6 @@ function reportErrorText(error: unknown): string {
   if (isApiError(error, "invalid_action")) {
     return "That action does not fit this report. A dismissal takes no action, and you cannot suspend your own account.";
   }
-  if (isApiError(error, "not_available"))
-    return "Removing an account arrives with account deletion. Hide the profile or suspend requests for now.";
   return adminErrorText(error);
 }
 
@@ -388,7 +386,7 @@ function ClosedReports({ items }: { items: AdminReport[] }) {
 /* -------------------------------------------------------- resolve dialog */
 
 type Outcome = "resolved" | "dismissed";
-type Act = Exclude<ReportAction, "remove_account">;
+type Act = ReportAction;
 
 const ACTION_CHOICES: { id: Act; title: string; note: string }[] = [
   { id: "none", title: "No further action", note: "Close the report; the profile stays as it is." },
@@ -401,6 +399,11 @@ const ACTION_CHOICES: { id: Act; title: string; note: string }[] = [
     id: "suspend_requests",
     title: "Suspend requests",
     note: "The member can no longer send, answer or receive contact through requests. They are told, without your note or who reported them.",
+  },
+  {
+    id: "remove_account",
+    title: "Remove the account",
+    note: "Hidden at once and deleted at the next daily sweep, with no grace period. Your note is kept as the reason. This cannot be undone.",
   },
 ];
 
@@ -450,7 +453,9 @@ function ResolveDialog({
                 ? `Report resolved. ${name}'s profile is hidden.`
                 : act === "suspend_requests"
                   ? `Report resolved. Requests are suspended for ${name}.`
-                  : `Report about ${name} resolved.`;
+                  : act === "remove_account"
+                    ? `Report resolved. ${name}'s account is hidden and will be deleted at the next daily sweep.`
+                    : `Report about ${name} resolved.`;
           reset();
           onDone(text);
         },
@@ -523,7 +528,6 @@ function ResolveDialog({
                   />
                 ))}
               </div>
-              <p className="pn-field-hint">Removing an account arrives with account deletion.</p>
             </fieldset>
           </div>
         ) : null}
