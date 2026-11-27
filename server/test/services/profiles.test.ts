@@ -13,6 +13,7 @@ import {
   runAs,
   studentPayload,
 } from "../policies/fixtures";
+import { acceptRequest, makeStudent, sendRequest } from "../policies/request-fixtures";
 
 /**
  * `/api/me/*`: onboarding, the owner's profile and settings, the kind switch
@@ -372,12 +373,21 @@ describe("settings", () => {
   });
 
   it("lowering_max_active_keeps_relationships", async () => {
-    // Relationships arrive with Task 19, which adds an accepted mentee here
-    // and asserts it survives; until then the offer must stay open and keep
-    // every other setting when the cap drops.
+    // Two accepted mentees, then the cap drops to one: both relationships
+    // stay, the offer stays open with every other setting, and new
+    // mentorships are refused until one ends.
     const id = await newAccount(db.pool);
     const cookie = await cookieFor(id);
     await call(cookie, "POST", "/onboarding", professionalPayload());
+    await approve(id);
+    const mentees = [await makeStudent(db.pool), await makeStudent(db.pool)];
+    const accepted = [];
+    for (const mentee of mentees) {
+      const requestId = await sendRequest(db.pool, mentee, id);
+      await acceptRequest(db.pool, id, requestId);
+      accepted.push(requestId);
+    }
+    const waiting = await sendRequest(db.pool, await makeStudent(db.pool), id);
 
     const res = await call(cookie, "PATCH", "/settings", { mentorship: { maxActive: 1 } });
     expect(res.status).toBe(200);
@@ -386,6 +396,23 @@ describe("settings", () => {
     expect(settings.mentorship?.status).toBe("active");
     expect(settings.mentorship?.topics).toEqual(["internships-and-first-jobs", "professional-licensure"]);
     expect(settings.mentorship?.availability).toBe("Weekday evenings");
+
+    // Both relationships survive the lower cap.
+    const relationships = await rowsAs<{ request_id: string; completed_at: Date | null }>(
+      db.pool,
+      id,
+      "SELECT request_id, completed_at FROM mentorship_relationships ORDER BY started_at",
+    );
+    expect(relationships.map((r) => r.request_id).sort()).toEqual([...accepted].sort());
+    expect(relationships.every((r) => r.completed_at === null)).toBe(true);
+
+    // New mentorships are refused: a new request, and accepting the waiting one.
+    await expect(sendRequest(db.pool, await makeStudent(db.pool), id)).rejects.toThrow(/mest.mentor_full/);
+    await expect(acceptRequest(db.pool, id, waiting)).rejects.toThrow(/mest.mentor_full/);
+    // Completing both frees the one slot the new cap allows.
+    for (const requestId of accepted) await runAs(db.pool, id, "SELECT complete_relationship($1)", [requestId]);
+    await acceptRequest(db.pool, id, waiting);
+    await expect(sendRequest(db.pool, await makeStudent(db.pool), id)).rejects.toThrow(/mest.mentor_full/);
   });
 
   it("pause_with_resume_date_and_unknown_topic", async () => {
