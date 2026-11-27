@@ -6,7 +6,9 @@ import { directoryRoutes } from "./directory";
 import { meRoutes } from "./me";
 import { notificationRoutes } from "./notifications";
 import { profileRoutes } from "./profiles";
+import { adminReportRoutes, profileReportRoutes } from "./reports";
 import { meMentorshipRoutes, mentorRoutes, requestRoutes } from "./requests";
+import { savedRoutes } from "./saved";
 
 /**
  * Every API area, mounted under `/api` by `createApp`. Each area lives in its
@@ -24,11 +26,14 @@ export function createApiRoutes(): Hono {
   api.route("/config", configRoutes);
   api.route("/me", meRoutes);
   api.route("/me", meMentorshipRoutes);
+  api.route("/me", savedRoutes);
   api.route("/directory", directoryRoutes);
   api.route("/profiles", profileRoutes);
+  api.route("/profiles", profileReportRoutes);
   api.route("/requests", requestRoutes);
   api.route("/mentors", mentorRoutes);
   api.route("/notifications", notificationRoutes);
   api.route("/admin", adminRoutes);
+  api.route("/admin", adminReportRoutes);
   return api;
 }

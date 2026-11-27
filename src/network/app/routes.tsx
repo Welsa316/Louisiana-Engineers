@@ -17,6 +17,7 @@ import { Outlet, type RouteObject } from "react-router";
 import { adminRoutes } from "../features/admin/routes";
 import { authRoutes } from "../features/auth/routes";
 import { discoverRoutes } from "../features/me/discover-routes";
+import { menteeRoutes } from "../features/me/mentee-routes";
 import { meRoutes } from "../features/me/routes";
 import { NotificationsAppLayout, notificationRoutes } from "../features/notifications/routes";
 import { onboardingRoutes } from "../features/onboarding/routes";
@@ -44,6 +45,7 @@ const onboardingPages: RouteObject[] = onboardingRoutes;
 const memberPages: RouteObject[] = [
   ...meRoutes,
   ...discoverRoutes,
+  ...menteeRoutes,
   { path: "mentor/*", element: <Stub inApp title="Mentoring" /> },
   ...settingsRoutes,
   ...notificationRoutes,
