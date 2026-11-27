@@ -435,10 +435,12 @@ describe("resolving a report", () => {
     // The schema refuses a dismissal that acts, and an "open" resolution.
     expect((await call(admin, "POST", path, { status: "dismissed", action: "hide_profile" })).status).toBe(400);
     expect((await call(admin, "POST", path, { status: "open" })).status).toBe(400);
-    // Removing an account arrives with account deletion (Task 26).
-    expect((await call(admin, "POST", path, { status: "resolved", action: "remove_account" })).body).toEqual({
-      code: "not_available",
-    });
+    // A dismissal cannot remove the account either (removal itself works since
+    // Task 26; account.test.ts covers it).
+    expect((await call(admin, "POST", path, { status: "dismissed", action: "remove_account" })).status).toBe(400);
+    await expect(
+      asUser(db.pool, admin, (c) => c.query("SELECT admin_resolve_report($1, 'dismissed', NULL, 'remove_account')", [id])),
+    ).rejects.toThrow(/mest\.invalid_action/);
     // The function checks the same rules for a direct caller.
     await expect(
       asUser(db.pool, admin, (c) => c.query("SELECT admin_resolve_report($1, 'dismissed', NULL, 'hide_profile')", [id])),
