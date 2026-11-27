@@ -83,7 +83,7 @@ shared/                          imported as @shared/* (vite resolve.alias; tsx 
   types/<area>.ts                API response types, one file per task
 server/
   package.json, tsconfig.json (rootDir ../, outDir dist), vitest.config.ts
-  migrations/0001..0009_*.sql    hand-written, numbered, forward-only (0001 roles, 0002 core, 0003 notifications, 0004 profiles, 0005 requests, 0006 jobs, 0007 reports, 0008 dashboard, 0009 deletions)
+  migrations/0001..0010_*.sql    hand-written, numbered, forward-only (0001 roles, 0002 core, 0003 notifications, 0004 profiles and self reads, 0005 requests, 0007 reports, 0008 jobs, 0009 dashboard, 0010 deletions; 0006 unused)
   src/index.ts                   Hono app, static dist, /network/* fallback, meta injection, health
   src/env.ts, src/db/{pool,migrate,tx}.ts, src/http/{errors,validate}.ts, src/audit.ts
   src/auth/{magic-link,google,session,middleware}.ts
@@ -403,11 +403,13 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 
 ### Task 21: Lifecycle jobs: expiry, reminders, resume, retention, digest
 
+> **Handoff from integration (Phase 1C wave 2):** Migration numbers changed: 0007_reports.sql landed first, so this task's migration is `server/migrations/0008_jobs.sql` (not 0006), Task 25's is `0009_dashboard.sql` and Task 26's is `0010_deletions.sql`. `admin_digest()` may count open reports from the `reports` table (0007). Store the payload Task 20's `admin-digest` template reads: `{ queueSize, openReports, requestsWaiting, oldestWaitingOn }` (YYYY-MM-DD) plus `link`.
+
 > **Handoff from integration (Phase 1C wave 1):** The lifecycle functions in 0005 take an optional trailing `as_of` (pass the scheduler's `now`). In `send_request_reminder(id, n)`, `n` is the count already sent: 0 is the first reminder (`config.reminder_days[1]`), 1 the second; select requests with `reminders_sent = n`. `purge_request_text(before)` empties requests by `created_at < before` and stamps `text_purged_at`. All four refuse a call with an acting user, so jobs call them through `withSystem`.
 
 **Depends on:** Task 19 (parallel with Task 20).
 
-**Files:** Create `server/src/jobs/{expire-requests,reminders,resume-paused,retention,digest}.ts`, `server/migrations/0006_jobs.sql` (function `admin_digest()`); Test `server/test/jobs/lifecycle.test.ts`. Migration numbering from here: 0006 jobs (Task 21), 0007 reports (Task 24), 0008 dashboard (Task 25), 0009 deletions (Task 26).
+**Files:** Create `server/src/jobs/{expire-requests,reminders,resume-paused,retention,digest}.ts`, `server/migrations/0008_jobs.sql` (function `admin_digest()`); Test `server/test/jobs/lifecycle.test.ts`. Migration numbering from here: 0007 reports (Task 24, landed), 0008 jobs (Task 21), 0009 dashboard (Task 25), 0010 deletions (Task 26).
 
 **Interfaces:** Jobs only select ids and call Task 19's functions: `expire-requests` (`everyMs` 3 600 000; pending past `expires_at` → `expire_request`, which sets `expired`, notifies the mentee `response` with `request-expired`, email, and audits), `reminders` (86 400 000; pending requests older than `reminder_days[n]` days with `reminders_sent = n` → `send_request_reminder(id, n)`), `resume-paused` (86 400 000; `paused_until <= now` → `resume_mentor`), `retention` (86 400 000; `purge_request_text(now - retention_months)`), `admin-digest` (86 400 000, but runs `admin_digest()` only when `job_runs.last_run_at` for it is older than 7 days, so at most once a week; one `admin_digest` notification per active admin with queue size, open reports, requests waiting, oldest waiting). All take the scheduler's `now`.
 
@@ -453,7 +455,7 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 
 **Depends on:** Task 24.
 
-**Files:** Create `server/migrations/0008_dashboard.sql` (re-create `admin_dashboard` adding: requests sent, answered within 7 days percentage, acceptance rate, expiry rate, active relationships, completed, median hours to approval, median paused days, members inactive 6 months, requests by topic); Modify `src/network/features/admin/{Overview,Mentorship}.tsx`; Test `server/test/services/admin.test.ts` (`dashboard_matches_hand_counts`).
+**Files:** Create `server/migrations/0009_dashboard.sql` (re-create `admin_dashboard` adding: requests sent, answered within 7 days percentage, acceptance rate, expiry rate, active relationships, completed, median hours to approval, median paused days, members inactive 6 months, requests by topic); Modify `src/network/features/admin/{Overview,Mentorship}.tsx`; Test `server/test/services/admin.test.ts` (`dashboard_matches_hand_counts`).
 
 - [ ] Implement; PASS. Commit: `Add the mentorship activity measures to the dashboard`.
 
@@ -467,13 +469,15 @@ All suites; e2e loop end to end with every email printed by the development mail
 
 ### Task 26: Account deletion with grace period and the sweep
 
+> **Handoff from integration (Phase 1C wave 2):** Store the payloads Task 20's templates read: `deletion-requested` `{ firstName, executeOn }` (YYYY-MM-DD), `deletion-canceled` `{ firstName }`, each with `link`.
+
 > **Handoff from integration (wave 5):** The grace screen (`src/network/features/auth/ScheduledForDeletion.tsx`, built by Task 9) shows no date because `GET /api/auth/me` carries only `hasDeletionScheduled`. Add the `execute_after` date (to the me response or a small endpoint), show "Your account is scheduled for deletion on [date]" per 02 section 8 step 3, and wire its disabled Keep my account button.
 
 > **Handoff from integration (wave 2):** `visibility` is an ordinary owner column, so an owner could set it back to `public` during the grace period. Guard it: while an open `account_deletions` row exists, the owner-guard trigger rejects visibility changes (or the listing rule excludes profiles with an open deletion through a definer helper), with a test.
 
 **Depends on:** Phase 1C complete.
 
-**Files:** Create `server/migrations/0009_deletions.sql` (functions `request_account_deletion(immediate boolean, reason text)`, `cancel_account_deletion()`, `execute_account_deletion(id)`; `CREATE OR REPLACE admin_resolve_report` so `remove_account` works), `server/src/services/account.ts`, `server/src/routes/account.ts` (`POST /api/me/deletion`, `DELETE /api/me/deletion`), `server/src/jobs/deletions.ts` (86 400 000 ms; calls `execute_account_deletion` for due rows), `src/network/features/settings/Account.tsx` (replaces Task 16's stub by editing `features/settings/routes.tsx`); Modify `src/network/features/auth/ScheduledForDeletion.tsx` (wire Keep my account); Test `server/test/services/account.test.ts`.
+**Files:** Create `server/migrations/0010_deletions.sql` (functions `request_account_deletion(immediate boolean, reason text)`, `cancel_account_deletion()`, `execute_account_deletion(id)`; `CREATE OR REPLACE admin_resolve_report` so `remove_account` works), `server/src/services/account.ts`, `server/src/routes/account.ts` (`POST /api/me/deletion`, `DELETE /api/me/deletion`), `server/src/jobs/deletions.ts` (86 400 000 ms; calls `execute_account_deletion` for due rows), `src/network/features/settings/Account.tsx` (replaces Task 16's stub by editing `features/settings/routes.tsx`); Modify `src/network/features/auth/ScheduledForDeletion.tsx` (wire Keep my account); Test `server/test/services/account.test.ts`.
 
 **Interfaces:** Per 02 section 8 as revised in Task 1: request hides, sets mentorship `off`, cancels sent pending, declines received pending with reason `member_left` (mentee notified, no name later than the tombstone), notifies `account`; cancel restores `previous_visibility`; the sweep anonymizes the profile ("Former member"), deletes per-member tables, blanks request text, keeps counts, sets `users.email = null, deleted_at = now()`, deletes sessions, `auth_tokens` and `email_outbox` rows for that address, audits `account.deleted`.
 
