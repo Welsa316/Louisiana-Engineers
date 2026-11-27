@@ -37,12 +37,14 @@ describe("development seed", () => {
 
     // Every seeded account is verified at its <key>@example.test address and id.
     const users = await db.pool.query<{ id: string; email: string; verified: boolean }>(
-      "SELECT id, email::text AS email, email_verified_at IS NOT NULL AS verified FROM users ORDER BY email",
+      "SELECT id, email::text AS email, email_verified_at IS NOT NULL AS verified FROM users",
     );
+    // One comparison for both sides: Postgres collation differs between machines.
+    const byEmail = (a: { email: string }, b: { email: string }) => (a.email < b.email ? -1 : a.email > b.email ? 1 : 0);
     const expected = Object.values(SEED)
       .map((identity) => ({ ...identity, verified: true }))
-      .sort((a, b) => a.email.localeCompare(b.email));
-    expect(users.rows).toEqual(expected);
+      .sort(byEmail);
+    expect([...users.rows].sort(byEmail)).toEqual(expected);
     expect(SEED["layla-haddad"].email).toBe("layla-haddad@example.test");
     expect(SEED.admin.email).toBe("admin@example.test");
     expect(SEED.admin2.email).toBe("admin2@example.test");
