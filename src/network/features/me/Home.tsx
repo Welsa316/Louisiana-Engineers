@@ -6,8 +6,8 @@
  * reviewer's notes, a listed one sees who can find them. Onboarding sends
  * professionals here with `?submitted=1`.
  *
- * Request counts from `GET /api/me/mentorship` join this page in Phase 1C
- * (Tasks 22 and 23 fill `MentorshipCard`).
+ * Request counts from `GET /api/me/mentorship` fill `MentorshipCard`: the
+ * mentee's half is Task 22's, the mentor's half Task 23's.
  */
 
 import { ArrowRight, ArrowUpRight, CircleCheck, Clock, EyeOff, PencilLine } from "lucide-react";
@@ -23,6 +23,7 @@ import { useSession } from "../../lib/session";
 import { Card, Empty, Notice, PageHead } from "../../ui/ui";
 import { NotificationRows, notificationErrorText } from "../notifications/List";
 import { useNotifications } from "../notifications/api";
+import { useMyMentorship } from "./requests-api";
 
 /** How many notifications Home shows before "See all". */
 const LATEST = 5;
@@ -197,15 +198,32 @@ function MentorshipCard({ user }: { user: SessionUser }) {
       </Card>
     );
   }
+  return <MenteeMentorshipCard />;
+}
+
+/** The requests this member sent, at a glance (Task 22). */
+function MenteeMentorshipCard() {
+  const mine = useMyMentorship();
+  const waiting = mine.data?.pendingOutgoing;
   return (
     <Card title="Mentorship">
       <p className="t-body">
-        Mentorship requests open soon. You can already see who offers mentorship and on which topics.
+        {waiting === undefined
+          ? "Ask a mentor about one of their topics, or ask a professional for an introduction."
+          : waiting === 0
+            ? "No requests waiting. When a mentor's topics fit what you are working on, ask from their profile."
+            : `You have ${waiting} ${waiting === 1 ? "request" : "requests"} waiting for an answer.`}
       </p>
-      <Link to="/me/discover" className="link t-small mt-4 inline-flex">
-        Find mentors
-        <ArrowRight size={14} aria-hidden="true" />
-      </Link>
+      <div className="flex flex-wrap gap-x-5 gap-y-2 mt-4">
+        <Link to="/me/discover" className="link t-small inline-flex">
+          Find mentors
+          <ArrowRight size={14} aria-hidden="true" />
+        </Link>
+        <Link to="/me/requests" className="link t-small inline-flex">
+          My requests
+          <ArrowRight size={14} aria-hidden="true" />
+        </Link>
+      </div>
     </Card>
   );
 }

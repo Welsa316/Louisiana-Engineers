@@ -13,6 +13,7 @@ import type { OwnProfile, PreviewResponse } from "@shared/types/me";
 import { useMeta } from "../../lib/meta";
 import { useSession } from "../../lib/session";
 import { Empty, Notice, PageHead, Segmented, UiLink } from "../../ui/ui";
+import { previewRequestSlot } from "../me/RequestActions";
 import { ProfileContent } from "../public/Profile";
 import { settingsErrorText, useOwnProfile, usePreview } from "./api";
 
@@ -65,6 +66,7 @@ export function Preview() {
                 <ProfileContent
                   profile={preview.data.profile}
                   viewer={as === "visitor" ? null : user}
+                  slot={previewRequestSlot}
                   preview={{ as, contact: preview.data.contact ?? [] }}
                 />
               </div>

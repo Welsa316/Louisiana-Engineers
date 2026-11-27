@@ -204,8 +204,9 @@ test.describe("profile", () => {
     await expect(contact.getByRole("button", { name: "Copy booking link" })).toBeVisible();
     await expect(contact.getByRole("button", { name: "Copy LinkedIn" })).toBeVisible();
     await expect(contact.getByText("Sign in to see how to reach Layla")).toHaveCount(0);
-    // The request buttons wait for the mentorship phase.
-    await expect(page.getByText("Available soon").first()).toBeVisible();
+    // Hamza already has a pending request to Layla: the profile points at it instead of offering another.
+    await expect(page.getByRole("link", { name: /^Request pending since / })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Request mentorship" })).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
 
