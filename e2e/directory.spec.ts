@@ -74,10 +74,10 @@ test.describe("directory", () => {
     await expect(results(page)).toHaveCount(14);
     await page.getByRole("searchbox", { name: "Search the directory" }).fill("coastal");
     await expect(page).toHaveURL(/[?&]q=coastal/);
+    // The previous 14 stay on screen until the search answers, so wait for it.
+    await expect.poll(() => results(page).count()).toBeLessThan(14);
+    expect(await results(page).count()).toBeGreaterThan(0);
     await expect(page.getByRole("link", { name: /Layla Haddad/ })).toBeVisible();
-    const count = await results(page).count();
-    expect(count).toBeGreaterThan(0);
-    expect(count).toBeLessThan(14);
 
     // Reloading keeps the search.
     await page.reload();
