@@ -2,7 +2,7 @@
 
 This document describes the screens, navigation and flows of the member platform for Muslim Engineers in Science & Tech (MEST): the sitemap, navigation per role, user journeys, onboarding, the mentee, mentor and administrator workflows, how communication and scheduling were evaluated, the notification matrix, empty states and status labels, mobile behaviour and accessibility commitments. Requirements it fulfils are in [01-product-requirements.md](01-product-requirements.md) (IDs such as DIR-4); the data it reads and writes is in [02-technical-architecture.md](02-technical-architecture.md); build order is in [04-implementation-roadmap.md](04-implementation-roadmap.md).
 
-People named in examples (Layla Haddad, Amina Rahman, Fatima Noor and others) come from the prototype's `src/preview/network/data/mock.ts` and are fictional. The prototype at `/preview/professional-network/` shows most of these screens with that data.
+People named in examples (Layla Haddad, Amina Rahman, Fatima Noor and others) come from the development seed (`server/seed/`), first written for the planning prototype, and are fictional. The planning prototype that showed these screens was removed once the real routes under `/network` replaced it.
 
 ## 1. Design principles
 

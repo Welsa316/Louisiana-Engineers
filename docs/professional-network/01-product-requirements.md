@@ -2,7 +2,7 @@
 
 Muslim Engineers in Science & Tech (MEST) is a volunteer-run professional and community organization in Greater New Orleans, Louisiana. This document describes what the member platform must do. It is the product side of the plan; the technical design is in [02-technical-architecture.md](02-technical-architecture.md), the screens and flows in [03-ux-information-architecture.md](03-ux-information-architecture.md), the build order in [04-implementation-roadmap.md](04-implementation-roadmap.md), and the undecided points in [05-open-questions.md](05-open-questions.md).
 
-People and organizations named as examples in this document (for instance Layla Haddad of Crescent Coastal Engineering, or the student Amina Rahman) come from the prototype's `src/preview/network/data/mock.ts` and are fictional.
+People and organizations named as examples in this document (for instance Layla Haddad of Crescent Coastal Engineering, or the student Amina Rahman) come from the development seed (`server/seed/`), first written for the planning prototype, and are fictional.
 
 ## 1. Platform vision
 

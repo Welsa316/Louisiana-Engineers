@@ -2,7 +2,7 @@
 
 This document orders the work to build the member platform for Muslim Engineers in Science & Tech (MEST): phases with goals, scope, dependencies, complexity estimates, risks, acceptance criteria, and a feature-by-feature table. Requirements are in [01-product-requirements.md](01-product-requirements.md) (IDs such as REQ-6), the schema and policies in [02-technical-architecture.md](02-technical-architecture.md), the screens in [03-ux-information-architecture.md](03-ux-information-architecture.md), and the undecided items in [05-open-questions.md](05-open-questions.md).
 
-People named as examples come from the prototype's `src/preview/network/data/mock.ts` and are fictional.
+People named as examples come from the development seed (`server/seed/`), first written for the planning prototype, and are fictional.
 
 ## 1. How to read the estimates
 
@@ -46,7 +46,7 @@ Phases 1A to 1D together are the first release. They are split so that each has 
 - Sentry wired with scrubbing.
 - CI: typecheck, lint, unit tests, pgTAP against a local Supabase, Playwright smoke on the preview deploy.
 - Public pages: Network home (placeholder copy flagged for review), Community guidelines and Privacy notice (drafts flagged for board review).
-- Development seed from `mock.ts`.
+- Development seed of the fictional people (`server/seed/`).
 
 **Dependencies.** Domain or subdomain decision; Supabase account owned by MEST (not a volunteer's personal account); Resend account and DNS records (SPF, DKIM, DMARC); Google Cloud project for OAuth with MEST as owner; hosting provider that supports the SPA fallback.
 

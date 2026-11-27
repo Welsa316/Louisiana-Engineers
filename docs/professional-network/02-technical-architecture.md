@@ -4,13 +4,13 @@ This document describes how the member platform for Muslim Engineers in Science 
 
 Revised 2026-11-23 for the hosting decision recorded in [05-open-questions.md](05-open-questions.md): the platform runs as one Node service with Postgres on Railway rather than on Supabase. Where this document and the build plan differ, the build plan's task text wins; this document is the reference for every table column, policy row, function signature and notification.
 
-Examples that name people (Layla Haddad, Amina Rahman, Musa Grant) come from the prototype's `src/preview/network/data/mock.ts` and are fictional.
+Examples that name people (Layla Haddad, Amina Rahman, Musa Grant) come from the development seed (`server/seed/`), first written for the planning prototype, and are fictional.
 
 ## 1. Starting point
 
 The repository today is a single-page static landing site: React 19, TypeScript, Vite 6, Tailwind CSS 4, GSAP and lucide-react. There is no router, no backend, no authentication and no database. Content lives in `src/content/site.ts`, design tokens in `src/styles.css` under `@theme`, and the build output in `dist/` is served from static hosting.
 
-The prototype under `src/preview/network/` is frontend-only. It uses a small hash router (`router.tsx`) so that nothing about the production page's path handling changes, fictional data from `data/mock.ts`, and vocabularies from `data/taxonomy.ts`. Its types in `data/types.ts` are the shapes this schema is derived from.
+The planning prototype (frontend-only, since removed) supplied the shapes this schema is derived from; its vocabularies now live in `shared/taxonomy.ts` and its fictional people in `server/seed/`.
 
 ## 2. Recommended stack
 
@@ -80,7 +80,7 @@ server/
   src/services/*.ts              input validation and calls to SQL functions and views
   src/routes/*.ts                one Hono sub-app per area
   src/cli/admin-grant.ts
-  seed/*.ts                      development seed built from the prototype's mock.ts
+  seed/*.ts                      development seed of the fictional people
   test/{harness.ts,db/*,auth/*,policies/*,services/*,email/*,jobs/*}
 src/network/
   main.tsx, app/{router,routes,nav,shells,guards}.tsx, lib/{api,query,session,meta}.tsx
@@ -90,7 +90,7 @@ e2e/*.spec.ts
 docs/professional-network/       these documents plus runbook.md
 ```
 
-The prototype under `src/preview/` stays until the real routes replace it, then is removed.
+The prototype under `src/preview/` stayed until the real routes replaced it, and has been removed.
 
 ## 3. Backend organization
 
@@ -1123,7 +1123,7 @@ There is no payment provider, no analytics vendor and no messaging service.
 
 **Maintainability for volunteers:**
 
-- Everything is in the repository: migrations, policies, functions, email templates, seed data, the Dockerfile and the CI workflow. A new volunteer runs `npm ci`, `docker compose up -d`, `npm run migrate`, `npm run seed` and `npm run dev:all` and has a working local stack with the fictional data from `mock.ts`; magic links print in the server log.
+- Everything is in the repository: migrations, policies, functions, email templates, seed data, the Dockerfile and the CI workflow. A new volunteer runs `npm ci`, `docker compose up -d`, `npm run migrate`, `npm run seed` and `npm run dev:all` and has a working local stack with the fictional data from `server/seed/`; magic links print in the server log.
 - Vocabularies are tables with an admin screen, so a board member can add a discipline without a developer.
 - Policy and function tests run in CI on every change against a real Postgres. A failing privacy test blocks the deploy.
 - One small `config` table holds the tunable numbers (request expiry days, reminder days, pending cap, default `max_active`, daily rate limits, retention months, the pause switch) so a change is a row update from the admin settings screen, recorded in the audit log.
@@ -1138,7 +1138,7 @@ There is no payment provider, no analytics vendor and no messaging service.
 
 | Environment | Service | Database | Data |
 | --- | --- | --- | --- |
-| Local | `npm run dev:all` (Vite on 5173 proxying `/api` to the server on 8787; `tsx watch`) | `docker compose up -d` (Postgres 16 on 54329 with `mest` and `mest_test`) | `npm run seed` from the prototype's `mock.ts`; magic links print in the server log |
+| Local | `npm run dev:all` (Vite on 5173 proxying `/api` to the server on 8787; `tsx watch`) | `docker compose up -d` (Postgres 16 on 54329 with `mest` and `mest_test`) | `npm run seed` (`server/seed/`); magic links print in the server log |
 | CI (GitHub Actions) | `npm run typecheck`, `npm run test:server`, `npm run build`, `npm run build -w server`, `docker build .` | A Postgres service container | Test databases created per run |
 | Production (Railway) | One service built from the `Dockerfile`; `railway.json` sets the health check to `/api/health` | The Railway Postgres plugin, `DATABASE_URL` injected | Real members |
 

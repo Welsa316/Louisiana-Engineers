@@ -4,7 +4,7 @@ This document lists the product and technical choices for the member platform of
 
 Decisions made before these documents were written (passwordless sign-in, approval queue for professionals, platform-mediated requests with handoff on accept, 14-day expiry, 3 pending requests, default maximum of 3 active mentees, 14-day deletion grace) are recorded in [01-product-requirements.md](01-product-requirements.md) and [02-technical-architecture.md](02-technical-architecture.md) and are not reopened here. The hosting decision (Supabase in the first draft) was reopened and is settled below.
 
-People named as examples come from the prototype's `src/preview/network/data/mock.ts` and are fictional.
+People named as examples come from the development seed (`server/seed/`), first written for the planning prototype, and are fictional.
 
 ## Decisions recorded 2026-11-23
 
@@ -257,7 +257,7 @@ These do not change what members experience in a way the board needs to weigh. E
 
 **Why it matters.** Every developer should have their own database so the policy suite runs offline and developers do not collide.
 
-**Decision.** `docker-compose.yml` runs Postgres 16 locally with `mest` and `mest_test` databases; `npm run migrate` and `npm run seed` build the fictional data from `mock.ts`; magic links print in the server log instead of being sent. Each test worker gets a private database named with its `WORKTREE_ID`.
+**Decision.** `docker-compose.yml` runs Postgres 16 locally with `mest` and `mest_test` databases; `npm run migrate` and `npm run seed` build the fictional data from `server/seed/`; magic links print in the server log instead of being sent. Each test worker gets a private database named with its `WORKTREE_ID`.
 
 ### T9. Testing strategy
 
