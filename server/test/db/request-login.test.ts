@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createPool } from "../../src/db/pool";
 import { verifyRequestLogin } from "../../src/db/request-login";
 import { createTestDb, type TestDb } from "../harness";
 
@@ -28,4 +29,36 @@ describe("verifyRequestLogin", () => {
     // The harness's owner pool logs in as the table owner (a superuser locally and in CI).
     await expect(verifyRequestLogin(db.pool)).rejects.toThrow(/REQUEST_DATABASE_URL/);
   });
+
+  // Each condition on its own, with a throwaway login that is not a superuser.
+  const cases: [string, string][] = [
+    ["not_in_app_user", "CREATE ROLE %I LOGIN"],
+    ["bypassrls", "CREATE ROLE %I LOGIN BYPASSRLS IN ROLE app_user"],
+    ["table_owner_member", "CREATE ROLE %I LOGIN IN ROLE app_user"],
+  ];
+  for (const [label, create] of cases) {
+    it(`refuses_a_login_that_is_${label}`, async () => {
+      const role = `mest_check_${label}_${process.pid}`;
+      await db.pool.query(create.replace("%I", `"${role}"`));
+      if (label === "table_owner_member") {
+        const owner = await db.pool.query<{ owner: string }>(
+          "SELECT tableowner AS owner FROM pg_tables WHERE schemaname = 'public' AND tablename = 'users'",
+        );
+        await db.pool.query(`GRANT "${owner.rows[0].owner}" TO "${role}"`);
+      }
+      const url = new URL(db.url);
+      url.username = role;
+      url.password = "";
+      const pool = createPool(url.toString(), { max: 1 });
+      try {
+        const superuser = await pool.query<{ s: boolean }>("SELECT rolsuper AS s FROM pg_roles WHERE rolname = current_user");
+        expect(superuser.rows[0].s).toBe(false);
+        await expect(verifyRequestLogin(pool)).rejects.toThrow(/REQUEST_DATABASE_URL/);
+      } finally {
+        await pool.end();
+        await db.pool.query(`DROP OWNED BY "${role}"`);
+        await db.pool.query(`DROP ROLE "${role}"`);
+      }
+    });
+  }
 });

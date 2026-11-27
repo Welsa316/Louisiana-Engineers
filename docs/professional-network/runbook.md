@@ -255,8 +255,13 @@ When someone asks by email instead:
 2. If they cannot use it, confirm that the address they wrote from is the account's sign-in address. Do not act on a forwarded or third-party request.
 3. Schedule the deletion on their behalf. This is the same function the settings screen calls, with the same 14-day grace period, notice email and audit entry:
 
+   Type the address at the prompt rather than into the command, so `psql` quotes it (an address can contain a quote mark):
+
    ```sh
-   psql "$PROD_DB_URL" -c "SELECT schedule_account_deletion(u.id, false, NULL) FROM users u WHERE u.email = '<their address>' AND u.deleted_at IS NULL"
+   read -r -p "Address: " ADDR
+   psql "$PROD_DB_URL" -v addr="$ADDR" <<'SQL'
+   SELECT schedule_account_deletion(u.id, false, NULL) FROM users u WHERE u.email = :'addr' AND u.deleted_at IS NULL;
+   SQL
    ```
 
    One row with an id means it is scheduled; no rows means no live account uses that address. The grace period is a safeguard here too: if the request was forged, the real member gets the notice and can keep the account.
@@ -275,7 +280,14 @@ An administrator's account cannot be deleted while that would leave fewer than t
 psql "$PROD_DB_URL" -c "DELETE FROM sessions"
 ```
 
-To sign out one account: `DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE email = '<address>')`.
+To sign out one account, again with the address typed at a prompt:
+
+```sh
+read -r -p "Address: " ADDR
+psql "$PROD_DB_URL" -v addr="$ADDR" <<'SQL'
+DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE email = :'addr');
+SQL
+```
 
 **The other secrets:**
 
