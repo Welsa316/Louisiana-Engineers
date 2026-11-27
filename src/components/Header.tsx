@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Wordmark } from "./Logo";
-import { navigation } from "../content/site";
+import { isSectionLink, navigation } from "../content/site";
 
 export function Header() {
   const [solid, setSolid] = useState(false);
@@ -45,9 +45,11 @@ export function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Track the section in view for aria-current.
+  // Track the section in view for aria-current. Only `#` links name a
+  // section; a page link such as the directory is not a selector at all.
   useEffect(() => {
     const sections = navigation
+      .filter((item) => isSectionLink(item.href))
       .map((item) => document.querySelector<HTMLElement>(item.href))
       .filter((el): el is HTMLElement => Boolean(el));
     if (!sections.length) return;
@@ -81,7 +83,7 @@ export function Header() {
                 key={item.href}
                 className="nav-link"
                 href={item.href}
-                aria-current={current === item.href ? "true" : undefined}
+                aria-current={isSectionLink(item.href) && current === item.href ? "true" : undefined}
               >
                 {item.label}
               </a>

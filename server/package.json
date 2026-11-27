@@ -1,0 +1,10 @@
+{
+  "name": "@mest/server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/index.js --external:pg --sourcemap --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\""
+  }
+}
