@@ -7,7 +7,10 @@ import { defineConfig, devices } from "@playwright/test";
  * then `npm run e2e` (the global setup re-seeds before every run). The server runs in test mode so the dev-login and
  * dev-last-link routes exist.
  */
-const origin = "http://127.0.0.1:8787";
+// E2E_PORT lets the suite run beside a dev server already on 8787; point
+// DATABASE_URL at its own database too, since the global setup re-seeds it.
+const port = process.env.E2E_PORT ?? "8787";
+const origin = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "e2e",
@@ -28,7 +31,7 @@ export default defineConfig({
     timeout: 60_000,
     env: {
       NODE_ENV: "test",
-      PORT: "8787",
+      PORT: port,
       APP_ORIGIN: origin,
       JOBS_ENABLED: "false",
       // Specs that send real magic links give each test its own
