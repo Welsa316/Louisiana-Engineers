@@ -1,8 +1,10 @@
 import { Hono } from "hono";
+import { accountRoutes } from "./account";
 import { adminRoutes } from "./admin";
 import { authRoutes } from "./auth";
 import { configRoutes } from "./config";
 import { directoryRoutes } from "./directory";
+import { exportRoutes } from "./export";
 import { meRoutes } from "./me";
 import { notificationRoutes } from "./notifications";
 import { profileRoutes } from "./profiles";
@@ -27,6 +29,8 @@ export function createApiRoutes(): Hono {
   api.route("/me", meRoutes);
   api.route("/me", meMentorshipRoutes);
   api.route("/me", savedRoutes);
+  api.route("/me", accountRoutes);
+  api.route("/me", exportRoutes);
   api.route("/directory", directoryRoutes);
   api.route("/profiles", profileRoutes);
   api.route("/profiles", profileReportRoutes);
