@@ -161,7 +161,7 @@ function orderBy(search: DirectorySearch, rank: string | null): string {
 
 /* ------------------------------------------------------------- results */
 
-interface EntryRow {
+export interface EntryRow {
   id: string;
   first_name: string;
   last_name: string;
@@ -184,15 +184,18 @@ interface EntryRow {
   last_active_at: Date | null;
 }
 
-/** The card columns. Never `years_experience`, a contact column or the LinkedIn link. */
-const ENTRY_COLUMNS = `
+/**
+ * The card columns, read from `directory_entries e` (the suggested mentors
+ * reuse them). Never `years_experience`, a contact column or the LinkedIn link.
+ */
+export const ENTRY_COLUMNS = `
   e.id, e.first_name, e.last_name, e.credentials, e.title, e.organization,
   e.discipline_id, e.discipline_label, e.discipline_group::text AS discipline_group,
   e.location, e.experience_band, e.verified, e.tags, e.participation,
   e.visibility::text AS visibility, e.mentor_status::text AS mentor_status,
   e.mentor_topics, e.audience, e.has_capacity, e.last_active_at`;
 
-function toEntry(row: EntryRow): DirectoryEntry {
+export function toEntry(row: EntryRow): DirectoryEntry {
   return {
     id: row.id,
     firstName: row.first_name,
