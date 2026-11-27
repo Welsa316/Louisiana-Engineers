@@ -1,5 +1,6 @@
 import type { Db } from "../db/tx";
 import { defaultMailer, type Mailer } from "./resend";
+import "./templates/all";
 import { renderTemplate, type TemplateData } from "./templates/registry";
 
 /** Attempts per outbox row before the sender gives up and records the last error. */

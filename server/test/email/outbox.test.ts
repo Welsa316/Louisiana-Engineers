@@ -363,7 +363,8 @@ describe("template registry", () => {
     expect(magic.html).not.toContain("t<1>");
     expect(`${magic.subject}${magic.text}${magic.html}`).not.toMatch(/—/);
 
-    const fallback = renderTemplate("request-received", { title: "New request", body: "<b>Hi</b>", link: "/network/mentor" });
+    // A name no template registers (Task 20 registered request-received and the rest).
+    const fallback = renderTemplate("not-registered-yet", { title: "New request", body: "<b>Hi</b>", link: "/network/mentor" });
     expect(fallback.subject).toBe("New request");
     expect(fallback.html).toContain("&lt;b&gt;Hi&lt;/b&gt;");
     expect(fallback.text).toContain("http://127.0.0.1:8787/network/mentor");
