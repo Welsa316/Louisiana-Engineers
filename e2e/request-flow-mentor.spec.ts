@@ -69,6 +69,8 @@ async function sendRequest(api: APIRequestContext, origin: string, mentorId: str
 }
 
 const capacityLine = (page: Page) => page.getByTestId("capacity-line");
+/** The dashboard shows the count once, in its Active mentees stat. */
+const activeStat = (page: Page) => page.locator(".pn-stat").filter({ hasText: "Active mentees" });
 
 test.describe("mentor screens (read-only)", () => {
   test("the dashboard, the inbox, a request and the mentees read right at every width", async ({ page }) => {
@@ -77,7 +79,8 @@ test.describe("mentor screens (read-only)", () => {
     // The dashboard: two waiting, one of three taken.
     await page.goto("/network/mentor");
     await expect(page.getByRole("heading", { level: 1, name: "2 people are waiting to hear from you." })).toBeVisible();
-    await expect(capacityLine(page)).toHaveText(/1 of 3 active/);
+    await expect(activeStat(page)).toContainText(/1\s*of 3/);
+    await expect(capacityLine(page)).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
 
     // The inbox: waiting requests oldest first, with days left.
@@ -205,7 +208,7 @@ test.describe.serial("Layla and Tariq answer Amina", () => {
     await expect(drawer.getByRole("link", { name: "Open relationship" })).toBeVisible();
 
     await page.goto("/network/mentor");
-    await expect(capacityLine(page)).toHaveText(/2 of 3 active/);
+    await expect(activeStat(page)).toContainText(/2\s*of 3/);
   });
 
   test("Amina's request shows Accepted and the email address", async ({ page }) => {

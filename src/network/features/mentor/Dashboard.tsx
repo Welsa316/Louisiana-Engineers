@@ -1,6 +1,6 @@
 /**
  * The mentor dashboard (`/network/mentor`), ported from the prototype: how
- * many people are waiting, the capacity line, the waiting requests oldest
+ * many people are waiting, the waiting requests oldest
  * first with the days left, the active mentees, and the mentorship offer
  * at a glance. Counts come from `GET /api/me/mentorship`; the lists from
  * `GET /api/requests?role=mentor`. Pausing, the topics and the cap live in
@@ -19,7 +19,7 @@ import { useMyMentorship, useRequestList } from "../me/requests-api";
 import { useOwnProfile, useOwnSettings } from "../settings/api";
 import { calendarDay } from "../me/RequestActions";
 import { atCapacity, daysLeft } from "./RequestDrawer";
-import { CapacityLine, MENTOR_ACTIVE, MENTOR_PENDING, MentorRequestRow } from "./Requests";
+import { MENTOR_ACTIVE, MENTOR_PENDING, MentorRequestRow } from "./Requests";
 
 /** How many waiting requests and mentees the dashboard lists before "All". */
 const LISTED = 5;
@@ -100,7 +100,6 @@ export function Dashboard() {
           </Link>
         }
       />
-      <CapacityLine className="mt-4" />
 
       <div className="pn-stats mt-8">
         <Stat
