@@ -131,6 +131,8 @@ export interface MyMentorship {
   pendingIncoming: number;
   /** Pending requests the caller sent. */
   pendingOutgoing: number;
+  /** How many pending requests a member may have at once (config `pending_cap`). */
+  pendingCap: number;
 }
 
 /** `GET /api/me/suggested-mentors?topic=`: up to three mentors taking requests. */

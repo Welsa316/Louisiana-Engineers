@@ -316,16 +316,20 @@ export async function myMentorship(db: Db): Promise<MyMentorship> {
     active_count: number;
     pending_incoming: number;
     pending_outgoing: number;
+    pending_cap: number;
   }>(
-    `SELECT s.status::text AS status, s.max_active, s.active_count, s.pending_incoming, s.pending_outgoing
+    `SELECT s.status::text AS status, s.max_active, s.active_count, s.pending_incoming, s.pending_outgoing,
+            (SELECT c.value::int FROM config c WHERE c.key = 'pending_cap') AS pending_cap
        FROM my_mentorship_summary() AS s`,
   );
+  const cap = row?.pending_cap ?? (await db.one<{ n: number }>("SELECT value::int AS n FROM config WHERE key = 'pending_cap'")).n;
   return {
     status: row?.status ?? null,
     maxActive: row?.max_active ?? null,
     activeCount: row?.active_count ?? 0,
     pendingIncoming: row?.pending_incoming ?? 0,
     pendingOutgoing: row?.pending_outgoing ?? 0,
+    pendingCap: cap,
   };
 }
 

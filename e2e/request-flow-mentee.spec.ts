@@ -265,13 +265,11 @@ test.describe.serial("Amina's requests", () => {
 
     await page.goto(`/network/me/discover/${MARIAM}`);
     await page.getByRole("link", { name: "Request mentorship" }).click();
-    await fillMentorshipForm(page, "Mariam", "Choosing a major");
-    await page.getByRole("button", { name: "Send request" }).click();
 
+    // 03 section 6.3: at the cap the form never opens, so nothing typed is wasted.
     const capHeading = page.getByRole("heading", { level: 1, name: "You have 3 requests waiting." });
     await expect(capHeading).toBeVisible();
-    // The refusal replaced the steps in place, so focus moves to it for screen readers.
-    await expect(capHeading).toBeFocused();
+    await expect(page.getByRole("button", { name: "Send request" })).toHaveCount(0);
     await expect(page.getByText("Withdraw one or wait for an answer, then come back.")).toBeVisible();
     await page.getByRole("link", { name: "See my requests" }).click();
     await expect(page.getByRole("list", { name: "Requests" }).getByRole("listitem")).toHaveCount(4);

@@ -544,9 +544,10 @@ describe("lists and counts", () => {
       activeCount: 1,
       pendingIncoming: 1,
       pendingOutgoing: 1,
+      pendingCap: 3,
     });
     const student = await call(await cookieFor(students[1]), "GET", "/me/mentorship");
-    expect(student.body).toEqual({ status: null, maxActive: null, activeCount: 0, pendingIncoming: 0, pendingOutgoing: 1 });
+    expect(student.body).toEqual({ status: null, maxActive: null, activeCount: 0, pendingIncoming: 0, pendingOutgoing: 1, pendingCap: 3 });
     expect((await call(null, "GET", "/me/mentorship")).status).toBe(401);
   });
 
@@ -703,6 +704,7 @@ describe("seed", () => {
       activeCount: 1,
       pendingIncoming: 2,
       pendingOutgoing: 0,
+      pendingCap: 3,
     });
     const amina_ = (await call(await cookieFor(amina), "GET", "/requests?role=mentee")).body as RequestsResponse;
     expect(amina_.items.map((r) => [r.counterparty.firstName, r.status])).toEqual([

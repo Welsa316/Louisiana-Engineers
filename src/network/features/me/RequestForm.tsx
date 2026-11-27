@@ -20,7 +20,7 @@ import { limits } from "@shared/limits";
 import { createRequestSchema, type CreateRequestInput } from "@shared/schemas/request";
 import type { MeetingMode, RequestFormat, RequestKind } from "@shared/types/common";
 import type { ProfileView } from "@shared/types/directory";
-import type { MentorAvailability, RequestSummary } from "@shared/types/requests";
+import type { MentorAvailability, MyMentorship, RequestSummary } from "@shared/types/requests";
 import { ApiError, isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
 import { Card, Field, Input, Monogram, Notice, Option, Steps, Textarea } from "../../ui/ui";
@@ -436,10 +436,14 @@ function Wizard({ profile, kind, opening }: { profile: ProfileView; kind: Reques
           );
           return;
         }
-        const gate = error instanceof ApiError ? gateFor(error.code, availability.data) : null;
-        if (gate) {
-          // The refusal changed what the gate should say (counts, the pause date); re-read first.
-          void Promise.all([mine.refetch(), availability.refetch()]).finally(() => setRefusal(gate));
+        const code = error instanceof ApiError ? error.code : null;
+        if (code && gateFor(code, availability.data)) {
+          // The refusal changed what the gate should say (counts, a pause and its
+          // date), so decide it from the fresh answer, not the cached one.
+          void Promise.all([mine.refetch(), availability.refetch()]).then(
+            ([, fresh]) => setRefusal(gateFor(code, fresh.data ?? availability.data)),
+            () => setRefusal(gateFor(code, availability.data)),
+          );
           return;
         }
         setSendError(
@@ -733,8 +737,24 @@ export function RequestForm() {
   const profile = useProfile(valid ? mentorId : "");
   const availability = useAvailability(valid ? mentorId : "");
   const open = useOpenMenteeRequests();
+  const mine = useMyMentorship();
 
   if (!valid) return <Unavailable />;
+  // A failed load is not a fact about the mentor: say it did not load.
+  const failed = [profile, availability, mine].find(
+    (q) => q.isError && (isApiError(q.error, "network") || (isApiError(q.error) && q.error.status >= 500)),
+  );
+  if (failed) {
+    return (
+      <div className="pn-wizard">
+        <h1>{failed === profile ? "The profile did not load." : "The request form did not load."}</h1>
+        <p className="pn-wizard-lead">Check your connection and try again.</p>
+        <button type="button" className="btn btn-outline btn-sm mt-6" onClick={() => void failed.refetch()}>
+          Try again
+        </button>
+      </div>
+    );
+  }
   if (profile.isError) {
     if (isApiError(profile.error, "network") || (isApiError(profile.error) && profile.error.status >= 500)) {
       return (
@@ -749,7 +769,7 @@ export function RequestForm() {
     }
     return <Unavailable />;
   }
-  if (profile.isPending || availability.isPending || open.isPending) {
+  if (profile.isPending || availability.isPending || open.isPending || mine.isPending) {
     return (
       <div className="pn-wizard" role="status" aria-live="polite">
         <span className="sr-only">Loading the request form</span>
@@ -759,7 +779,14 @@ export function RequestForm() {
 
   const p = profile.data;
   if (p.isOwner) return <Unavailable />;
-  return <Wizard key={`${p.id}-${kind}`} profile={p} kind={kind} opening={openingGate(p, kind, availability.data, open.data?.items ?? [])} />;
+  return (
+    <Wizard
+      key={`${p.id}-${kind}`}
+      profile={p}
+      kind={kind}
+      opening={openingGate(p, kind, availability.data, open.data?.items ?? [], mine.data)}
+    />
+  );
 }
 
 /** What the form can already tell before any step: an open request with this person, or no offer of this kind. */
@@ -768,12 +795,16 @@ function openingGate(
   kind: RequestKind,
   availability: MentorAvailability | undefined,
   openRequests: RequestSummary[],
+  mine: MyMentorship | undefined,
 ): GateReason | null {
   if (openRequests.some((r) => r.role === "mentee" && r.counterparty.id === p.id)) return "duplicate";
+  // What the mentor offers comes first: withdrawing a request would not change it.
   const state = availability?.state;
   if (kind === "mentorship" && state !== "taking") {
     return state === "paused" ? "paused" : state === "full" ? "full" : "unavailable";
   }
   if (kind === "introduction" && !p.participation.includes("networking")) return "no_introductions";
+  // 03 section 6.3: at the cap the form does not open, so nothing typed is lost.
+  if (mine && mine.pendingOutgoing >= mine.pendingCap) return "pending_cap";
   return null;
 }
