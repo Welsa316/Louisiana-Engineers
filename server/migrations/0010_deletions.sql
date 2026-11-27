@@ -135,6 +135,17 @@ BEGIN
   IF clean_reason IS NOT NULL AND char_length(clean_reason) > 1000 THEN
     RAISE EXCEPTION 'mest.invalid_reason' USING ERRCODE = '22023';
   END IF;
+  -- Leaving takes the administrator role with it, so the same two-administrator
+  -- minimum as admin_revoke applies: count the others who can still act.
+  PERFORM 1 FROM admin_roles a WHERE a.revoked_at IS NULL ORDER BY a.profile_id FOR UPDATE;
+  IF EXISTS (SELECT 1 FROM admin_roles a WHERE a.profile_id = target AND a.revoked_at IS NULL)
+     AND (SELECT count(*) FROM admin_roles a JOIN users u ON u.id = a.profile_id
+           WHERE a.revoked_at IS NULL AND a.profile_id <> target
+             AND u.suspended_at IS NULL AND u.deleted_at IS NULL
+             AND NOT EXISTS (SELECT 1 FROM account_deletions d
+                              WHERE d.profile_id = a.profile_id AND d.canceled_at IS NULL AND d.executed_at IS NULL)) < 2 THEN
+    RAISE EXCEPTION 'mest.admin_minimum' USING ERRCODE = '23514', DETAIL = 'at least two administrators stay';
+  END IF;
 
   SELECT * INTO open_row FROM account_deletions d
    WHERE d.profile_id = target AND d.canceled_at IS NULL AND d.executed_at IS NULL
@@ -289,6 +300,45 @@ $$;
 -- The sweep (section 8, step 4). System context only: the `deletions` job
 -- calls it for each open row past execute_after. Moves a row at most once
 -- and returns whether it did. `as_of` is the scheduler's clock.
+-- Whole-word replacement of a departed member's names (longest first) with
+-- "Former member", for other members' notifications.
+CREATE FUNCTION scrub_name(value text, names text[]) RETURNS text
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  name text;
+  result text := value;
+BEGIN
+  IF value IS NULL THEN
+    RETURN NULL;
+  END IF;
+  FOREACH name IN ARRAY names LOOP
+    result := regexp_replace(
+      result,
+      '\m' || regexp_replace(name, '([.^$|?*+()\[\]{}\\])', '\\\1', 'g') || '\M',
+      'Former member',
+      'g'
+    );
+  END LOOP;
+  RETURN result;
+END
+$$;
+
+-- The same for every string value in a notification payload.
+CREATE FUNCTION scrub_name_values(payload jsonb, names text[]) RETURNS jsonb
+LANGUAGE sql IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT CASE WHEN payload IS NULL OR jsonb_typeof(payload) <> 'object' THEN payload ELSE
+    coalesce((
+      SELECT jsonb_object_agg(e.key,
+               CASE WHEN jsonb_typeof(e.value) = 'string' THEN to_jsonb(scrub_name(e.value #>> '{}', names)) ELSE e.value END)
+        FROM jsonb_each(payload) e
+    ), '{}'::jsonb)
+  END
+$$;
+
 CREATE FUNCTION execute_account_deletion(id uuid, as_of timestamptz DEFAULT now()) RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -297,6 +347,7 @@ DECLARE
   d account_deletions%ROWTYPE;
   target uuid;
   address citext;
+  names text[];
 BEGIN
   IF app_uid() IS NOT NULL THEN
     RAISE EXCEPTION 'mest.forbidden' USING ERRCODE = '42501';
@@ -322,6 +373,34 @@ BEGIN
      SET why = '', goals = NULL, scheduling_note = NULL, mentor_note = NULL,
          text_purged_at = coalesce(r.text_purged_at, now())
    WHERE r.mentee_id = target OR r.mentor_id = target;
+
+  -- Other members' notifications about this member's requests, reports and
+  -- review carry their name; they become "Former member" too (02 section 8).
+  SELECT array_remove(ARRAY[
+           nullif(btrim(concat_ws(' ', p.first_name, p.last_name)), ''),
+           nullif(btrim(p.first_name), ''),
+           nullif(btrim(p.last_name), '')
+         ], NULL)
+    INTO names FROM profiles p WHERE p.id = target;
+  IF cardinality(names) > 0 THEN
+    WITH scrubbed AS (
+      UPDATE notifications n
+         SET title = scrub_name(n.title, names),
+             body = scrub_name(n.body, names),
+             payload = scrub_name_values(n.payload, names)
+       WHERE n.recipient_id <> target
+         AND ((n.subject_type = 'mentorship_request' AND n.subject_id IN (
+                SELECT r.id FROM mentorship_requests r WHERE r.mentee_id = target OR r.mentor_id = target))
+           OR (n.subject_type = 'report' AND n.subject_id IN (SELECT rp.id FROM reports rp WHERE rp.profile_id = target))
+           OR (n.subject_type = 'profile_review' AND n.subject_id IN (
+                SELECT pr.id FROM profile_reviews pr WHERE pr.profile_id = target)))
+      RETURNING n.id AS scrubbed_id
+    )
+    -- Their emails not yet sent, for the same notifications only.
+    UPDATE email_outbox o
+       SET payload = scrub_name_values(o.payload, names)
+     WHERE o.sent_at IS NULL AND o.notification_id IN (SELECT sc.scrubbed_id FROM scrubbed sc);
+  END IF;
 
   -- Per-member tables.
   DELETE FROM profile_expertise pe WHERE pe.profile_id = target;

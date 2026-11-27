@@ -20,9 +20,17 @@ export const deletionsJob: Job = {
   transaction: false,
   async run(db, now): Promise<DeletionsResult> {
     const due = await db.query<{ id: string }>(
-      `SELECT id FROM account_deletions
-        WHERE canceled_at IS NULL AND executed_at IS NULL AND execute_after <= $1
-        ORDER BY execute_after, id`,
+      // A member with an email still waiting to go out (an administrator's
+      // removal notice, say) is swept on a later run, once it has gone or
+      // after an hour, since the sweep deletes the address and its outbox.
+      `SELECT d.id FROM account_deletions d
+        WHERE d.canceled_at IS NULL AND d.executed_at IS NULL AND d.execute_after <= $1
+          AND NOT EXISTS (
+            SELECT 1 FROM email_outbox o JOIN users u ON u.email = o.to_email
+             WHERE u.id = d.profile_id AND o.sent_at IS NULL AND o.attempts < 3
+               AND o.created_at > $1::timestamptz - interval '1 hour'
+          )
+        ORDER BY d.execute_after, d.id`,
       [now],
     );
     const totals = await eachRow(

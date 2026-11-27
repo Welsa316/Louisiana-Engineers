@@ -278,6 +278,25 @@ describe("asking for deletion", () => {
   });
 });
 
+describe("administrators", () => {
+  it("the_last_two_administrators_cannot_leave_or_be_removed", async () => {
+    const one = await makePerson(db.pool, { admin: true, firstName: "Ada" });
+    const two = await makePerson(db.pool, { admin: true, firstName: "Bea" });
+    const refused = await call(await cookieFor(one), "POST", "/me/deletion", { confirmName: "Ada" });
+    expect(refused).toMatchObject({ status: 409, body: { code: "admin_minimum" } });
+
+    const reporter = await makeStudent(db.pool);
+    const reportId = await scalarAs<string>(db.pool, reporter, "SELECT report_profile($1, 'unsafe', NULL) AS value", [two]);
+    await expect(
+      runAs(db.pool, one, "SELECT admin_resolve_report($1, 'resolved', NULL, 'remove_account')", [reportId]),
+    ).rejects.toThrow(/mest\.admin_minimum/);
+
+    // With a third administrator, either is allowed.
+    await makePerson(db.pool, { admin: true, firstName: "Cy" });
+    expect((await call(await cookieFor(one), "POST", "/me/deletion", { confirmName: "Ada" })).status).toBe(200);
+  });
+});
+
 describe("keeping the account", () => {
   it("cancel_restores_visibility", async () => {
     const resumeOn = new Date(Date.now() + 30 * DAY).toISOString().slice(0, 10);
@@ -626,7 +645,9 @@ describe("the sweep", () => {
     expect(kept.status).toBe(409);
     expect(kept.body.code).toBe("removed_by_admin");
 
-    expect(await runSweep(new Date(Date.now() + 60_000))).toEqual({ deleted: 1, errored: 0 });
+    // A minute later the removal email has not gone yet, so the sweep waits for it.
+    expect(await runSweep(new Date(Date.now() + 60_000))).toEqual({ deleted: 0, errored: 0 });
+    expect(await runSweep(new Date(Date.now() + 2 * 3_600_000))).toEqual({ deleted: 1, errored: 0 });
     expect((await profileRow(target)).first_name).toBe("Former");
     const audit = (
       await db.pool.query<{ detail: Record<string, unknown> }>(
@@ -651,6 +672,21 @@ describe("the sweep", () => {
       )
     ).rows;
     expect(rows).toEqual([{ immediate: true, reason: "Report: spam", due: true, previous_visibility: "public" }]);
+  });
+
+  it("sweep_removes_the_leavers_name_from_other_members_notifications", async () => {
+    const leaver = await makeLeaver();
+    const mentee = await makeStudent(db.pool, { firstName: "Amina" });
+    await sendRequest(db.pool, mentee, leaver);
+    expect((await requestDeletion(leaver)).status).toBe(200);
+    expect(JSON.stringify(await notificationsFor(mentee))).toContain("Layla");
+
+    await db.pool.query("UPDATE email_outbox SET sent_at = now()");
+    expect(await runSweep(new Date(Date.now() + 15 * DAY))).toEqual({ deleted: 1, errored: 0 });
+    const after = JSON.stringify(await notificationsFor(mentee));
+    expect(after).not.toContain("Layla");
+    expect(after).not.toContain("Quintavalle");
+    expect(after).toContain("Former member");
   });
 
   it("the_sweep_is_for_the_jobs_only", async () => {
