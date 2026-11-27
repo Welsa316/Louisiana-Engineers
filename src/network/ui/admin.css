@@ -77,3 +77,62 @@
     justify-content: center;
   }
 }
+
+/* Dashboard measures (features/admin/measures.tsx). A measure with nothing
+   to count yet says so in body type, not in the display numerals. */
+.pn-stat-empty {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--color-fg-2);
+}
+.pn-admin-measures-note {
+  max-width: 44rem;
+}
+
+/* Measure tables: the first cell of a row names the measure. It is a row
+   header for screen readers but reads as body text, not as a column label. */
+.pn-admin-measures tbody th[scope="row"] {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--pn-line);
+  font-size: inherit;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-align: left;
+  text-transform: none;
+  color: var(--color-fg);
+}
+
+@media (max-width: 47.99rem) {
+  .pn-admin-measures tbody th[scope="row"] {
+    display: block;
+    padding: 0 0 0.375rem;
+    border: 0;
+    font-weight: 500;
+  }
+  /* Month columns sit side by side under the measure's name. */
+  .pn-admin-months tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 1rem;
+  }
+  .pn-admin-months tbody th[scope="row"] {
+    grid-column: 1 / -1;
+  }
+  /* A topic and its count share one line. */
+  .pn-admin-topics tr {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+  .pn-admin-topics tbody th[scope="row"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    font-weight: 400;
+  }
+  .pn-admin-topics td[data-label]::before {
+    content: none;
+  }
+}

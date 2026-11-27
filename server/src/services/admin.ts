@@ -39,19 +39,52 @@ const offset = ({ page, size }: PageArgs) => (page - 1) * size;
 
 /* ------------------------------------------------------------- dashboard */
 
+interface DashboardRow {
+  approved_professionals: number;
+  pending_professionals: number;
+  students: number;
+  active_mentors: number;
+  open_reports: number;
+  oldest_open_report_at: Date | null;
+  paused_mentors: number;
+  median_paused_days: number | null;
+  median_hours_to_approval: number | null;
+  requests_sent: number;
+  introductions_sent: number;
+  answered_within_7_days_pct: number | null;
+  acceptance_rate_pct: number | null;
+  expiry_rate_pct: number | null;
+  active_relationships: number;
+  completed_relationships: number;
+  members_inactive_6_months: number;
+  requests_by_topic: AdminDashboard["requestsByTopic"];
+  by_month: AdminDashboard["byMonth"];
+}
+
+/** The success measures (01 section 8); migration 0009 defines each one. */
 export async function dashboard(db: Db): Promise<AdminDashboard> {
-  const row = await db.maybeOne<{
-    approved_professionals: number;
-    pending_professionals: number;
-    students: number;
-    active_mentors: number;
-  }>("SELECT approved_professionals, pending_professionals, students, active_mentors FROM admin_dashboard");
+  const row = await db.maybeOne<DashboardRow>("SELECT * FROM admin_dashboard");
   if (!row) throw new AppError(403, "not_admin", "admin_dashboard returned no row");
   return {
     approvedProfessionals: row.approved_professionals,
     pendingProfessionals: row.pending_professionals,
     students: row.students,
     activeMentors: row.active_mentors,
+    openReports: row.open_reports,
+    oldestOpenReportAt: row.oldest_open_report_at ? row.oldest_open_report_at.toISOString() : null,
+    pausedMentors: row.paused_mentors,
+    medianPausedDays: row.median_paused_days,
+    medianHoursToApproval: row.median_hours_to_approval,
+    requestsSent: row.requests_sent,
+    introductionsSent: row.introductions_sent,
+    answeredWithin7DaysPct: row.answered_within_7_days_pct,
+    acceptanceRatePct: row.acceptance_rate_pct,
+    expiryRatePct: row.expiry_rate_pct,
+    activeRelationships: row.active_relationships,
+    completedRelationships: row.completed_relationships,
+    membersInactive6Months: row.members_inactive_6_months,
+    requestsByTopic: row.requests_by_topic,
+    byMonth: row.by_month,
   };
 }
 

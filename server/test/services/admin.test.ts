@@ -11,11 +11,14 @@ import type {
   AdminTag,
   AdminVocabularyLists,
 } from "@shared/types/admin";
+import { seedRequestId } from "../../seed/requests";
+import { SEED, runSeed } from "../../seed/seed";
 import { createSession } from "../../src/auth/session";
 import { wrapClient } from "../../src/db/tx";
 import { adminRoutes } from "../../src/routes/admin";
-import { asSystem, createTestDb, testApp, truncateAll, type TestDb } from "../harness";
+import { asSystem, asUser, createTestDb, testApp, truncateAll, type TestDb } from "../harness";
 import { makePerson, newAccount, onboard, professionalPayload, rowsAs, visibleProfileIds } from "../policies/fixtures";
+import { sendRequest } from "../policies/request-fixtures";
 
 /**
  * The administration area's routes (`/api/admin/*`) over the 0004 admin
@@ -296,7 +299,208 @@ describe("dashboard and configuration", () => {
     await submitted();
     await makePerson(db.pool, { kind: "student", visibility: "hidden" });
     const counts = await json<AdminDashboard>(await call(cookie, "GET", "/dashboard"));
-    expect(counts).toEqual({ approvedProfessionals: 2, pendingProfessionals: 1, students: 1, activeMentors: 0 });
+    expect(counts).toMatchObject({ approvedProfessionals: 2, pendingProfessionals: 1, students: 1, activeMentors: 0 });
+    // Nothing to measure yet: rates and medians are null, not zero.
+    expect(counts).toMatchObject({
+      requestsSent: 0,
+      answeredWithin7DaysPct: null,
+      acceptanceRatePct: null,
+      expiryRatePct: null,
+      medianHoursToApproval: null,
+      medianPausedDays: null,
+      oldestOpenReportAt: null,
+      requestsByTopic: [],
+    });
+    expect(counts.byMonth.map((m) => m.requestsSent)).toEqual([0, 0, 0]);
+  });
+
+  it("dashboard_matches_hand_counts", async () => {
+    await runSeed();
+    const cookie = await cookieFor(SEED.admin.id);
+    const id = (key: string) => SEED[key].id;
+
+    // Arranged on top of the seed, each with a known answer:
+    // an introduction, which the mentorship measures leave out;
+    await sendRequest(db.pool, id("amina-rahman"), id("ibrahim-okafor"), { kind: "introduction" });
+    // the seed's three submissions, decided after 6, 30 and 72 hours (median 30);
+    const open = await db.pool.query<{ id: string }>("SELECT id FROM profile_reviews WHERE decision IS NULL ORDER BY profile_id");
+    expect(open.rows).toHaveLength(3);
+    const decisions = [
+      { body: { decision: "approved" }, hours: 6 },
+      { body: { decision: "declined", notes: "Add your current role." }, hours: 30 },
+      { body: { decision: "approved" }, hours: 72 },
+    ];
+    for (const [i, row] of open.rows.entries()) {
+      expect((await call(cookie, "POST", `/reviews/${row.id}`, decisions[i].body)).status).toBe(200);
+      await db.pool.query("UPDATE profile_reviews SET submitted_at = decided_at - $2::interval WHERE id = $1", [
+        row.id,
+        `${decisions[i].hours} hours`,
+      ]);
+    }
+    // Fatima (seeded paused) 10 days into her pause and Nadia 4 days (median
+    // 7); Zainab paused 30 days but hidden by an administrator, so not counted.
+    for (const key of ["nadia-el-amin", "zainab-qureshi"]) {
+      await asUser(db.pool, id(key), (client) => client.query("SELECT set_mentorship_status('paused', current_date + 30)"));
+    }
+    const started = await db.pool.query<{ fresh: boolean }>(
+      "SELECT paused_at > now() - interval '1 minute' AS fresh FROM mentorship_settings WHERE profile_id = $1",
+      [id("nadia-el-amin")],
+    );
+    expect(started.rows).toEqual([{ fresh: true }]);
+    const pauses: [string, number][] = [
+      ["fatima-noor", 10],
+      ["nadia-el-amin", 4],
+      ["zainab-qureshi", 30],
+    ];
+    for (const [key, days] of pauses) {
+      await db.pool.query("UPDATE mentorship_settings SET paused_at = now() - $2::interval WHERE profile_id = $1", [
+        id(key),
+        `${days} days`,
+      ]);
+    }
+    expect((await call(cookie, "POST", `/profiles/${id("zainab-qureshi")}/hide`)).status).toBe(200);
+    // Yusuf at his limit (one accepted mentee, limit 1) is not an active mentor.
+    await db.pool.query("UPDATE mentorship_settings SET max_active = 1 WHERE profile_id = $1", [id("yusuf-hassan")]);
+    // Leen's pending request to Layla (req-1004) declined because Layla left
+    // (what the deletion flow records): no mentor answered it.
+    await db.pool.query(
+      "UPDATE mentorship_requests SET status = 'declined', decline_reason = 'member_left', responded_at = now() WHERE id = $1",
+      [seedRequestId("req-1004")],
+    );
+    // Hamza has not been seen for 200 days.
+    await db.pool.query("UPDATE profiles SET last_active_at = now() - interval '200 days' WHERE id = $1", [id("hamza-ali")]);
+
+    const got = await json<AdminDashboard>(await call(cookie, "GET", "/dashboard"));
+
+    // The request measures, counted by hand from server/seed/requests.ts:
+    // nine mentorship requests; answered within 7 days are 1001, 1002, 1005,
+    // 1006 and 1007, of the seven whose first week is over or that a mentor
+    // answered (1003 is pending and younger, 1004 ended with member_left);
+    // accepted 1001, 1005, 1006 (completed) and 1007 against declined 1002;
+    // expired 1008 and 1009, of the eight no longer pending.
+    expect(got).toMatchObject({
+      requestsSent: 9,
+      introductionsSent: 1,
+      answeredWithin7DaysPct: 71,
+      acceptanceRatePct: 80,
+      expiryRatePct: 25,
+      activeRelationships: 3,
+      completedRelationships: 1,
+      medianHoursToApproval: 30,
+      pausedMentors: 2,
+      medianPausedDays: 7,
+      pendingProfessionals: 0,
+    });
+    const labels = new Map(
+      (await db.pool.query<{ id: string; label: string }>("SELECT id, label FROM mentorship_topics")).rows.map((t) => [t.id, t.label]),
+    );
+    const topic = (topicId: string, requests: number) => ({ topicId, label: labels.get(topicId), requests });
+    expect(got.requestsByTopic).toEqual([
+      topic("internships-and-first-jobs", 2),
+      topic("resume-and-portfolio", 2),
+      topic("choosing-a-major", 1),
+      topic("leadership-and-management", 1),
+      topic("negotiating-offers", 1),
+      topic("professional-licensure", 1),
+      topic("research-and-publishing", 1),
+    ]);
+
+    // The people measures, counted here from the raw rows.
+    const profiles = (
+      await db.pool.query<{
+        id: string;
+        kind: string | null;
+        approval_state: string;
+        hidden: boolean;
+        anonymized: boolean;
+        deleted: boolean;
+        inactive: boolean;
+      }>(
+        `SELECT p.id, p.kind::text AS kind, p.approval_state::text AS approval_state,
+                p.admin_hidden_at IS NOT NULL AS hidden, p.anonymized_at IS NOT NULL AS anonymized,
+                u.deleted_at IS NOT NULL AS deleted,
+                coalesce(p.last_active_at, p.created_at) < now() - interval '6 months' AS inactive
+           FROM profiles p JOIN users u ON u.id = p.id`,
+      )
+    ).rows;
+    const settings = (
+      await db.pool.query<{ profile_id: string; status: string; max_active: number }>(
+        "SELECT profile_id, status::text AS status, max_active FROM mentorship_settings",
+      )
+    ).rows;
+    const relationships = (
+      await db.pool.query<{ mentor_id: string; kind: string; completed: boolean }>(
+        `SELECT rel.mentor_id, r.kind::text AS kind, rel.completed_at IS NOT NULL AS completed
+           FROM mentorship_relationships rel JOIN mentorship_requests r ON r.id = rel.request_id`,
+      )
+    ).rows;
+    const byId = new Map(profiles.map((p) => [p.id, p]));
+    const live = profiles.filter((p) => !p.anonymized);
+    const busy = (mentor: string) =>
+      relationships.filter((r) => r.mentor_id === mentor && r.kind === "mentorship" && !r.completed).length;
+    const listedActive = settings.filter((s) => {
+      const p = byId.get(s.profile_id)!;
+      return s.status === "active" && p.approval_state === "approved" && !p.hidden && !p.anonymized;
+    });
+    const activeMentors = listedActive.filter((s) => busy(s.profile_id) < s.max_active).length;
+    expect(activeMentors).toBeLessThan(listedActive.length); // Yusuf is full: the free-slot rule is exercised
+    const inactive = live.filter((p) => !p.deleted && p.inactive).length;
+    expect(inactive).toBeGreaterThan(0);
+    const reports = (
+      await db.pool.query<{ created_at: Date }>("SELECT created_at FROM reports WHERE status = 'open' ORDER BY created_at")
+    ).rows;
+    expect(reports.length).toBeGreaterThan(0);
+    expect(got).toMatchObject({
+      approvedProfessionals: live.filter((p) => p.kind === "professional" && p.approval_state === "approved").length,
+      pendingProfessionals: live.filter((p) => p.kind === "professional" && p.approval_state === "pending").length,
+      students: live.filter((p) => p.kind === "student").length,
+      activeMentors,
+      membersInactive6Months: inactive,
+      openReports: reports.length,
+      oldestOpenReportAt: reports[0].created_at.toISOString(),
+    });
+
+    // The last three months (America/Chicago), counted from the request rows.
+    const monthOf = (d: Date) => {
+      const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit" }).formatToParts(d);
+      return `${parts.find((p) => p.type === "year")!.value}-${parts.find((p) => p.type === "month")!.value}`;
+    };
+    const [year, month] = monthOf(new Date()).split("-").map(Number);
+    const months = [2, 1, 0].map((back) => {
+      const d = new Date(Date.UTC(year, month - 1 - back, 1));
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    });
+    const requests = (
+      await db.pool.query<{ kind: string; status: string; reason: string | null; created_at: Date; responded_at: Date | null }>(
+        "SELECT kind::text AS kind, status::text AS status, decline_reason AS reason, created_at, responded_at FROM mentorship_requests",
+      )
+    ).rows.filter((r) => r.kind === "mentorship");
+    const completions = (
+      await db.pool.query<{ completed_at: Date }>(
+        `SELECT rel.completed_at FROM mentorship_relationships rel JOIN mentorship_requests r ON r.id = rel.request_id
+          WHERE r.kind = 'mentorship' AND rel.completed_at IS NOT NULL`,
+      )
+    ).rows;
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    expect(got.byMonth).toEqual(
+      months.map((m) => {
+        const sent = requests.filter((r) => monthOf(r.created_at) === m);
+        return {
+          month: m,
+          requestsSent: sent.length,
+          answeredWithin7Days: sent.filter(
+            (r) =>
+              ["accepted", "declined", "completed"].includes(r.status) &&
+              r.reason !== "member_left" &&
+              r.responded_at !== null &&
+              r.responded_at.getTime() - r.created_at.getTime() <= WEEK_MS,
+          ).length,
+          expired: sent.filter((r) => r.status === "expired").length,
+          completedRelationships: completions.filter((c) => monthOf(c.completed_at) === m).length,
+        };
+      }),
+    );
+    expect(got.byMonth.reduce((n, m) => n + m.requestsSent, 0)).toBeGreaterThan(0);
   });
 
   it("config_update_audited", async () => {

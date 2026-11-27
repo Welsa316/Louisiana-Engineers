@@ -279,8 +279,9 @@ describe("dashboard and activity", () => {
     await asSystem(db.pool, (client) => client.query("UPDATE profiles SET approval_state = 'approved' WHERE id = $1", [mentor.profile]));
 
     const [counts] = await rowsAs(db.pool, admin, "SELECT * FROM admin_dashboard");
-    // open_reports arrived with 0007 (Task 24); reports.test.ts counts it.
-    expect(counts).toEqual({ approved_professionals: 4, pending_professionals: 1, students: 1, active_mentors: 1, open_reports: 0 });
+    // open_reports arrived with 0007 (Task 24) and the request measures with
+    // 0009 (Task 25); reports.test.ts and admin.test.ts count those.
+    expect(counts).toMatchObject({ approved_professionals: 4, pending_professionals: 1, students: 1, active_mentors: 1, open_reports: 0 });
     expect(await rowsAs(db.pool, student, "SELECT * FROM admin_dashboard")).toEqual([]);
     expect(await rowsAs(db.pool, null, "SELECT * FROM admin_dashboard")).toEqual([]);
   });

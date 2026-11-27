@@ -12,8 +12,58 @@ import type { AdminDashboardCounts, AdminMemberRow, Education } from "./profiles
 
 export type { AdminDashboardCounts, AdminMemberRow } from "./profiles";
 
-/** `GET /api/admin/dashboard`: the `admin_dashboard` view (Tasks 24 and 25 add measures). */
-export type AdminDashboard = AdminDashboardCounts;
+/** One mentorship topic and how many mentorship requests named it. */
+export interface AdminDashboardTopic {
+  topicId: string;
+  label: string;
+  requests: number;
+}
+
+/**
+ * One calendar month (America/Chicago) of mentorship activity, by when the
+ * request was created (completions by when the relationship ended).
+ */
+export interface AdminDashboardMonth {
+  /** YYYY-MM */
+  month: string;
+  requestsSent: number;
+  answeredWithin7Days: number;
+  expired: number;
+  completedRelationships: number;
+}
+
+/**
+ * `GET /api/admin/dashboard`: the `admin_dashboard` view, the success
+ * measures of 01 section 8 as aggregates. Every request measure counts
+ * mentorship requests only; introductions are counted on their own.
+ * Percentages are whole numbers, and null when nothing has been counted yet.
+ */
+export interface AdminDashboard extends AdminDashboardCounts {
+  openReports: number;
+  /** When the oldest open report was filed; null when none are open. */
+  oldestOpenReportAt: string | null;
+  pausedMentors: number;
+  /** How long the mentors paused now have been paused, in days (median, one decimal). */
+  medianPausedDays: number | null;
+  /** Submission to decision for decided profile reviews, in hours (median, one decimal). */
+  medianHoursToApproval: number | null;
+  requestsSent: number;
+  introductionsSent: number;
+  /** Accepted or declined within 7 days, of the requests whose first 7 days are over or that were answered. */
+  answeredWithin7DaysPct: number | null;
+  /** accepted / (accepted + declined), counting completed requests as accepted. */
+  acceptanceRatePct: number | null;
+  /** expired, of the requests no longer pending. */
+  expiryRatePct: number | null;
+  activeRelationships: number;
+  completedRelationships: number;
+  /** Members whose last activity (or sign-up) is more than 6 months ago. */
+  membersInactive6Months: number;
+  /** Most requested first. */
+  requestsByTopic: AdminDashboardTopic[];
+  /** The last three months, oldest first, the current month last. */
+  byMonth: AdminDashboardMonth[];
+}
 
 /** The review queue's filter: open reviews, or decided ones by outcome. */
 export const adminReviewStatuses = ["pending", "approved", "declined"] as const;
