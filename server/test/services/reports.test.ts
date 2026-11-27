@@ -278,6 +278,44 @@ describe("who can read a report", () => {
   });
 });
 
+describe("a reported administrator", () => {
+  it("reported_administrator_cannot_see_or_close_the_report", async () => {
+    const reported = await makePerson(db.pool, { admin: true, firstName: "Rae", lastName: "Reported" });
+    const other = await makePerson(db.pool, { admin: true, visibility: "hidden", firstName: "Bea", lastName: "Admin" });
+    const reporter = await makeStudent(db.pool, { firstName: "Amina", lastName: "Rahman" });
+    const { id } = (await report(reporter, reported)).body as ReportCreated;
+
+    // The reported administrator gets no notice of it, no row and no reporter.
+    expect((await notificationsOf(reported)).filter((n) => n.template === "report-received")).toEqual([]);
+    expect((await notificationsOf(other)).filter((n) => n.template === "report-received")).toHaveLength(1);
+    const theirs = (await call(reported, "GET", "/admin/reports?status=open")).body as AdminReportsResponse;
+    expect(theirs).toEqual({ items: [], total: 0 });
+    expect(JSON.stringify(theirs)).not.toContain(reporter);
+
+    // Nor can they close it; another administrator can.
+    const self = await call(reported, "POST", `/admin/reports/${id}/resolve`, { status: "dismissed", action: "none" });
+    expect(self).toMatchObject({ status: 409, body: { code: "own_report" } });
+    const fine = await call(other, "POST", `/admin/reports/${id}/resolve`, { status: "dismissed", action: "none" });
+    expect(fine.status).toBe(200);
+  });
+});
+
+describe("reports filed by an administrator", () => {
+  it("an_administrator_cannot_report_their_way_into_request_text", async () => {
+    const { admin } = await admins();
+    const mentor = await makeMentor(db.pool, { firstName: "Layla" });
+    const student = await makeStudent(db.pool, { firstName: "Amina" });
+    const requestId = await sendRequest(db.pool, student, mentor);
+
+    // A student is never listed, so nobody, an administrator included, can report one.
+    expect((await report(admin, student)).status).toBe(404);
+    // A listed mentor can be reported, but an administrator's own report unmasks nothing.
+    expect((await report(admin, mentor)).status).toBe(201);
+    const items = ((await call(admin, "GET", "/admin/requests?size=50")).body as AdminRequestsResponse).items;
+    expect(items.find((i) => i.id === requestId)).toMatchObject({ underReport: false, why: null });
+  });
+});
+
 describe("resolving a report", () => {
   it("resolve_hide_removes_from_directory_and_pauses_mentoring", async () => {
     const { admin } = await admins();
@@ -388,7 +426,7 @@ describe("resolving a report", () => {
   });
 
   it("resolve_checks_status_and_action", async () => {
-    const { admin, admin2 } = await admins();
+    const { admin } = await admins();
     const pro = await makePerson(db.pool);
     const reporter = await makeStudent(db.pool);
     const { id } = (await report(reporter, pro)).body as ReportCreated;
@@ -411,13 +449,8 @@ describe("resolving a report", () => {
     await expect(
       asUser(db.pool, reporter, (c) => c.query("SELECT admin_resolve_report($1, 'dismissed', NULL, 'none')", [id])),
     ).rejects.toThrow(/mest\.forbidden/);
-    // An administrator cannot suspend themselves.
-    const self = (await report(admin2, admin)).body as ReportCreated;
-    expect(
-      (await call(admin, "POST", `/admin/reports/${self.id}/resolve`, { status: "resolved", action: "suspend_requests" })).body,
-    ).toEqual({
-      code: "invalid_action",
-    });
+    // A report about an administrator is decided by another one, whatever the action
+    // (covered with a listed administrator in "a reported administrator").
     // Unknown ids answer 404.
     expect(
       (await call(admin, "POST", "/admin/reports/00000000-0000-4000-8000-000000000000/resolve", { status: "dismissed" })).status,

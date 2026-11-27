@@ -84,6 +84,7 @@ const EMPTY: Record<ReportStatus, { title: string; body?: string }> = {
 
 function reportErrorText(error: unknown): string {
   if (isApiError(error, "report_closed")) return "This report was already closed, possibly by another administrator.";
+  if (isApiError(error, "own_report")) return "This report is about you, so another administrator has to decide it.";
   if (isApiError(error, "invalid_action")) {
     return "That action does not fit this report. A dismissal takes no action, and you cannot suspend your own account.";
   }

@@ -94,7 +94,10 @@ BEGIN
   IF me IS NULL OR NOT is_member() THEN
     RAISE EXCEPTION 'mest.forbidden' USING ERRCODE = '42501';
   END IF;
-  IF target IS NULL OR profile_access(target) <> 'visible' THEN
+  -- What a member can see: a listed profile, or the other party of an open
+  -- request. Not profile_access, which lets an administrator see everyone:
+  -- a report unmasks request text, so it must not reach unlisted members.
+  IF target IS NULL OR NOT (profile_in_directory(target) OR is_counterparty(target)) THEN
     RAISE EXCEPTION 'mest.not_found' USING ERRCODE = '23514';
   END IF;
   IF target = me OR report_profile.reason IS NULL
@@ -116,7 +119,9 @@ BEGIN
   VALUES (target, me, report_profile.reason, clean_detail)
   RETURNING id INTO new_id;
 
-  PERFORM notify_admins(
+  -- Every active administrator except the one reported, who is told nothing.
+  PERFORM create_notification(
+    a.profile_id,
     'report',
     'New report about ' || profile_display_name(target),
     'A member reported this profile as ' || lower(report_reason_label(report_profile.reason))
@@ -131,7 +136,10 @@ BEGIN
       'link', '/network/admin/reports'
     ),
     others_open = 0
-  );
+  )
+    FROM admin_roles a JOIN users u ON u.id = a.profile_id
+   WHERE a.revoked_at IS NULL AND u.suspended_at IS NULL AND u.deleted_at IS NULL
+     AND a.profile_id <> target;
   PERFORM write_audit('report.filed', 'report', new_id,
     jsonb_build_object('profile', target, 'reason', report_profile.reason));
   RETURN new_id;
@@ -180,6 +188,10 @@ BEGIN
   END IF;
   IF rep.status <> 'open' THEN
     RAISE EXCEPTION 'mest.report_closed' USING ERRCODE = '23514';
+  END IF;
+  -- Another administrator decides a report about an administrator.
+  IF rep.profile_id = me THEN
+    RAISE EXCEPTION 'mest.own_report' USING ERRCODE = '23514';
   END IF;
 
   IF act = 'remove_account' THEN
@@ -470,7 +482,8 @@ JOIN users pu ON pu.id = r.profile_id
 LEFT JOIN professional_details d ON d.profile_id = r.profile_id
 LEFT JOIN profiles rp ON rp.id = r.reporter_id
 LEFT JOIN profiles rb ON rb.id = r.resolved_by
-WHERE is_admin();
+-- A reported administrator never sees the report, so never its reporter.
+WHERE is_admin() AND r.profile_id <> app_uid();
 
 -- Requests for administrators: status, dates, kind, topic and parties. The
 -- free text (why, goals, scheduling_note, mentor_note) is masked unless an
@@ -510,6 +523,11 @@ CROSS JOIN LATERAL (
   SELECT EXISTS (
     SELECT 1 FROM reports rep
      WHERE rep.status = 'open' AND rep.profile_id IN (r.mentee_id, r.mentor_id)
+       -- Only a member's report opens the text; an administrator cannot
+       -- open it by filing one.
+       AND NOT EXISTS (
+         SELECT 1 FROM admin_roles a WHERE a.profile_id = rep.reporter_id AND a.revoked_at IS NULL
+       )
   ) AS under_report
 ) flag
 WHERE is_admin();
