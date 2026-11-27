@@ -9,9 +9,10 @@
 import type { RouteObject } from "react-router";
 import { Directory } from "../public/Directory";
 import { Profile } from "../public/Profile";
+import { reportSlot } from "../public/ReportDialog";
 import { requestSlot } from "./RequestActions";
 
 export const discoverRoutes: RouteObject[] = [
   { path: "me/discover", element: <Directory mode="discover" /> },
-  { path: "me/discover/:id", element: <Profile mode="discover" slot={requestSlot} /> },
+  { path: "me/discover/:id", element: <Profile mode="discover" slot={requestSlot} reportSlot={reportSlot} /> },
 ];

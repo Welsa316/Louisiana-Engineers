@@ -9,8 +9,9 @@ import type { RouteObject } from "react-router";
 import { requestSlot } from "../me/RequestActions";
 import { Directory } from "./Directory";
 import { Profile } from "./Profile";
+import { reportSlot } from "./ReportDialog";
 
 export const directoryRoutes: RouteObject[] = [
   { path: "directory", element: <Directory /> },
-  { path: "directory/:id", element: <Profile slot={requestSlot} /> },
+  { path: "directory/:id", element: <Profile slot={requestSlot} reportSlot={reportSlot} /> },
 ];
