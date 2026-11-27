@@ -390,6 +390,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 
 ### Task 20: Email templates
 
+> **Handoff from integration (Phase 1C wave 1):** The seed's expired Amina to Layla request (req-1009 in `server/seed/requests.ts`) carries a why, goals and scheduling note; use it for `privacy.test.ts`. Notifications already name the templates `request-received`, `request-accepted`, `request-declined`, `request-expired` and `request-reminder`; read the payload each caller stores (`request_payload(r)` in 0005) and render nothing else from it.
+
 **Depends on:** Task 19 (parallel with Task 21).
 
 **Files:** Create `server/src/email/templates/{request-received,request-reminder,request-accepted,request-declined,request-expired,profile-submitted,profile-approved,profile-declined,profile-verified,report-received,report-status,moderation-action,deletion-requested,deletion-canceled,admin-digest}.ts` and register them in a new `server/src/email/templates/all.ts` imported by `registry.ts`'s consumers; Test `server/test/email/privacy.test.ts`.
@@ -401,6 +403,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 
 ### Task 21: Lifecycle jobs: expiry, reminders, resume, retention, digest
 
+> **Handoff from integration (Phase 1C wave 1):** The lifecycle functions in 0005 take an optional trailing `as_of` (pass the scheduler's `now`). In `send_request_reminder(id, n)`, `n` is the count already sent: 0 is the first reminder (`config.reminder_days[1]`), 1 the second; select requests with `reminders_sent = n`. `purge_request_text(before)` empties requests by `created_at < before` and stamps `text_purged_at`. All four refuse a call with an acting user, so jobs call them through `withSystem`.
+
 **Depends on:** Task 19 (parallel with Task 20).
 
 **Files:** Create `server/src/jobs/{expire-requests,reminders,resume-paused,retention,digest}.ts`, `server/migrations/0006_jobs.sql` (function `admin_digest()`); Test `server/test/jobs/lifecycle.test.ts`. Migration numbering from here: 0006 jobs (Task 21), 0007 reports (Task 24), 0008 dashboard (Task 25), 0009 deletions (Task 26).
@@ -410,6 +414,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 - [ ] **Step 1:** Failing tests `expiry_at_day_14_once`, `reminders_at_day_5_and_10_exactly_once`, `resume_paused_on_date`, `retention_empties_text_after_24_months`, `digest_one_per_admin_at_most_weekly`. Implement; PASS. Commit: `Add the request lifecycle, retention and digest jobs`.
 
 ### Task 22: Mentee screens
+
+> **Handoff from integration (Phase 1C wave 1):** Request notifications link to `/network/me/requests/:id` for the mentee and `/network/mentor/requests/:id` for the mentor; build those paths. Besides the plan's codes, `POST /api/requests` can answer `invalid_request` and `not_onboarded`; the full list is `RequestActionErrorCode` in shared/types/requests.ts. `GET /api/me/suggested-mentors` takes an optional `?topic=` to rank mentors offering it first.
 
 > **Handoff from integration (Phase 1B wave 3):** Task 15 owns `src/network/features/public/directory-routes.tsx` and `src/network/features/me/discover-routes.tsx`; pass the request buttons as `slot` to `<Profile>` in both (a ReactNode or `(profile: ProfileView) => ReactNode`). `ProfileActions` already treats a signed-in account with `kind === null` as "finish joining"; keep that branch. Use the query key `["me", "profile"]` for `GET /api/me/profile` (onboarding invalidates `["me"]`).
 
@@ -422,6 +428,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 
 ### Task 23: Mentor screens
 
+> **Handoff from integration (Phase 1C wave 1):** A mentor who uses only `mest` (the onboarding default) receives requests but `respond_to_request` refuses an accept with `invalid_share_methods`, because an accept must share at least one method with a value. The accept sheet must detect this before submitting and send the mentor to Settings, Privacy and contact, to add a method, then bring them back to the request; add an e2e case for a mentor with only `mest`.
+
 **Depends on:** Task 22.
 
 **Files:** Create `src/network/features/mentor/{Dashboard,Requests,RequestDrawer,Mentees,Relationship,routes}.tsx` (ported; Dashboard and the capacity line read `GET /api/me/mentorship`; Mentees reads `GET /api/requests?role=mentor&status=accepted`; the accept sheet lists the mentor's methods with checkboxes prefilled from `share_with_members` and the A5 line "Meet in public places; MEST does not supervise meetings"); Test `e2e/request-flow-mentor.spec.ts` (creates its own request through the API in `beforeAll`).
@@ -430,6 +438,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 - [ ] **Step 2:** Implement; PASS. Commit: `Add the mentor inbox and relationship screens`.
 
 ### Task 24: Reports and moderation
+
+> **Handoff from integration (Phase 1C wave 1):** When `suspend_requests` suspends a member, stop releasing their contact values through an accepted relationship: `release_contact`'s handoff branch and `get_request_handoff` do not yet check that the mentor is in good standing, and `respond_to_request` does not check that the mentee still is. Add `member_in_good_standing` checks to both (CREATE OR REPLACE in 0007) with tests.
 
 **Depends on:** Task 19 (parallel with Tasks 20 to 22); its UI parts depend on Tasks 15 and 17 (already merged).
 
