@@ -300,6 +300,25 @@ describe("GET /api/me/export", () => {
     expect(await rowsAs(db.pool, amina, "SELECT id FROM audit_log")).toEqual([]);
   });
 
+  it("export_works_during_the_grace_period_and_while_suspended", async () => {
+    // Leaving or suspended members can no longer act, but their data is still theirs.
+    const { amina, layla } = await arrange();
+    await asSystem(db.pool, (client) =>
+      client.query(
+        `INSERT INTO account_deletions (profile_id, execute_after, previous_visibility) VALUES ($1, now() + interval '14 days', 'hidden')`,
+        [amina],
+      ),
+    );
+    await asSystem(db.pool, (client) => client.query("UPDATE users SET suspended_at = now() WHERE id = $1", [layla]));
+    for (const who of [amina, layla]) {
+      const res = await download(await cookieFor(who));
+      expect(res.status).toBe(200);
+      const data = res.body as DataExport;
+      expect(data.profile).toMatchObject({ id: who });
+      expect(data.requests.length).toBeGreaterThan(0);
+    }
+  });
+
   it("export_works_before_onboarding_and_needs_a_session", async () => {
     expect((await download(null)).status).toBe(401);
 

@@ -100,4 +100,4 @@ export interface AdminRequestItem {
 export type AdminRequestsResponse = Paged<AdminRequestItem>;
 
 /** Domain refusals the report endpoints answer with `409 { code }`. */
-export type ReportErrorCode = "rate_limited" | "invalid_report" | "report_closed" | "invalid_action" | "not_available" | "own_report";
+export type ReportErrorCode = "rate_limited" | "invalid_report" | "report_closed" | "invalid_action" | "not_available" | "own_report" | "admin_minimum";

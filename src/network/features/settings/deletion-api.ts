@@ -56,6 +56,9 @@ export function useKeepAccount() {
 export function deletionErrorText(error: unknown): string {
   if (isApiError(error, "confirm_mismatch")) return "That is not the first name on your profile. Type it exactly as it appears there.";
   if (isApiError(error, "deletion_scheduled")) return "Your account is already scheduled for deletion.";
+  if (isApiError(error, "admin_minimum")) {
+    return "MEST Network needs at least two administrators. Ask another member to take on the role before you delete your account.";
+  }
   if (isApiError(error, "no_deletion")) return "Your account is not scheduled for deletion, so there is nothing to keep.";
   if (isApiError(error, "removed_by_admin")) {
     return "An administrator removed this account, so it cannot be kept from here. Write to the MEST team if you think this is a mistake.";

@@ -3,11 +3,28 @@ import { ACCOUNT_FOOTER, compose, firstName, type RenderedEmail, type TemplateCo
 /**
  * To a member when an administrator restricts their account
  * (`admin_resolve_report`, Task 24). Payload contract: `firstName`, `action`
- * (`suspend_requests` or `hide_profile`) and `link`. Never says who reported
+ * (`suspend_requests`, `hide_profile` or `remove_account`) and `link`. Never says who reported
  * them or why.
  */
 export function renderModerationAction(data: TemplateData, context: TemplateContext): RenderedEmail {
   const name = firstName(data.firstName, "there");
+  if (data.action === "remove_account") {
+    // There is nothing left to sign in to, so the link is the public home.
+    return compose({
+      subject: "Your MEST Network account was removed",
+      heading: "Your MEST Network account was removed",
+      paragraphs: [
+        `Hi ${name},`,
+        "An administrator removed your MEST Network account. Your profile is no longer listed, and your account and personal details are being deleted.",
+        "If you think this is a mistake, contact the MEST organizers.",
+      ],
+      button: "Visit MEST Network",
+      link: "/network",
+      fallbackPath: "/network",
+      footer: ACCOUNT_FOOTER,
+      context,
+    });
+  }
   const what =
     data.action === "suspend_requests"
       ? "An administrator paused mentorship requests on your account. For now you cannot send or accept requests."

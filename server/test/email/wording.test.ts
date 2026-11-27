@@ -12,4 +12,11 @@ describe("template wording", () => {
     const mentorship = renderTemplate("request-received", { ...base, kind: "mentorship" }, { appOrigin: "http://x.test" });
     expect(mentorship.text).toContain("Amina sent you a mentorship request about Graduate school.");
   });
+
+  it("moderation_action_says_plainly_when_an_account_was_removed", () => {
+    const removed = renderTemplate("moderation-action", { firstName: "Bilal", action: "remove_account" }, { appOrigin: "http://x.test" });
+    expect(removed.subject).toMatch(/removed/i);
+    expect(removed.text).toMatch(/removed your MEST Network account/);
+    expect(removed.text).not.toMatch(/Sign in to see where your account stands/);
+  });
 });
