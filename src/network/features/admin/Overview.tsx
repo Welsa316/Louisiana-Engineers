@@ -1,14 +1,18 @@
 /**
- * Administration overview: the dashboard counts (`admin_dashboard`), the
- * oldest submissions waiting for review and the expertise tags waiting for a
- * decision. Aggregates only; individual records live in the queues.
+ * Administration overview: the dashboard counts and the running measures
+ * (`admin_dashboard`, migration 0009: approval time, open reports, the 7-day
+ * answer share, inactive members), the oldest submissions waiting for review
+ * and the expertise tags waiting for a decision. Aggregates only; individual
+ * records live in the queues, and the request measures in full on the
+ * mentorship screen.
  */
 
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router";
 import { useMeta } from "../../lib/meta";
-import { Card, Empty, Monogram, Notice, PageHead, Stat, fmtRelative, plural } from "../../ui/ui";
+import { Card, Empty, Monogram, Notice, PageHead, Stat, fmtRelative, fmtRelativeLower, plural } from "../../ui/ui";
 import { adminErrorText, personInitials, personName, useAdminDashboard, useReviews, useTags } from "./api";
+import { duration, measure } from "./measures";
 
 export function Overview() {
   useMeta({ title: "Administration" });
@@ -18,6 +22,7 @@ export function Overview() {
   const today = new Date().toISOString();
   const counts = dashboard.data;
   const loading = <span className="sr-only">Loading</span>;
+  const approval = duration(counts ? counts.medianHoursToApproval : undefined);
 
   return (
     <>
@@ -32,11 +37,48 @@ export function Overview() {
           <Notice tone="warn">{adminErrorText(dashboard.error)}</Notice>
         </div>
       ) : (
-        <div className="pn-stats mt-8" aria-busy={dashboard.isPending || undefined}>
-          <Stat label="Listed professionals" value={counts?.approvedProfessionals ?? loading} />
-          <Stat label="Waiting for review" value={counts?.pendingProfessionals ?? loading} />
-          <Stat label="Students" value={counts?.students ?? loading} />
-          <Stat label="Active mentors" value={counts?.activeMentors ?? loading} />
+        <div aria-busy={dashboard.isPending || undefined}>
+          <div className="pn-stats mt-8">
+            <Stat label="Listed professionals" value={counts?.approvedProfessionals ?? loading} />
+            <Stat label="Waiting for review" value={counts?.pendingProfessionals ?? loading} />
+            <Stat label="Students" value={counts?.students ?? loading} />
+            <Stat label="Active mentors" value={counts?.activeMentors ?? loading} note="Taking requests, with a free slot" />
+          </div>
+          <div className="pn-stats mt-4">
+            <Stat
+              label="Time to a decision"
+              value={approval.value}
+              unit={approval.unit}
+              note="Median, submission to approval or decline"
+            />
+            <Stat
+              label="Open reports"
+              value={measure(counts?.openReports)}
+              note={
+                counts?.oldestOpenReportAt
+                  ? `Oldest filed ${fmtRelativeLower(counts.oldestOpenReportAt, today)}`
+                  : counts
+                    ? "Nothing waiting"
+                    : undefined
+              }
+            />
+            <Stat
+              label="Answered within 7 days"
+              value={measure(counts?.answeredWithin7DaysPct)}
+              unit={counts?.answeredWithin7DaysPct != null ? "%" : undefined}
+              note={counts ? `Of ${plural(counts.requestsSent, "mentorship request")} sent` : undefined}
+            />
+            <Stat
+              label="Inactive 6 months"
+              value={measure(counts?.membersInactive6Months)}
+              note="Members not seen since, for a check-in"
+            />
+          </div>
+          <p className="t-small mt-4">
+            <Link to="/admin/mentorship" className="link link-quiet">
+              See mentorship activity by month and topic
+            </Link>
+          </p>
         </div>
       )}
 
