@@ -1,20 +1,41 @@
 # MEST — Muslim Engineers in Science & Tech
 
-Landing page for Muslim Engineers in Science & Tech (MEST), a professional and community organization based in Greater New Orleans, Louisiana. React, TypeScript, Vite, Tailwind CSS 4, GSAP (ScrollTrigger + SplitText), Lucide icons.
+Landing page and MEST Network for Muslim Engineers in Science & Tech (MEST), a professional and community organization based in Greater New Orleans, Louisiana.
+
+- **Landing page** (`/`): React, TypeScript, Vite, Tailwind CSS 4, GSAP (ScrollTrigger + SplitText), Lucide icons.
+- **MEST Network** (`/network`): the professional directory, mentorship requests and administration, served with the landing page by one Node service (Hono) with Postgres, deployed on Railway. Planning documents, the build plan and the production runbook are in [`docs/professional-network/`](docs/professional-network/README.md).
 
 ## Run locally
 
+Node.js 22 or newer. The landing page alone needs only the web app:
+
 ```sh
 npm ci
-npm run dev
+npm run dev        # Vite on http://127.0.0.1:5173
 ```
+
+The network app also needs the API and Postgres 16 (Docker, or any local Postgres with `DATABASE_URL` and `DATABASE_URL_TEST` pointed at it in `.env`):
 
 ```sh
-npm run build      # TypeScript check and production build to dist/
-npm run preview    # Serve the production build
+cp .env.example .env
+docker compose up -d   # Postgres on 54329 with the mest and mest_test databases
+npm run migrate        # apply server/migrations
+npm run seed           # fictional people, requests and reports for development
+npm run dev:all        # the API on 8787 and Vite on 5173, which proxies /api
 ```
 
-Node.js 22 or newer.
+Open `http://127.0.0.1:5173/network`. Sign-in links are not emailed locally: the server prints each one in its log. The seeded administrators are `admin@example.test` and `admin2@example.test`.
+
+```sh
+npm run typecheck      # web and server types
+npm run test:server    # server and policy tests against a real Postgres
+npm run build          # web production build to dist/
+npm run build -w server
+npm run e2e            # browser tests at 375 and 1280 (build and migrate first)
+npm run admin:grant -- <email>   # grant the administrator role (see the runbook)
+```
+
+Production setup, backups and incident steps are in [`docs/professional-network/runbook.md`](docs/professional-network/runbook.md).
 
 ## Sitemap
 
@@ -41,6 +62,8 @@ All replaceable content lives in [`src/content/site.ts`](src/content/site.ts). C
 
 ## Structure
 
+- `src/network/`: the MEST Network app (React Router, TanStack Query), split into its own chunk
+- `server/`: the API, migrations, background jobs, seed and tests; `shared/` holds the types, limits and schemas both sides use
 - `src/App.tsx` — page composition
 - `src/components/Hero.tsx` — the hero: a full-bleed photograph opened through an eight-pointed star aperture under the oversized wordmark; GSAP runs the aperture, the letter masks, the drawn rule, the staggered copy and the scroll-scrubbed exit
 - `src/components/` — `Header`, `Hero`, `Purpose` (Mission & About), `Pillars`, `Events`, `Membership` (Get Involved), `Footer`, `Logo` (mark, lettering, full lockup and header wordmark from the supplied SVG)

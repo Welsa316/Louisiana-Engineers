@@ -1,6 +1,6 @@
 # Professional Directory, Networking and Mentorship Platform: planning documents
 
-This folder holds the planning documents for a member platform for Muslim Engineers in Science & Tech (MEST), the volunteer-run professional and community organization based in Greater New Orleans, Louisiana. The platform adds three things the current single-page landing site does not have: a directory of professionals who choose to be listed, a way for students and early-career members to request mentorship from those professionals, and the administration tools a volunteer board needs to approve profiles, handle reports and keep personal data private. The documents cover product requirements, technical architecture (one Node service with Postgres on Railway, serving the existing React and Vite frontend), information architecture and user experience, an implementation roadmap, the questions that still need an answer, and the task-by-task build plan for the first release. A frontend-only prototype exists so the board can click through the proposed experience with fictional data.
+This folder holds the planning documents for a member platform for Muslim Engineers in Science & Tech (MEST), the volunteer-run professional and community organization based in Greater New Orleans, Louisiana. The platform adds three things the current single-page landing site does not have: a directory of professionals who choose to be listed, a way for students and early-career members to request mentorship from those professionals, and the administration tools a volunteer board needs to approve profiles, handle reports and keep personal data private. The documents cover product requirements, technical architecture (one Node service with Postgres on Railway, serving the existing React and Vite frontend), information architecture and user experience, an implementation roadmap, the questions that still need an answer, and the task-by-task build plan for the first release. A frontend-only prototype let the board click through the proposed experience with fictional data before the build; the real screens have replaced it, and [runbook.md](runbook.md) covers running the service in production.
 
 ## Documents
 
@@ -12,29 +12,19 @@ This folder holds the planning documents for a member platform for Muslim Engine
 | [04-implementation-roadmap.md](04-implementation-roadmap.md) | Phases, scope, dependencies, complexity estimates, risks, order of work and acceptance criteria |
 | [05-open-questions.md](05-open-questions.md) | What was decided on 2026-11-23, which board questions are running on their default, and the technical decisions as made |
 | [06-build-plan-phase-1.md](06-build-plan-phase-1.md) | The task-by-task plan for the first release: constraints, interfaces, tests and commit messages per task, and the multi-agent workflow that executes it |
+| [runbook.md](runbook.md) | Operating the service: accounts and holders, first deployment on Railway, the request login, Resend and Google setup, the first administrators, backups and restore, pausing, deletion requests by email, rotating secrets and incident steps |
 
 Read them in order the first time. Each file is self-contained and links to the others where a topic continues. The build plan's task text wins where it and an earlier document differ; the architecture document is the reference for every table column, policy row, function signature and notification.
 
 ## Source of truth for vocabularies
 
-The prototype's data modules define the controlled vocabularies and entity shapes that these documents use, and the documents are written to match them:
+The controlled vocabularies and entity shapes these documents use were first defined in the prototype's data modules and now live in the build:
 
-- `src/preview/network/data/taxonomy.ts`: disciplines, mentorship topics, audiences, experience bands, contact methods, participation options. The build copies it to `shared/taxonomy.ts`, where topics become `{ id, label }` with slug ids
-- `src/preview/network/data/types.ts`: visibility levels, mentorship status, approval state, request statuses, roles, entity fields
-- `src/preview/network/data/mock.ts`: fictional people, organizations, requests, meetings and reports used as examples and as the development seed
+- `shared/taxonomy.ts`: disciplines, mentorship topics (as `{ id, label }` with slug ids), audiences, experience bands, contact methods, participation options. The `disciplines` and `mentorship_topics` tables are seeded from it, and administrators add to them from the admin screen
+- `shared/types/common.ts`: visibility levels, mentorship status, approval state, request statuses and the other enumerations, matching the database's enumerated types
+- `server/seed/`: the fictional people, organizations, requests and reports used as examples and as the development seed
 
-Every person and organization named in these documents comes from `mock.ts` and is fictional.
-
-## How to run the prototype
-
-```sh
-npm ci
-npm run dev
-```
-
-Then open `http://127.0.0.1:5173/preview/professional-network/`.
-
-The prototype is frontend-only. It uses fictional data and keeps state only for the browser session (a reload keeps your walkthrough; the Reset data button in the control bar restores the samples). It is gated off the production landing page by its URL prefix, is not linked from the public navigation, and should not be deployed. Role switching (visitor, student or mentee, mentor, administrator) is in the "Prototype" control bar fixed at the top of the page so reviewers can see each perspective without signing in. The build plan removes the prototype in its last task, once the real screens replace it.
+Every person and organization named in these documents comes from that fictional data.
 
 ## Status
 
