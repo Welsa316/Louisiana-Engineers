@@ -172,7 +172,8 @@ test.describe("reports", () => {
 
       // His card is gone for a visitor, and his profile is not found.
       await visitorPage.goto("/network/directory?q=Chowdhury");
-      await expect(visitorPage.getByRole("heading", { level: 1 })).toBeVisible();
+      // A loading list also has no cards: wait for the search's own empty answer.
+      await expect(visitorPage.getByText("No profiles match these filters.")).toBeVisible();
       await expect(cards(visitorPage).filter({ hasText: "Bilal Chowdhury" })).toHaveCount(0);
       const gone = await visitorPage.request.get(`/api/profiles/${BILAL}`);
       expect(gone.status()).toBe(404);
