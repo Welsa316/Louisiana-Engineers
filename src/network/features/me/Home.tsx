@@ -7,7 +7,8 @@
  * professionals here with `?submitted=1`.
  *
  * Request counts from `GET /api/me/mentorship` fill `MentorshipCard`: the
- * mentee's half is Task 22's, the mentor's half Task 23's.
+ * mentee's half is Task 22's, the mentor's half (requests waiting, oldest
+ * first, and the capacity line) Task 23's.
  */
 
 import { ArrowRight, ArrowUpRight, CircleCheck, Clock, EyeOff, PencilLine } from "lucide-react";
@@ -23,7 +24,10 @@ import { useSession } from "../../lib/session";
 import { Card, Empty, Notice, PageHead } from "../../ui/ui";
 import { NotificationRows, notificationErrorText } from "../notifications/List";
 import { useNotifications } from "../notifications/api";
-import { useMyMentorship } from "./requests-api";
+import { daysLeftLabel } from "../mentor/RequestDrawer";
+import { CapacityLine } from "../mentor/Requests";
+import { counterpartyName, requestSubject } from "./Requests";
+import { useMyMentorship, useRequestList } from "./requests-api";
 
 /** How many notifications Home shows before "See all". */
 const LATEST = 5;
@@ -186,19 +190,64 @@ function nextStep(user: SessionUser, state: ApprovalState): Step {
   };
 }
 
-/** Mentorship at a glance. Requests open in Phase 1C; until then this points at the right place. */
+/** Mentorship at a glance: a mentor's waiting requests, or the requests a member sent. */
 function MentorshipCard({ user }: { user: SessionUser }) {
-  if (isMentor(user)) {
-    return (
-      <Card title="Mentoring">
+  return isMentor(user) ? <MentorMentorshipCard /> : <MenteeMentorshipCard />;
+}
+
+/**
+ * Requests waiting for a mentor (03 section 3.3, Task 23): the oldest
+ * first with the days left to answer, and the capacity line, from
+ * `GET /api/me/mentorship` and the mentor's pending inbox.
+ */
+function MentorMentorshipCard() {
+  const mine = useMyMentorship();
+  const waiting = useRequestList("mentor", ["pending"], 1, 3);
+  const m = mine.data;
+  const count = m?.pendingIncoming;
+  return (
+    <section aria-label="Requests waiting for you">
+      <Card title="Requests waiting for you">
         <p className="t-body">
-          Mentorship requests open soon. When someone asks for your time, the request and the days left to answer appear
-          here.
+          {count === undefined
+            ? "Requests people send you appear here with the days left to answer."
+            : count === 0
+              ? m?.status === "paused"
+                ? "Nothing waiting. Mentorship is paused, so nobody can send you a request until you resume."
+                : "Nothing waiting. You get an email when someone asks for your time."
+              : `${count} ${count === 1 ? "request is" : "requests are"} waiting for your answer.`}
         </p>
+        {waiting.data && waiting.data.items.length > 0 ? (
+          <ul className="pn-ledger mt-4" aria-label="Oldest waiting requests">
+            {waiting.data.items.map((r) => (
+              <li key={r.id}>
+                <Link to={`/mentor/requests/${r.id}`} className="pn-row-link">
+                  <span className="min-w-0">
+                    <span className="pn-row-title block truncate">{counterpartyName(r.counterparty)}</span>
+                    <span className="pn-row-meta block truncate">{requestSubject(r)}</span>
+                  </span>
+                  <span className="pn-status" data-tone="pending">
+                    {daysLeftLabel(r.expiresAt)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <CapacityLine className="mt-4" />
+        <div className="flex flex-wrap gap-x-5 gap-y-2 mt-4">
+          <Link to="/mentor/requests" className="link t-small inline-flex">
+            Mentoring inbox
+            <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+          <Link to="/me/requests" className="link t-small inline-flex">
+            My requests
+            <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+        </div>
       </Card>
-    );
-  }
-  return <MenteeMentorshipCard />;
+    </section>
+  );
 }
 
 /** The requests this member sent, at a glance (Task 22). */

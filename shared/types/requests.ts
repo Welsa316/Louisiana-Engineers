@@ -102,6 +102,8 @@ export interface RequestDetail extends RequestSummary {
  * `409` codes the request actions answer besides the creation refusals in
  * `DomainErrorCode` (shared/types/common.ts). `403 { code: 'forbidden' }`
  * means the other party's action (a mentor canceling, a mentee answering).
+ * `mentee_unavailable` refuses an accept when the mentee was suspended or is
+ * leaving (migration 0007); declining stays possible.
  */
 export type RequestActionErrorCode =
   | "not_pending"
@@ -109,7 +111,8 @@ export type RequestActionErrorCode =
   | "invalid_share_methods"
   | "invalid_decline_reason"
   | "invalid_request"
-  | "not_onboarded";
+  | "not_onboarded"
+  | "mentee_unavailable";
 
 /** `GET /api/mentors/:id/availability`, decided in this order. */
 export const availabilityStates = ["off", "networking_only", "paused", "full", "taking"] as const;
