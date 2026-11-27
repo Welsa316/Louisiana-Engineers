@@ -20,7 +20,7 @@ export function renderRequestReceived(data: TemplateData, context: TemplateConte
     subject: `New ${noun} from ${mentee}`,
     heading: `New ${noun} from ${mentee}`,
     paragraphs: [
-      `${mentee} sent you a ${noun}${about}.`,
+      `${mentee} sent you ${data.kind === "introduction" ? "an" : "a"} ${noun}${about}.`,
       "Open it in MEST Network to read it and reply." +
         (expires ? ` If there is no reply, it expires on ${expires}.` : ""),
     ],
