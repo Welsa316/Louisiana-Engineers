@@ -142,6 +142,23 @@ describe("set_mentorship_status", () => {
     expect((await status(pro)).status).toBe("off");
   });
 
+  it("a_new_pause_starts_its_own_clock", async () => {
+    const pro = await mentor();
+    const pausedAt = async () =>
+      (await db.pool.query<{ at: Date | null }>("SELECT paused_at AS at FROM mentorship_settings WHERE profile_id = $1", [pro]))
+        .rows[0].at;
+    await runAs(db.pool, pro, "SELECT set_mentorship_status('paused', NULL)");
+    expect(await pausedAt()).not.toBeNull();
+    await db.pool.query("UPDATE mentorship_settings SET paused_at = now() - interval '30 days' WHERE profile_id = $1", [pro]);
+    // Resuming ends the pause; the next pause is measured from its own start.
+    await runAs(db.pool, pro, "SELECT set_mentorship_status('active', NULL)");
+    expect(await pausedAt()).toBeNull();
+    await runAs(db.pool, pro, "SELECT set_mentorship_status('paused', NULL)");
+    const again = await pausedAt();
+    expect(again).not.toBeNull();
+    expect(Date.now() - (again as Date).getTime()).toBeLessThan(60_000);
+  });
+
   it("pause_stores_resume_date_and_off_clears_it", async () => {
     const pro = await mentor();
     await runAs(db.pool, pro, "SELECT set_mentorship_status('paused', '2030-02-01')");

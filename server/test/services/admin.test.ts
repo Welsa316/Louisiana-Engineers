@@ -18,7 +18,7 @@ import { wrapClient } from "../../src/db/tx";
 import { adminRoutes } from "../../src/routes/admin";
 import { asSystem, asUser, createTestDb, testApp, truncateAll, type TestDb } from "../harness";
 import { makePerson, newAccount, onboard, professionalPayload, rowsAs, visibleProfileIds } from "../policies/fixtures";
-import { sendRequest } from "../policies/request-fixtures";
+import { acceptRequest, makeMentor, makeStudent, sendRequest } from "../policies/request-fixtures";
 
 /**
  * The administration area's routes (`/api/admin/*`) over the 0004 admin
@@ -312,6 +312,21 @@ describe("dashboard and configuration", () => {
       requestsByTopic: [],
     });
     expect(counts.byMonth.map((m) => m.requestsSent)).toEqual([0, 0, 0]);
+  });
+
+  it("dashboard_leaves_withdrawn_requests_out_of_the_answer_rates", async () => {
+    const admin = await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    const mentor = await makeMentor(db.pool);
+    const answered = await sendRequest(db.pool, await makeStudent(db.pool), mentor);
+    await acceptRequest(db.pool, mentor, answered);
+    // Withdrawn by its mentee after ten days: no mentor ever owed it an answer.
+    const mentee = await makeStudent(db.pool);
+    const withdrawn = await sendRequest(db.pool, mentee, mentor);
+    await asUser(db.pool, mentee, (client) => client.query("SELECT cancel_request($1)", [withdrawn]));
+    await db.pool.query("UPDATE mentorship_requests SET created_at = now() - interval '10 days' WHERE id = $1", [withdrawn]);
+
+    const got = await json<AdminDashboard>(await call(await cookieFor(admin), "GET", "/dashboard"));
+    expect(got).toMatchObject({ answeredWithin7DaysPct: 100, acceptanceRatePct: 100, expiryRatePct: 0 });
   });
 
   it("dashboard_matches_hand_counts", async () => {
