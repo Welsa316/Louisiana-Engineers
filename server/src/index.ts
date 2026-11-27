@@ -112,13 +112,22 @@ export function createApp({ webDist, pool, cacheIndex = true }: AppOptions): Hon
 
 async function main(): Promise<void> {
   const { env } = await import("./env");
-  const { getPool, closePool } = await import("./db/pool");
+  const { getPool, getRequestPool, closePool } = await import("./db/pool");
   const { runMigrations } = await import("./db/migrate");
+  const { verifyRequestLogin } = await import("./db/request-login");
   const { webDist } = await import("./paths");
 
   const pool = getPool();
   const migrated = await runMigrations(pool);
   for (const name of migrated.applied) console.log(`[db] applied ${name}`);
+
+  // In production the request pool must log in as mest_request with the
+  // password in REQUEST_DATABASE_URL. Refuse to start otherwise, so a bad
+  // deploy fails its health check instead of serving API errors.
+  if (env.NODE_ENV === "production") {
+    const login = await verifyRequestLogin(getRequestPool());
+    console.log(`[db] requests log in as ${login}`);
+  }
 
   const app = createApp({ webDist: webDist(), pool, cacheIndex: env.NODE_ENV === "production" });
   const hostname = env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
