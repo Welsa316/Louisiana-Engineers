@@ -430,6 +430,8 @@ All suites; e2e at 375 and 1280; audits (contact rules, student invisibility, ad
 
 ### Task 23: Mentor screens
 
+> **Handoff from integration (Phase 1C wave 2):** `respond_to_request` can also answer `409 mentee_unavailable` (the mentee was suspended or is leaving, from 0007); add it to `RequestActionErrorCode` and give the accept sheet plain copy for it. Task 22 left the mentor half of Home's `MentorshipCard` saying requests open soon; fill it from `GET /api/me/mentorship`. `RequestDetail` sends the request's mentor to `/mentor/requests/:id`.
+
 > **Handoff from integration (Phase 1C wave 1):** A mentor who uses only `mest` (the onboarding default) receives requests but `respond_to_request` refuses an accept with `invalid_share_methods`, because an accept must share at least one method with a value. The accept sheet must detect this before submitting and send the mentor to Settings, Privacy and contact, to add a method, then bring them back to the request; add an e2e case for a mentor with only `mest`.
 
 **Depends on:** Task 22.
