@@ -1,6 +1,11 @@
 import { resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerJob, registeredJobs, runJobOnce } from "./scheduler";
+import { adminDigestJob } from "./digest";
+import { expireRequestsJob } from "./expire-requests";
+import { remindersJob } from "./reminders";
+import { resumePausedJob } from "./resume-paused";
+import { retentionJob } from "./retention";
 import { sendEmailsJob } from "./send-emails";
 
 /**
@@ -11,6 +16,11 @@ import { sendEmailsJob } from "./send-emails";
  */
 export function registerJobs(): void {
   registerJob(sendEmailsJob);
+  registerJob(expireRequestsJob);
+  registerJob(remindersJob);
+  registerJob(resumePausedJob);
+  registerJob(retentionJob);
+  registerJob(adminDigestJob);
 }
 
 /** `npm run job -- <name>` runs one job once, under the same lock as the scheduler. */

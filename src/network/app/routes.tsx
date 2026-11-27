@@ -17,14 +17,15 @@ import { Outlet, type RouteObject } from "react-router";
 import { adminRoutes } from "../features/admin/routes";
 import { authRoutes } from "../features/auth/routes";
 import { discoverRoutes } from "../features/me/discover-routes";
+import { useMyMentorship } from "../features/me/requests-api";
 import { menteeRoutes } from "../features/me/mentee-routes";
 import { meRoutes } from "../features/me/routes";
+import { mentorRoutes } from "../features/mentor/routes";
 import { NotificationsAppLayout, notificationRoutes } from "../features/notifications/routes";
 import { onboardingRoutes } from "../features/onboarding/routes";
 import { directoryRoutes } from "../features/public/directory-routes";
 import { publicRoutes } from "../features/public/routes";
 import { settingsRoutes } from "../features/settings/routes";
-import { Stub } from "../features/public/Stub";
 import { RequireAdmin, RequireMember, RequireOnboarded } from "./guards";
 import type { NavBadges } from "./nav";
 import { NotFoundPage, PublicLayout } from "./shells";
@@ -32,8 +33,12 @@ import { NotFoundPage, PublicLayout } from "./shells";
 /** Controls mounted in the app shell's header, beside the notification bell. */
 const appHeaderSlot: ReactNode = null;
 
-/** Rail and tab bar counts (requests waiting, unread notifications), once their tasks land. */
-const appBadges: NavBadges = {};
+/** The app shell with its counts: requests waiting for the mentor's answer (unread notifications come from the bell). */
+function MemberLayout() {
+  const mine = useMyMentorship();
+  const badges: NavBadges = mine.data?.pendingIncoming ? { mentoring: mine.data.pendingIncoming } : {};
+  return <NotificationsAppLayout headerSlot={appHeaderSlot} badges={badges} />;
+}
 
 /* Task 9's public and sign-in pages and Task 15's directory and profile. */
 const publicPages: RouteObject[] = [...publicRoutes, ...directoryRoutes, ...authRoutes];
@@ -41,12 +46,12 @@ const publicPages: RouteObject[] = [...publicRoutes, ...directoryRoutes, ...auth
 /* Task 14's onboarding wizard. */
 const onboardingPages: RouteObject[] = onboardingRoutes;
 
-/* Home, discovery, settings and notifications; Tasks 22 and 23 replace the mentoring stub. */
+/* Home, discovery, requests, mentoring, settings and notifications. */
 const memberPages: RouteObject[] = [
   ...meRoutes,
   ...discoverRoutes,
   ...menteeRoutes,
-  { path: "mentor/*", element: <Stub inApp title="Mentoring" /> },
+  ...mentorRoutes,
   ...settingsRoutes,
   ...notificationRoutes,
 ];
@@ -74,7 +79,7 @@ export const routes: RouteObject[] = [
     element: (
       <RequireMember>
         <RequireOnboarded>
-          <NotificationsAppLayout headerSlot={appHeaderSlot} badges={appBadges} />
+          <MemberLayout />
         </RequireOnboarded>
       </RequireMember>
     ),
