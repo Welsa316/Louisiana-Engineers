@@ -109,6 +109,12 @@
   display: none;
 }
 
+/* Headings and the main area take focus only to move screen readers to new
+   content; they are not controls, so they draw no keyboard ring. */
+.pn-root :is(main, h1, h2, h3)[tabindex="-1"]:focus {
+  outline: none;
+}
+
 /* ------------------------------------------------------------------ */
 /* Public header (network pages)                                        */
 /* ------------------------------------------------------------------ */
