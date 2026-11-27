@@ -39,7 +39,7 @@ CREATE TABLE mentorship_requests (
   responded_at timestamptz,
   mentor_note text CHECK (char_length(mentor_note) <= 600),
   decline_reason text CHECK (
-    decline_reason IN ('not_fit', 'no_capacity', 'outside_experience', 'other', 'member_left', '')
+    decline_reason IN ('not_fit', 'no_capacity', 'outside_experience', 'other', 'member_left')
   ),
   reminders_sent int NOT NULL DEFAULT 0 CHECK (reminders_sent BETWEEN 0 AND 2),
   text_purged_at timestamptz,

@@ -128,6 +128,17 @@ describe("requests and relationships", () => {
     expect(await rowsAs(db.pool, null, "SELECT id FROM my_requests")).toEqual([]);
   });
 
+  it("a_declined_request_always_has_a_real_reason", async () => {
+    const mentor = await makeMentor(db.pool);
+    const student = await makeStudent(db.pool);
+    const id = await sendRequest(db.pool, student, mentor);
+    await expect(
+      asSystem(db.pool, (client) =>
+        client.query("UPDATE mentorship_requests SET status = 'declined', decline_reason = '', responded_at = now() WHERE id = $1", [id]),
+      ),
+    ).rejects.toThrow(/check constraint/);
+  });
+
   it("app_user_cannot_write_requests_directly", async () => {
     const mentor = await makeMentor(db.pool);
     const student = await makeStudent(db.pool);
