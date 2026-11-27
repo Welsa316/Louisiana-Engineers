@@ -14,6 +14,10 @@ jobs:
           POSTGRES_USER: mest
           POSTGRES_PASSWORD: mest
           POSTGRES_DB: mest
+          # Requests log in as mest_request, which has no password outside
+          # production (where REQUEST_DATABASE_URL carries one). Trust local
+          # connections here as development does.
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 54329:5432
         options: >-
