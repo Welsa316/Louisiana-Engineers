@@ -1,0 +1,199 @@
+/* ------------------------------------------------------------------ */
+/* Scheduling (Task 31): proposed times, meetings and the meetings log. */
+/* Built from the network's surfaces and hairlines; no new colours.     */
+/* ------------------------------------------------------------------ */
+
+/* The Meetings card: each block (a question, the next meeting, a      */
+/* proposal) is separated by a hairline, like the rest of the network. */
+.pn-meetings {
+  display: grid;
+  gap: 0;
+}
+.pn-meetings > * + * {
+  border-top: 1px solid var(--pn-line);
+  padding-top: 1.25rem;
+  margin-top: 1.25rem;
+}
+.pn-meeting-block h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.1875rem;
+  line-height: 1.2;
+}
+.pn-meeting-when {
+  margin-top: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.pn-meeting-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin-top: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-fg-2);
+}
+.pn-meeting-note {
+  margin-top: 0.75rem;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+.pn-meeting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.pn-meeting-times {
+  display: grid;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Earlier meetings: a compact ledger with the outcome on the right. */
+.pn-meeting-history {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--pn-line);
+}
+.pn-meeting-history > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--pn-line);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+.pn-meeting-history > li:last-child {
+  border-bottom: 0;
+}
+
+/* The propose dialog: one row per time. */
+.pn-time-rows {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+.pn-time-row {
+  position: relative;
+}
+/* A floated legend joins the fieldset's own box, so the remove button
+   can sit on its line. */
+.pn-time-row > legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 0.25rem;
+  line-height: 2.5rem;
+}
+.pn-time-row-fields,
+.pn-time-row-error {
+  clear: both;
+}
+.pn-time-row-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: end;
+}
+/* Side by side, so the site's stacked-field spacing does not apply. */
+.pn-time-row-fields > .field,
+.pn-meeting-form > .field + .field {
+  min-width: 0;
+  margin-top: 0;
+}
+.pn-time-row-fields .field-input {
+  width: 100%;
+  min-width: 0;
+}
+/* Beside the row's "Time N" legend. */
+.pn-time-row-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.pn-time-row-error {
+  color: var(--pn-neg);
+}
+
+/* The meetings log: a date block, the person and the time, the state. */
+.pn-meeting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  padding: 1rem 1.25rem;
+}
+.pn-meeting-row-link {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  min-width: 0;
+  border-radius: 3px;
+}
+.pn-meeting-row-link:hover .pn-row-title {
+  color: var(--color-accent);
+}
+.pn-meeting-row-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+.pn-meeting-date {
+  display: grid;
+  justify-items: center;
+  padding: 0.375rem 0;
+  border: 1px solid var(--pn-line);
+  border-radius: var(--pn-radius);
+  background: var(--pn-surface-2);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.pn-meeting-date strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.375rem;
+}
+.pn-meeting-date span {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-fg-2);
+}
+.pn-meeting-row-ask {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding-left: 4.25rem;
+}
+@media (max-width: 47.99rem) {
+  .pn-meeting-row {
+    padding: 1rem;
+  }
+  .pn-meeting-row-ask {
+    padding-left: 0;
+  }
+  /* The state goes under the person, so the name keeps the width. */
+  .pn-meeting-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pn-meeting-row > .pn-status {
+    padding-left: 4.25rem;
+  }
+}
+
+/* "Did you meet?" inline, in a history row or the log. */
+.pn-meeting-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.pn-meeting-ask-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

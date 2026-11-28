@@ -11,6 +11,9 @@
  *   canceled   when it was sent and withdrawn
  *   completed  when, and who marked it
  *
+ * Accepted and completed requests also carry the Meetings card (Task 31,
+ * features/meetings/Scheduling.tsx), the same one the mentor sees.
+ *
  * The request as written is shown below, unless the retention rule has
  * emptied it.
  */
@@ -33,6 +36,7 @@ import {
   RequestStatusPill,
   requestSubject,
 } from "./Requests";
+import { MeetingsPanel } from "../meetings/Scheduling";
 import { useOwnProfile } from "./Home";
 import { useRequest, useRequestAction, useSuggestedMentors } from "./requests-api";
 
@@ -129,7 +133,7 @@ function StatusBlock({ r }: { r: Detail }) {
           <Card accent title={`How to reach ${first}`}>
             <p className="t-body">
               {first} accepted and shared {r.handoff && r.handoff.methods.length === 1 ? "this way" : "these ways"} to
-              get in touch. Suggest a time and agree the details directly.
+              get in touch. Propose times to meet under Meetings, or agree the details directly.
             </p>
             <div className="mt-5">
               {r.handoff && r.handoff.methods.length > 0 ? (
@@ -388,6 +392,9 @@ function DetailView({ r }: { r: Detail }) {
       <div className="pn-split mt-8">
         <div className="grid gap-6 content-start">
           <StatusBlock r={r} />
+          {r.status === "accepted" || r.status === "completed" ? (
+            <MeetingsPanel requestId={r.id} first={first} active={r.status === "accepted"} preferredMode={r.mode} />
+          ) : null}
           <Thread r={r} myInitials={myInitials} student={user?.kind === "student"} />
         </div>
         <div className="grid gap-6 content-start">

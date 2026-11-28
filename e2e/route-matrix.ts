@@ -11,7 +11,7 @@ import { seedEmail, seedUserId } from "../server/seed/users";
  * no seeded row changes.
  */
 
-export type Viewer = "visitor" | "newcomer" | "student" | "mentor" | "admin" | "leaving";
+export type Viewer = "visitor" | "newcomer" | "student" | "mentee" | "mentor" | "admin" | "leaving";
 
 export interface Screen {
   /** Path under the origin. */
@@ -56,6 +56,12 @@ export const SCREENS: Record<Viewer, Screen[]> = {
     { path: `/network/me/requests/${seedRequestId("req-1001")}` },
     { path: `/network/me/requests/${seedRequestId("req-1002")}` },
     { path: "/network/me/saved" },
+    // Meetings (Task 31): the log in both tabs; req-1001 above carries a
+    // meeting to come, one to answer and the Propose times dialog.
+    { path: "/network/me/meetings" },
+    { path: "/network/me/meetings?show=past" },
+    { path: `/network/me/requests/${seedRequestId("req-1001")}`, press: "Propose times" },
+    { path: `/network/me/requests/${seedRequestId("req-1001")}`, press: "Cancel meeting" },
     { path: "/network/notifications" },
     { path: "/network/settings" },
     { path: "/network/settings/profile" },
@@ -64,6 +70,8 @@ export const SCREENS: Record<Viewer, Screen[]> = {
     { path: "/network/settings/preview" },
     { path: "/network/settings/account" },
   ],
+  // Sumaya Osman, choosing from the three times Layla proposed (seed/meetings.ts).
+  mentee: [{ path: `/network/me/requests/${seedRequestId("req-1005")}` }, { path: "/network/me/meetings" }],
   mentor: [
     { path: "/network/me" },
     { path: "/network/mentor" },
@@ -73,6 +81,9 @@ export const SCREENS: Record<Viewer, Screen[]> = {
     { path: `/network/mentor/requests/${seedRequestId("req-1004")}`, ready: "dialog", press: "Decline" },
     { path: "/network/mentor/mentees" },
     { path: `/network/mentor/mentees/${seedRequestId("req-1005")}` },
+    { path: `/network/mentor/mentees/${seedRequestId("req-1005")}`, press: "Change the times" },
+    { path: `/network/mentor/mentees/${seedRequestId("req-1006")}` },
+    { path: "/network/me/meetings?show=past" },
     { path: "/network/settings/mentorship" },
     { path: "/network/settings/privacy" },
     { path: "/network/settings/account" },
@@ -91,7 +102,12 @@ export const SCREENS: Record<Viewer, Screen[]> = {
   leaving: [{ path: "/network/scheduled-for-deletion" }],
 };
 
-const SEED_KEY: Partial<Record<Viewer, string>> = { student: "amina-rahman", mentor: "layla-haddad", admin: "admin" };
+const SEED_KEY: Partial<Record<Viewer, string>> = {
+  student: "amina-rahman",
+  mentee: "sumaya-osman",
+  mentor: "layla-haddad",
+  admin: "admin",
+};
 
 /**
  * Signs `page` in as the viewer. The newcomer and the leaving member are

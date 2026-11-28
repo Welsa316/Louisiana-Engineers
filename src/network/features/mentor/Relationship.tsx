@@ -5,7 +5,8 @@
  * over, the timeline and "Mark as completed". A pending or closed-unanswered
  * request belongs in the inbox, so it is sent there; the mentee of a
  * request is sent to their own view; anyone else gets "not available".
- * Phase 2 adds the meetings log here.
+ * The Meetings card (Task 31, features/meetings/Scheduling.tsx) proposes
+ * and chooses times, holds the upcoming meeting and asks "Did you meet?".
  */
 
 import { useState } from "react";
@@ -24,6 +25,7 @@ import {
   requestSubject,
 } from "../me/Requests";
 import { useRequest, useRequestAction } from "../me/requests-api";
+import { MeetingsPanel } from "../meetings/Scheduling";
 import { CompleteDialog, completeErrorText } from "./Mentees";
 import { methodLabel } from "./RequestDrawer";
 import { isLoadFailure, MentorBack, RequestNotAvailable } from "./Requests";
@@ -89,6 +91,7 @@ function RelationshipView({ r }: { r: RequestDetail }) {
               </p>
             </Card>
           ) : null}
+          <MeetingsPanel requestId={r.id} first={first} active={r.status === "accepted"} preferredMode={r.mode} />
           <Card title="The request" flush>
             <div className="p-5 grid gap-3">
               <p className="t-heading">{requestSubject(r)}</p>

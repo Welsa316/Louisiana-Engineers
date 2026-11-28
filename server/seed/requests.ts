@@ -205,6 +205,22 @@ export async function seedRequests(db: Db): Promise<void> {
   const people = [...new Set(SEED_REQUESTS.flatMap((r) => [r.mentee, r.mentor]))].map(seedUserId);
   const ids = SEED_REQUESTS.map((r) => seedRequestId(r.key));
 
+  // Meetings and proposed times between seeded people go first: they hang
+  // off the relationships below, and the seeded schedule (seed/meetings.ts,
+  // which runs after this) is written fresh each time.
+  await db.query(
+    `DELETE FROM meetings m
+      USING mentorship_relationships rel
+      WHERE m.relationship_id = rel.id AND (rel.mentee_id = ANY ($1::uuid[]) OR rel.mentor_id = ANY ($1::uuid[]))`,
+    [people],
+  );
+  await db.query(
+    `DELETE FROM availability_slots s
+      USING mentorship_relationships rel
+      WHERE s.relationship_id = rel.id AND (rel.mentee_id = ANY ($1::uuid[]) OR rel.mentor_id = ANY ($1::uuid[]))`,
+    [people],
+  );
+
   // Requests between seeded people that the seed did not write go, so a
   // re-run starts from the listed state (an open pair left by an earlier
   // run would otherwise block a listed one).
