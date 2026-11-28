@@ -61,6 +61,12 @@ const ROWS: Row[] = [
     for: "admin",
   },
   {
+    key: "memberDigest",
+    title: "Weekly digest",
+    note: "Off unless you turn it on. Professionals newly listed in your discipline, or mentors who start taking requests for the topics you chose: names and titles only, at most once a week, and only when something is new.",
+    for: "everyone",
+  },
+  {
     key: "productUpdates",
     title: "News about MEST Network",
     note: "Occasional notes about new features and MEST events.",

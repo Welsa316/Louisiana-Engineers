@@ -35,6 +35,7 @@ const TEMPLATES = [
   "admin-digest",
   "photo-reviewed",
   "feedback-invite",
+  "member-digest",
 ] as const;
 
 type TemplateName = (typeof TEMPLATES)[number];
@@ -83,6 +84,13 @@ beforeAll(async () => {
     { label: "Layla's booking link", value: seedBookingUrl("layla-haddad") },
   ];
   for (const secret of secrets) expect(secret.value, secret.label).toMatch(/\S{6,}/);
+
+  // The member digest is opt-in (Task 35); Amina turns it on so its email is queued.
+  await db.pool.query(
+    `INSERT INTO notification_preferences (profile_id, email_member_digest) VALUES ($1, true)
+     ON CONFLICT (profile_id) DO UPDATE SET email_member_digest = true`,
+    [amina.id],
+  );
 });
 
 afterAll(async () => {
@@ -194,6 +202,12 @@ function callers(): Record<TemplateName, Caller> {
       recipient: amina.id, category: "response", link: mentee,
       title: "Layla marked your mentorship as completed", body: "Two short questions about how it went help MEST improve mentoring.",
       payload: { ...p, otherFirstName: "Layla", recipientRole: "mentee", link: mentee }, mentions: ["Layla", "completed"],
+    },
+    "member-digest": {
+      recipient: amina.id, category: "member_digest", link: "/network/directory",
+      title: "Your weekly MEST Network digest", body: "Taking requests for your topics: 1 mentor.",
+      payload: { firstName: "Amina", mentors: [{ id: layla.id, name: "Layla Haddad", title: "Coastal Engineer" }] },
+      mentions: ["Amina", "Layla Haddad, Coastal Engineer"],
     },
   };
 }
