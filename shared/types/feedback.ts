@@ -3,11 +3,13 @@
  * /api/requests/:id/feedback` for the two parties, `GET /api/admin/feedback`
  * for administrators. Each party answers once, after the relationship is
  * completed, and only they read their answer: the other party never sees
- * it, and administrators read the comments without any author, request or
- * relationship attached (the average and the count are on the dashboard).
+ * it, and administrators for every region read the comments without any
+ * author, request, relationship or kind attached, dated by quarter, and
+ * never those about a relationship they were a party to (the average and
+ * the count are on the dashboard, once there are 5 answers).
  */
 
-import type { Paged, RequestKind } from "./common";
+import type { Paged } from "./common";
 import type { RequestRole } from "./requests";
 
 /**
@@ -40,18 +42,21 @@ export interface FeedbackResponse {
  */
 export type FeedbackErrorCode = "not_completed" | "feedback_exists" | "comment_closed";
 
-/** One comment as administrators read it: which side wrote it and when (by month), nothing more. */
+/** One comment as administrators read it: which side wrote it and when (by quarter), nothing more. */
 export interface AdminFeedbackComment {
   id: string;
   authorRole: RequestRole;
-  kind: RequestKind;
   helpful: number;
   comment: string;
-  /** YYYY-MM, America/Chicago. */
-  month: string;
+  /** YYYY-"Q"Q, for example 2026-Q4, America/Chicago. */
+  quarter: string;
 }
 
-/** `GET /api/admin/feedback?page&size`: comments only, newest first. */
+/**
+ * `GET /api/admin/feedback?page&size`: comments only, by quarter, newest
+ * first, then in an order that says nothing about when. A chapter
+ * administrator is answered `409 { code: 'out_of_region' }`.
+ */
 export type AdminFeedbackResponse = Paged<AdminFeedbackComment>;
 
 /** In the personal data export: the caller's own answers only. */

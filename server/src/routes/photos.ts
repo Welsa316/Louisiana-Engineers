@@ -36,7 +36,10 @@ import {
  *   `private` otherwise (members-only, counterparty, owner, administrator).
  * - `adminPhotoRoutes`, mounted at `/admin`: the queue at
  *   `GET /api/admin/photos`, any photo's image for review, and
- *   `POST /api/admin/photos/:id` with `{ decision }`.
+ *   `POST /api/admin/photos/:id` with `{ decision }`. Each holds to the
+ *   regions the administrator covers: another region's photos are not
+ *   listed, their images answer 404 and a decision on one answers
+ *   `409 { code: 'out_of_region' }`.
  *
  * An upload is checked by its bytes (JPEG or WebP magic numbers), not the
  * type the browser declared, and by its size; the SQL function and the

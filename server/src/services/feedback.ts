@@ -1,6 +1,5 @@
 import type { Paged } from "@shared/types/common";
 import type { AdminFeedbackComment, ExportFeedback, FeedbackResponse, OwnFeedback } from "@shared/types/feedback";
-import type { RequestKind } from "@shared/types/common";
 import type { RequestRole } from "@shared/types/requests";
 import type { LeaveFeedback } from "@shared/schemas/feedback";
 import type { Db } from "../db/tx";
@@ -64,17 +63,21 @@ export async function leaveFeedback(db: Db, requestId: string, input: LeaveFeedb
 interface AdminRow {
   id: string;
   author_role: RequestRole;
-  kind: RequestKind;
   helpful: number;
   comment: string;
-  month: string;
+  quarter: string;
   total: string;
 }
 
-/** `admin_feedback`: the comments, newest first, with no author. */
+/**
+ * `admin_feedback`: the comments by quarter, newest first, with no author.
+ * Administrators for every region only (a chapter administrator's call
+ * raises `mest.out_of_region`), and never the comments about a
+ * relationship the caller was a party to.
+ */
 export async function listFeedbackComments(db: Db, page: { page: number; size: number }): Promise<Paged<AdminFeedbackComment>> {
   const rows = await db.query<AdminRow>(
-    "SELECT id, author_role, kind::text AS kind, helpful, comment, month, total FROM admin_feedback($1, $2)",
+    "SELECT id, author_role, helpful, comment, quarter, total FROM admin_feedback($1, $2)",
     [page.page, page.size],
   );
   let total = rows.length > 0 ? Number(rows[0].total) : 0;
@@ -87,10 +90,9 @@ export async function listFeedbackComments(db: Db, page: { page: number; size: n
     items: rows.map((row) => ({
       id: row.id,
       authorRole: row.author_role,
-      kind: row.kind,
       helpful: row.helpful,
       comment: row.comment,
-      month: row.month,
+      quarter: row.quarter,
     })),
     total,
   };

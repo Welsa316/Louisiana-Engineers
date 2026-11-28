@@ -64,7 +64,7 @@ interface DashboardRow {
   by_month: AdminDashboard["byMonth"];
   meetings_held: number;
   meetings_upcoming: number;
-  feedback_responses: number;
+  feedback_responses: number | null;
   feedback_average_helpful: number | null;
 }
 

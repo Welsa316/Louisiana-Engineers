@@ -67,9 +67,13 @@ export interface AdminDashboard extends AdminDashboardCounts {
   meetingsHeld: number;
   /** Meetings still to come. */
   meetingsUpcoming: number;
-  /** Post-completion feedback answers from either side (Task 32). */
-  feedbackResponses: number;
-  /** Their mean helpfulness, 1 to 5, one decimal; null before the first answer. */
+  /**
+   * Post-completion feedback answers from either side (Task 32), leaving out
+   * answers about a relationship the caller was a party to; null under 5,
+   * so no single answer can be worked out from the change.
+   */
+  feedbackResponses: number | null;
+  /** Their mean helpfulness, 1 to 5, one decimal; null under 5 answers, as the count. */
   feedbackAverageHelpful: number | null;
 }
 

@@ -114,7 +114,9 @@ interface AdminPhotoRow extends PhotoRow {
 
 /**
  * The photo queue: pending photos oldest first; decided ones most recently
- * decided first. The administrator reads the rows through the policy.
+ * decided first. The administrator reads the rows through the policy, and
+ * only the photos of profiles in the regions they administer (an approved
+ * photo the policy shows any member is left out too).
  */
 export async function listPhotos(db: Db, status: PhotoStatus, paging: { page: number; size: number }): Promise<Paged<AdminPhoto>> {
   const order = status === "pending" ? "ph.created_at ASC, ph.id" : "ph.reviewed_at DESC, ph.id";
@@ -123,14 +125,14 @@ export async function listPhotos(db: Db, status: PhotoStatus, paging: { page: nu
             count(*) OVER ()::int AS total
        FROM profile_photos ph
        JOIN profiles p ON p.id = ph.profile_id
-      WHERE ph.status = $1::photo_status
+      WHERE ph.status = $1::photo_status AND admin_covers_profile(ph.profile_id)
       ORDER BY ${order}
       LIMIT $2 OFFSET $3`,
     [status, paging.size, (paging.page - 1) * paging.size],
   );
   let total = rows[0]?.total;
   if (total === undefined) {
-    total = (await db.one<{ n: number }>("SELECT count(*)::int AS n FROM profile_photos WHERE status = $1::photo_status", [status])).n;
+    total = (await db.one<{ n: number }>("SELECT count(*)::int AS n FROM profile_photos ph WHERE ph.status = $1::photo_status AND admin_covers_profile(ph.profile_id)", [status])).n;
   }
   return {
     items: rows.map((row) => ({
@@ -151,10 +153,10 @@ export async function listPhotos(db: Db, status: PhotoStatus, paging: { page: nu
   };
 }
 
-/** Any photo's bytes, for the administrator reviewing it. */
+/** A photo's bytes, in any state, for an administrator of the profile's region reviewing it. */
 export async function getPhotoBytesForAdmin(db: Db, photoId: string): Promise<PhotoBytes | null> {
   const row = await db.maybeOne<{ id: string; image: Buffer; content_type: PhotoContentType }>(
-    "SELECT ph.id, ph.image, ph.content_type FROM profile_photos ph WHERE ph.id = $1 AND is_admin()",
+    "SELECT ph.id, ph.image, ph.content_type FROM profile_photos ph WHERE ph.id = $1 AND admin_covers_profile(ph.profile_id)",
     [photoId],
   );
   return row ? { version: row.id, image: row.image, contentType: row.content_type, shareable: false } : null;

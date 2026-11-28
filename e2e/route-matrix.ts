@@ -219,6 +219,8 @@ export const SCREENS: Record<Viewer, Screen[]> = {
           .first(),
     },
     { path: "/network/settings/profile", shows: (page) => page.getByRole("combobox", { name: /Region/ }) },
+    // Feedback comments are for administrators for every region only (Task 39).
+    { path: "/network/admin/mentorship", shows: text("Members' comments are shown only to administrators for every region.") },
   ],
   leaving: [{ path: "/network/scheduled-for-deletion" }],
 };
