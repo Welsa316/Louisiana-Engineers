@@ -143,9 +143,13 @@ export const features = {
 export const membershipEndpoint: string =
   import.meta.env.VITE_MEMBERSHIP_ENDPOINT ?? "";
 
-/** Contact channels. Empty strings render as "to be announced". */
+/**
+ * Contact channels. Empty strings render as "to be announced". The address
+ * has no mailbox of its own: it forwards to the organizers' inbox (runbook:
+ * email), and the network's emails use it as their Reply-To.
+ */
 export const contact = {
-  email: "",
+  email: "admin@mestnola.com",
   city: "Greater New Orleans, Louisiana",
 };
 

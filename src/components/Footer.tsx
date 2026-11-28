@@ -42,7 +42,9 @@ export function Footer() {
               <li>
                 {contact.email ? (
                   <a className="link-quiet link" href={`mailto:${contact.email}`}>
-                    {contact.email}
+                    {/* A narrow phone column may break the address after the @, never mid-word. */}
+                    {contact.email.split("@")[0]}@<wbr />
+                    {contact.email.split("@").slice(1).join("@")}
                   </a>
                 ) : (
                   <span className="tba">Email to be announced</span>
