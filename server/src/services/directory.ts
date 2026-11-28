@@ -3,6 +3,7 @@ import { paging } from "@shared/limits";
 import { audienceIds, participationIds } from "@shared/taxonomy";
 import { experienceBandIds } from "@shared/types/common";
 import type { Education } from "@shared/types/profiles";
+import { photoUrl } from "@shared/types/photos";
 import {
   directorySorts,
   mentoringFilters,
@@ -195,7 +196,16 @@ export interface EntryRow {
   audience: DirectoryEntry["audience"];
   has_capacity: boolean;
   last_active_at: Date | null;
+  photo_version: string | null;
 }
+
+/**
+ * The approved photo's id, read through the `profile_photos` policy (so only
+ * a photo of a profile the caller may see), for the card's and the profile's
+ * `photoUrl`. Expects the profile as `e`.
+ */
+export const PHOTO_VERSION_COLUMN = `
+  (SELECT ph.id FROM profile_photos ph WHERE ph.profile_id = e.id AND ph.status = 'approved') AS photo_version`;
 
 /**
  * The card columns, read from `directory_entries e` (the suggested mentors
@@ -206,7 +216,7 @@ export const ENTRY_COLUMNS = `
   e.discipline_id, e.discipline_label, e.discipline_group::text AS discipline_group,
   e.location, e.experience_band, e.verified, e.tags, e.participation,
   e.visibility::text AS visibility, e.mentor_status::text AS mentor_status,
-  e.mentor_topics, e.audience, e.has_capacity, e.last_active_at`;
+  e.mentor_topics, e.audience, e.has_capacity, e.last_active_at,${PHOTO_VERSION_COLUMN}`;
 
 export function toEntry(row: EntryRow): DirectoryEntry {
   return {
@@ -230,6 +240,7 @@ export function toEntry(row: EntryRow): DirectoryEntry {
     audience: row.audience,
     hasCapacity: row.has_capacity,
     lastActiveAt: row.last_active_at ? row.last_active_at.toISOString() : null,
+    photoUrl: row.photo_version ? photoUrl(row.id, row.photo_version) : null,
   };
 }
 
@@ -332,6 +343,7 @@ interface ProfileRow {
   last_active_at: Date | null;
   is_owner: boolean;
   saved: boolean;
+  photo_version: string | null;
 }
 
 /**
@@ -349,7 +361,8 @@ export async function getProfile(db: Db, id: string): Promise<ProfileView | null
             e.format::text AS format, e.mode::text AS mode, e.availability, e.duration_min,
             to_char(e.paused_until, 'YYYY-MM-DD') AS paused_until, e.has_capacity, e.last_active_at,
             coalesce(e.id = app_uid(), false) AS is_owner,
-            EXISTS (SELECT 1 FROM saved_profiles s WHERE s.saver_id = app_uid() AND s.saved_id = e.id) AS saved
+            EXISTS (SELECT 1 FROM saved_profiles s WHERE s.saver_id = app_uid() AND s.saved_id = e.id) AS saved,
+            ${PHOTO_VERSION_COLUMN}
        FROM profile_entries e
       WHERE e.id = $1`,
     [id],
@@ -403,6 +416,7 @@ export async function getProfile(db: Db, id: string): Promise<ProfileView | null
         : null,
     saved: row.saved,
     lastActiveAt: row.last_active_at ? row.last_active_at.toISOString() : null,
+    photoUrl: row.photo_version ? photoUrl(row.id, row.photo_version) : null,
   };
 }
 

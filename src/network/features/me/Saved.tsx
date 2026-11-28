@@ -93,6 +93,7 @@ export function Saved() {
                     location: entry.location ?? "",
                     disciplineId: entry.disciplineId,
                     expertise: entry.tags,
+                    photoUrl: entry.photoUrl,
                   }}
                   to={`/me/discover/${entry.id}`}
                   status={cardStatus(entry)}

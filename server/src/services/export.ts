@@ -10,6 +10,7 @@ import {
 } from "@shared/types/export";
 import type { RequestRole } from "@shared/types/requests";
 import type { Db } from "../db/tx";
+import { photoForExport } from "./photos";
 import { getOwnProfile } from "./profiles";
 
 /**
@@ -19,7 +20,8 @@ import { getOwnProfile } from "./profiles";
  * from the profiles service, requests and relationships from `my_requests`
  * (the other party's public fields only, of which only the name is kept),
  * notifications under the recipient policy, and audit entries from
- * `my_audit_entries()`. Contact values are never read: the handoff values
+ * `my_audit_entries()`. A profile photo is noted (state, type and size),
+ * never copied into the file. Contact values are never read: the handoff values
  * belong to the mentor, and the file carries only the method names.
  */
 
@@ -168,6 +170,7 @@ export async function exportMyData(db: Db): Promise<DataExport> {
     exportedAt: new Date().toISOString(),
     profile,
     settings,
+    photo: await photoForExport(db),
     requests,
     relationships,
     notifications: await notifications(db),

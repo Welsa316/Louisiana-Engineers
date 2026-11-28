@@ -701,7 +701,7 @@ function Wizard({ profile, kind, opening }: { profile: ProfileView; kind: Reques
       <aside className="pn-wizard-aside min-w-0" aria-label={`About ${firstName}`}>
         <Card lift>
           <div className="flex items-center gap-3">
-            <Monogram initials={initialsOf(profile)} />
+            <Monogram initials={initialsOf(profile)} photo={profile.photoUrl} />
             <div className="min-w-0">
               <div className="pn-row-title truncate">{name}</div>
               <div className="pn-row-meta truncate">{[profile.title, profile.organization].filter(Boolean).join(" · ")}</div>

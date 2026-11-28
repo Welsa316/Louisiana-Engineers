@@ -85,7 +85,7 @@ function Suggestions({
             {items.map((p) => (
               <li key={p.id}>
                 <Link to={`/me/discover/${p.id}`} className="pn-row-link">
-                  <Monogram initials={initialsOf(p)} size="sm" />
+                  <Monogram initials={initialsOf(p)} photo={p.photoUrl} size="sm" />
                   <span className="min-w-0">
                     <span className="pn-row-title block truncate">{displayName(p)}</span>
                     <span className="pn-row-meta block truncate">

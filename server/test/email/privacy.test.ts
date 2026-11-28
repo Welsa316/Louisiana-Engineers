@@ -33,6 +33,7 @@ const TEMPLATES = [
   "deletion-requested",
   "deletion-canceled",
   "admin-digest",
+  "photo-reviewed",
 ] as const;
 
 type TemplateName = (typeof TEMPLATES)[number];
@@ -182,6 +183,11 @@ function callers(): Record<TemplateName, Caller> {
       recipient: admin.id, category: "admin_digest", link: "/network/admin",
       title: "This week in MEST Network", body: "",
       payload: { queueSize: 3, openReports: 1, requestsWaiting: 5, oldestWaitingOn: "2026-11-10" }, mentions: ["3", "5", "November 10, 2026"],
+    },
+    "photo-reviewed": {
+      recipient: layla.id, category: "profile", link: "/network/settings/profile",
+      title: "Your profile photo was not approved", body: "Your initials show on your profile instead.",
+      payload: { firstName: "Layla", decision: "rejected" }, mentions: ["Layla", "not approve"],
     },
   };
 }

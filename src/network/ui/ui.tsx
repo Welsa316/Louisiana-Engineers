@@ -20,6 +20,7 @@ import {
 } from "react";
 import { Check, CheckCircle2, ChevronDown, Eye, Lock, Users, X } from "lucide-react";
 import type { RequestStatus } from "@shared/types/common";
+import { MonogramPhoto } from "./photos-image";
 
 /* ---------- Links ---------- */
 
@@ -78,15 +79,22 @@ export function Star({ className }: { className?: string }) {
 
 /* ---------- Monogram ---------- */
 
+/**
+ * Initials in a faint star, or the member's approved photo when `photo` is
+ * given (Task 33), with the initials back if the photo cannot load.
+ */
 export function Monogram({
   initials,
   size = "md",
   student = false,
+  photo,
   className,
 }: {
   initials: string;
   size?: "sm" | "md" | "lg" | "xl";
   student?: boolean;
+  /** The approved photo's URL; initials when absent. */
+  photo?: string | null;
   className?: string;
 }) {
   const classes = ["pn-mono", size !== "md" && `pn-mono-${size}`, student && "pn-mono-student", className]
@@ -94,8 +102,15 @@ export function Monogram({
     .join(" ");
   return (
     <span className={classes} aria-hidden="true">
-      <Star />
-      <span>{initials}</span>
+      <MonogramPhoto
+        src={photo}
+        fallback={
+          <>
+            <Star />
+            <span>{initials}</span>
+          </>
+        }
+      />
     </span>
   );
 }
