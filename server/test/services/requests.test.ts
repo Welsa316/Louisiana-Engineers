@@ -433,7 +433,7 @@ describe("a member who is no longer in good standing", () => {
 });
 
 describe("canceling and completing", () => {
-  it("cancel_and_complete_notify_in_app_only", async () => {
+  it("cancel_notifies_in_app_only_and_complete_invites_feedback", async () => {
     const mentor = await makeMentor(db.pool, { firstName: "Layla" });
     const student = await makeStudent(db.pool, { firstName: "Amina" });
     const menteeCookie = await cookieFor(student);
@@ -465,13 +465,15 @@ describe("canceling and completing", () => {
     ]);
     expect(mentorNotes[1].title).toContain("canceled");
     expect(await outboxTemplatesFor(mentor)).toEqual(before);
-    // The mentee heard about the acceptance (emailed) and the completion (in the app only).
+    // The mentee heard about the acceptance and the completion, which now
+    // (Task 32) invites their feedback, both by email.
     const menteeNotes = await notificationsOf(student);
     expect(menteeNotes.map((n) => [n.template, n.email_status])).toEqual([
       ["request-accepted", "queued"],
-      ["default", "skipped"],
+      ["feedback-invite", "queued"],
     ]);
-    expect(await outboxTemplatesFor(student)).toEqual(["request-accepted"]);
+    expect(menteeNotes[1].title).toContain("completed");
+    expect(await outboxTemplatesFor(student)).toEqual(["request-accepted", "feedback-invite"]);
   });
 
   it("set_kind_keeps_requests", async () => {

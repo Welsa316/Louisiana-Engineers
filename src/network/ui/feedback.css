@@ -1,0 +1,113 @@
+/* ------------------------------------------------------------------ */
+/* Post-completion feedback (Task 32): the helpfulness scale and the   */
+/* administrators' comment list. Tokens only, as everywhere in pn-*.   */
+/* ------------------------------------------------------------------ */
+
+.pn-scale {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.pn-scale legend {
+  margin-bottom: 0.625rem;
+  padding: 0;
+}
+.pn-scale-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+.pn-scale-option {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.25rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.25rem 0.5rem;
+  border: 1px solid var(--pn-line-strong);
+  border-radius: var(--pn-radius);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--dur) var(--ease-out),
+    background-color var(--dur) var(--ease-out);
+}
+.pn-scale-option:hover {
+  border-color: var(--color-accent);
+}
+.pn-scale-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.pn-scale-option[data-checked="true"] {
+  border-color: var(--color-accent);
+  background: var(--pn-purple-ghost);
+}
+.pn-scale-num {
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.pn-scale-word {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: var(--color-fg-2);
+  /* Whole words only: a label never breaks mid-word on a phone. */
+  overflow-wrap: normal;
+  hyphens: none;
+}
+.pn-scale-option[data-checked="true"] .pn-scale-word {
+  color: var(--color-fg);
+}
+.pn-scale[aria-invalid="true"] .pn-scale-option {
+  border-color: #e58a9c;
+}
+
+/* The member's own answer, once sent. */
+.pn-feedback-answer {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Administrators: what members said. */
+.pn-feedback-comments {
+  display: grid;
+}
+.pn-feedback-comment {
+  display: grid;
+  gap: 0.375rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--pn-line);
+}
+.pn-feedback-comment:first-child {
+  border-top: 0;
+}
+.pn-feedback-comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.pn-feedback-comment p {
+  max-width: 68ch;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 64rem) {
+  .pn-feedback-comments {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pn-feedback-comment:nth-child(2) {
+    border-top: 0;
+  }
+  .pn-feedback-comment:nth-child(even) {
+    border-left: 1px solid var(--pn-line);
+  }
+}

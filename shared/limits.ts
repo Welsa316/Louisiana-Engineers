@@ -90,6 +90,10 @@ export const fieldLimits = {
   meetingPlace: { min: 0, max: 200 },
   /** meetings.agenda (02 section 4.3: max 400) */
   meetingAgenda: { min: 0, max: 400 },
+  /** relationship_feedback.helpful (a number: 1 not helpful, 5 very helpful) */
+  feedbackHelpful: { min: 1, max: 5 },
+  /** relationship_feedback.comment */
+  feedbackComment: { min: 0, max: 600 },
 } as const;
 
 /**

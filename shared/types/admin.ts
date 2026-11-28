@@ -67,6 +67,10 @@ export interface AdminDashboard extends AdminDashboardCounts {
   meetingsHeld: number;
   /** Meetings still to come. */
   meetingsUpcoming: number;
+  /** Post-completion feedback answers from either side (Task 32). */
+  feedbackResponses: number;
+  /** Their mean helpfulness, 1 to 5, one decimal; null before the first answer. */
+  feedbackAverageHelpful: number | null;
 }
 
 /** The review queue's filter: open reviews, or decided ones by outcome. */

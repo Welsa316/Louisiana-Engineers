@@ -8,7 +8,7 @@
  */
 
 import { useId, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { ArrowRight, Check } from "lucide-react";
 import type { RequestSummary } from "@shared/types/requests";
 import { isApiError } from "../../lib/api";
@@ -61,8 +61,8 @@ export function CompleteDialog({
       }
     >
       <p>
-        {first} is told in the app, and the contact details you shared stop showing on their request. It frees a place
-        for someone new. The request stays in both your histories.
+        {first} is told and asked for feedback, and the contact details you shared stop showing on their request. It
+        frees a place for someone new. The request stays in both your histories.
       </p>
       {error ? (
         <p className="t-small mt-3" role="alert">
@@ -76,6 +76,7 @@ export function CompleteDialog({
 function MenteeCard({ r }: { r: RequestSummary }) {
   const detail = useRequest(r.id);
   const complete = useRequestAction(r.id, "complete");
+  const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const first = counterpartyFirstName(r.counterparty);
   const d = detail.data;
@@ -124,7 +125,15 @@ function MenteeCard({ r }: { r: RequestSummary }) {
         first={first}
         pending={complete.isPending}
         error={complete.isError ? completeErrorText(complete.error) : null}
-        onConfirm={() => complete.mutate(undefined, { onSuccess: () => setConfirming(false) })}
+        onConfirm={() =>
+          complete.mutate(undefined, {
+            onSuccess: () => {
+              setConfirming(false);
+              // The two feedback questions wait on the mentorship's own page.
+              navigate(`/mentor/mentees/${r.id}`, { state: { feedback: true } });
+            },
+          })
+        }
       />
     </Card>
   );

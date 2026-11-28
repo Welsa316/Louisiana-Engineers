@@ -34,6 +34,7 @@ const TEMPLATES = [
   "deletion-canceled",
   "admin-digest",
   "photo-reviewed",
+  "feedback-invite",
 ] as const;
 
 type TemplateName = (typeof TEMPLATES)[number];
@@ -188,6 +189,11 @@ function callers(): Record<TemplateName, Caller> {
       recipient: layla.id, category: "profile", link: "/network/settings/profile",
       title: "Your profile photo was not approved", body: "Your initials show on your profile instead.",
       payload: { firstName: "Layla", decision: "rejected" }, mentions: ["Layla", "not approve"],
+    },
+    "feedback-invite": {
+      recipient: amina.id, category: "response", link: mentee,
+      title: "Layla marked your mentorship as completed", body: "Two short questions about how it went help MEST improve mentoring.",
+      payload: { ...p, otherFirstName: "Layla", recipientRole: "mentee", link: mentee }, mentions: ["Layla", "completed"],
     },
   };
 }

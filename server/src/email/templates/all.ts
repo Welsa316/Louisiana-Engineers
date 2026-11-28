@@ -1,6 +1,7 @@
 import { renderAdminDigest } from "./admin-digest";
 import { renderDeletionCanceled } from "./deletion-canceled";
 import { renderDeletionRequested } from "./deletion-requested";
+import { renderFeedbackInvite } from "./feedback-invite";
 import { renderMeetingCheckIn } from "./meeting-check-in";
 import { renderMeetingScheduled } from "./meeting-scheduled";
 import { renderModerationAction } from "./moderation-action";
@@ -41,3 +42,4 @@ registerTemplate("admin-digest", renderAdminDigest);
 registerTemplate("meeting-scheduled", renderMeetingScheduled);
 registerTemplate("meeting-check-in", renderMeetingCheckIn);
 registerTemplate("photo-reviewed", renderPhotoReviewed);
+registerTemplate("feedback-invite", renderFeedbackInvite);

@@ -3,12 +3,15 @@
  * measures from `admin_dashboard` (migration 0009), the last three months as
  * a table with month columns (it prints well for a board meeting), and which
  * topics mentees ask about. Aggregates only: no request, person or text.
+ * Post-completion feedback (Task 32) adds the average helpfulness, the
+ * number of answers and the comments, none of them tied to a person.
  */
 
 import type { AdminDashboard } from "@shared/types/admin";
 import { useMeta } from "../../lib/meta";
 import { Card, Empty, Notice, PageHead, Stat, plural } from "../../ui/ui";
 import { adminErrorText, useAdminDashboard } from "./api";
+import { FeedbackComments } from "./FeedbackComments";
 import { measure, monthLabel, trim } from "./measures";
 
 type MonthKey = Exclude<keyof AdminDashboard["byMonth"][number], "month">;
@@ -87,6 +90,21 @@ export function Mentorship() {
             <Stat label="Active relationships" value={measure(d?.activeRelationships)} note="Accepted and not yet completed" />
             <Stat label="Completed" value={measure(d?.completedRelationships)} note="Relationships that reached an end" />
           </div>
+
+          <h2 className="t-small text-fg-2 mt-8 mb-3">Feedback</h2>
+          <div className="pn-stats">
+            <Stat
+              label="Average helpfulness"
+              value={d?.feedbackAverageHelpful != null ? trim(d.feedbackAverageHelpful) : measure(d?.feedbackAverageHelpful)}
+              unit={d?.feedbackAverageHelpful != null ? "of 5" : undefined}
+              note="1 is not helpful, 5 is very helpful"
+            />
+            <Stat
+              label="Answers"
+              value={measure(d?.feedbackResponses)}
+              note="From mentees and mentors, after a relationship ends"
+            />
+          </div>
         </div>
       )}
 
@@ -164,11 +182,16 @@ export function Mentorship() {
         </div>
       ) : null}
 
+      <div className="mt-8">
+        <FeedbackComments />
+      </div>
+
       <p className="pn-admin-measures-note t-small text-fg-2 mt-8">
         Every measure counts mentorship requests; introductions are counted only on their own. A request counts toward
         the 7-day share once its first week is over or a mentor has answered it. Canceled requests, and requests closed
         because a member left, count toward neither the 7-day share nor the acceptance rate. The expired share is of
-        every request no longer waiting for an answer.
+        every request no longer waiting for an answer. Feedback is shown without names: a comment says only which side
+        wrote it and the month.
       </p>
     </>
   );
