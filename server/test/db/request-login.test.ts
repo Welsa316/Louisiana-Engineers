@@ -63,6 +63,9 @@ describe("verifyRequestLogin", () => {
   }
 
   it("a_failed_check_switches_requests_off_instead_of_using_the_login", () => {
+    // A pool of its own to switch off: disabling ends the current pool, and
+    // the harness closes db.requestPool itself after the suite.
+    setRequestPool(createPool(db.url, { max: 1 }));
     disableRequestPool("REQUEST_DATABASE_URL logs in as postgres");
     try {
       expect(requestPoolDisabledReason()).toMatch(/postgres/);
