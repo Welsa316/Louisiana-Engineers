@@ -10,6 +10,7 @@ import {
 } from "@shared/types/export";
 import type { RequestRole } from "@shared/types/requests";
 import type { Db } from "../db/tx";
+import { calendarFeedForExport } from "./calendar";
 import { exportMeetings } from "./meetings";
 import { photoForExport } from "./photos";
 import { getOwnProfile } from "./profiles";
@@ -23,7 +24,8 @@ import { getOwnProfile } from "./profiles";
  * meetings and proposed times from the meetings service (names only),
  * notifications under the recipient policy, and audit entries from
  * `my_audit_entries()`. A profile photo is noted (state, type and size),
- * never copied into the file. Contact values are never read: the handoff values
+ * never copied into the file, and a calendar feed by its start date, never
+ * its address. Contact values are never read: the handoff values
  * belong to the mentor, and the file carries only the method names.
  */
 
@@ -178,6 +180,7 @@ export async function exportMyData(db: Db): Promise<DataExport> {
     relationships,
     meetings,
     availabilitySlots,
+    calendarFeed: await calendarFeedForExport(db),
     notifications: await notifications(db),
     audit: await auditEntries(db),
   };

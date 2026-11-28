@@ -7,6 +7,7 @@
  */
 
 import type { ContactMethodId } from "../taxonomy";
+import type { ExportCalendarFeed } from "./calendar";
 import type { DeclineReason, MeetingMode, NotificationCategory, RequestFormat, RequestKind, RequestStatus } from "./common";
 import type { ExportMeeting, ExportSlot } from "./meetings";
 import type { OwnProfile, OwnSettings } from "./me";
@@ -96,6 +97,8 @@ export interface DataExport {
   meetings: ExportMeeting[];
   /** Times proposed by either party of the caller's relationships (Task 30). */
   availabilitySlots: ExportSlot[];
+  /** Whether a calendar feed is on and since when (Task 37); null when off. Never the address. */
+  calendarFeed: ExportCalendarFeed | null;
   notifications: ExportNotification[];
   audit: ExportAuditEntry[];
 }
