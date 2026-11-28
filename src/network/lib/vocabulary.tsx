@@ -1,9 +1,9 @@
 /**
  * The mentorship topics members choose from, read from
  * `GET /api/config/vocabulary` so a topic an administrator adds is offered
- * in onboarding and settings at once. Until the answer arrives (or if it
- * fails) the starting set in `shared/taxonomy.ts` stands in, so the choices
- * never render empty.
+ * in onboarding, settings and the directory filter at once, and one they
+ * retire is not. Until the answer arrives (or if it fails) the starting set
+ * in `shared/taxonomy.ts` stands in, so the choices never render empty.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -12,10 +12,25 @@ import type { PublicVocabulary, VocabularyTopic } from "@shared/types/vocabulary
 import { api } from "./api";
 import { queryKeys } from "./query";
 
+/**
+ * Every label the vocabulary answer carried, retired topics included, so a
+ * topic a member chose before it was retired (or renamed) still reads as its
+ * current name wherever `topicLabel` is asked, even by callers that hold only
+ * the active list.
+ */
+const knownLabels = new Map<string, string>();
+
+async function fetchVocabulary(): Promise<PublicVocabulary> {
+  const vocabulary = await api<PublicVocabulary>("/config/vocabulary");
+  for (const t of [...vocabulary.topics, ...(vocabulary.retiredTopics ?? [])]) knownLabels.set(t.id, t.label);
+  return vocabulary;
+}
+
+/** The active topics: the only ones to offer as choices. */
 export function useTopics(): VocabularyTopic[] {
   const { data } = useQuery({
     queryKey: queryKeys.vocabulary,
-    queryFn: () => api<PublicVocabulary>("/config/vocabulary"),
+    queryFn: fetchVocabulary,
     staleTime: 5 * 60_000,
   });
   return data?.topics ?? mentorshipTopics;
@@ -32,9 +47,18 @@ export function withChosen(topics: VocabularyTopic[], chosen: string[]): Vocabul
   return [...topics, ...retired];
 }
 
-/** A topic's label, from the live list first, then the starting set, then the id itself. */
+/**
+ * A topic's label: from the given list first, then every label the live
+ * vocabulary carried (retired topics too), then the starting set, then the
+ * id itself.
+ */
 export function topicLabel(topics: VocabularyTopic[], id: string): string {
-  return topics.find((t) => t.id === id)?.label ?? mentorshipTopics.find((t) => t.id === id)?.label ?? id;
+  return (
+    topics.find((t) => t.id === id)?.label ??
+    knownLabels.get(id) ??
+    mentorshipTopics.find((t) => t.id === id)?.label ??
+    id
+  );
 }
 
 /** Labels for topic ids from the live list, so a topic an administrator added reads as its name, not its id. */

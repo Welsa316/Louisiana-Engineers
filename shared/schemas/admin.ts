@@ -7,7 +7,7 @@
 import { z } from "zod";
 import { configLimits, fieldLimits, limits } from "../limits";
 import { reportActions, verifiedMethods, vocabularyKinds } from "../types/common";
-import { chars, optionalField, slugSchema } from "./common";
+import { chars, optionalField, slugSchema, uuidSchema } from "./common";
 
 /** `POST /api/admin/reviews/:id`. Declining needs notes: they are sent to the member. */
 export const adminReviewSchema = z.discriminatedUnion("decision", [
@@ -36,6 +36,23 @@ export const adminVocabularySchema = z.object({
   kind: z.enum(vocabularyKinds),
   id: slugSchema,
   label: chars(fieldLimits.vocabularyLabel),
+});
+
+/** What `PATCH /api/admin/vocabulary/:kind/:id` relabels: a discipline or topic by slug, a tag by uuid. */
+export const renameKinds = ["discipline", "topic", "tag"] as const;
+export type RenameKind = (typeof renameKinds)[number];
+
+/**
+ * `PATCH /api/admin/vocabulary/:kind/:id`. Tags are held to the shorter
+ * expertise limit by `admin_rename_vocabulary`.
+ */
+export const adminRenameSchema = z.object({
+  label: chars(fieldLimits.vocabularyLabel),
+});
+
+/** `POST /api/admin/tags/:id/merge`: the approved tag that replaces this one. */
+export const adminMergeTagsSchema = z.object({
+  intoTagId: uuidSchema,
 });
 
 /** Resolving or dismissing a report (Task 24). A dismissal takes no action. */
@@ -108,5 +125,7 @@ export type AdminReview = z.output<typeof adminReviewSchema>;
 export type AdminVerified = z.output<typeof adminVerifiedSchema>;
 export type AdminTagDecision = z.output<typeof adminTagDecisionSchema>;
 export type AdminVocabulary = z.output<typeof adminVocabularySchema>;
+export type AdminRename = z.output<typeof adminRenameSchema>;
+export type AdminMergeTags = z.output<typeof adminMergeTagsSchema>;
 export type AdminResolveReport = z.output<typeof adminResolveReportSchema>;
 export type ConfigPatch = z.output<typeof configPatchSchema>;

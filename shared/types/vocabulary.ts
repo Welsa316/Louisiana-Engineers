@@ -12,4 +12,9 @@ export interface VocabularyTopic {
 export interface PublicVocabulary {
   /** Active mentorship topics, in their display order. */
   topics: VocabularyTopic[];
+  /**
+   * Topics an administrator retired: no longer offered, but members who
+   * chose one keep it, so its label must still resolve.
+   */
+  retiredTopics: VocabularyTopic[];
 }

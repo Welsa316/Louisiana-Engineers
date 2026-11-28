@@ -31,14 +31,20 @@ export function createConfigRoutes(
     return c.json<PublicConfig>({ googleEnabled, platformPaused: paused, defaultMaxActive: default_max_active });
   });
 
-  /** The active mentorship topics, so onboarding and settings offer the ones administrators add. */
+  /**
+   * The active mentorship topics, so onboarding, settings and the directory
+   * filter offer the ones administrators add and stop offering the ones they
+   * retire; the retired ones come separately so a choice a member already
+   * made still reads as its name.
+   */
   app.get("/vocabulary", async (c) => {
-    const topics = await withUser(null, (db) =>
-      db.query<VocabularyTopic>(
-        "SELECT id, label FROM mentorship_topics WHERE active ORDER BY sort_order, id",
+    const rows = await withUser(null, (db) =>
+      db.query<VocabularyTopic & { active: boolean }>(
+        "SELECT id, label, active FROM mentorship_topics ORDER BY sort_order, id",
       ),
     );
-    return c.json<PublicVocabulary>({ topics });
+    const pick = (active: boolean) => rows.filter((t) => t.active === active).map(({ id, label }) => ({ id, label }));
+    return c.json<PublicVocabulary>({ topics: pick(true), retiredTopics: pick(false) });
   });
 
   return app;

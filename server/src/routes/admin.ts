@@ -1,17 +1,19 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
 import {
+  adminMergeTagsSchema,
+  adminRenameSchema,
   adminReviewSchema,
   adminTagDecisionSchema,
   adminVerifiedSchema,
   adminVocabularySchema,
   configPatchSchema,
 } from "@shared/schemas/admin";
-import { pageQuerySchema, uuidSchema } from "@shared/schemas/common";
+import { pageQuerySchema, slugSchema, uuidSchema } from "@shared/schemas/common";
 import { disciplineGroups } from "@shared/taxonomy";
 import { adminReviewStatuses } from "@shared/types/admin";
 import { fieldLimits } from "@shared/limits";
-import { approvalStates, mentorStatuses, profileKinds, tagStatuses } from "@shared/types/common";
+import { approvalStates, mentorStatuses, profileKinds, tagStatuses, vocabularyKinds } from "@shared/types/common";
 import { requireAdmin, userIdOf } from "../auth/middleware";
 import { withUser, type Db } from "../db/tx";
 import { validate } from "../http/validate";
@@ -43,8 +45,17 @@ const membersQuery = pageQuerySchema.extend({
     .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "expected a region slug")
     .optional(),
 });
-const tagsQuery = pageQuerySchema.extend({ status: z.enum(tagStatuses).optional() });
+const tagsQuery = pageQuerySchema.extend({
+  status: z.enum(tagStatuses).optional(),
+  q: z.string().trim().max(fieldLimits.vocabularyLabel.max).optional(),
+});
 const grantSchema = z.object({ profileId: uuidSchema });
+const topicParam = z.object({ id: slugSchema });
+/** A discipline or topic is named by its slug, a tag by its uuid. */
+const renameParam = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("tag"), id: uuidSchema }),
+  z.object({ kind: z.enum(vocabularyKinds), id: slugSchema }),
+]);
 const vocabularySchema = adminVocabularySchema.extend({ groupName: z.enum(disciplineGroups as [string, ...string[]]).optional() });
 
 export function createAdminRoutes(): Hono {
@@ -126,8 +137,8 @@ export function createAdminRoutes(): Hono {
   /* Expertise tags */
 
   app.get("/tags", validate(tagsQuery, "query"), async (c) => {
-    const { status, page, size } = c.req.valid("query");
-    return c.json(await as(c, (db) => admin.listTags(db, status, { page, size })));
+    const { status, page, size, q } = c.req.valid("query");
+    return c.json(await as(c, (db) => admin.listTags(db, status, { page, size }, q)));
   });
 
   app.post("/tags/:id", validate(idParam, "param"), validate(adminTagDecisionSchema), async (c) => {
@@ -135,6 +146,13 @@ export function createAdminRoutes(): Hono {
     const { decision } = c.req.valid("json");
     await as(c, (db) => admin.decideTag(db, id, decision));
     return c.json({ ok: true });
+  });
+
+  /** Moves every profile to `intoTagId` and retires this tag (Task 34). */
+  app.post("/tags/:id/merge", validate(idParam, "param"), validate(adminMergeTagsSchema), async (c) => {
+    const { id } = c.req.valid("param");
+    const { intoTagId } = c.req.valid("json");
+    return c.json(await as(c, (db) => admin.mergeTags(db, id, intoTagId)));
   });
 
   /* Vocabulary */
@@ -151,6 +169,21 @@ export function createAdminRoutes(): Hono {
         groupName: entry.groupName as (typeof disciplineGroups)[number] | undefined,
       }),
     );
+    return c.json({ ok: true });
+  });
+
+  /** Relabels a discipline, topic or tag; the id it is filtered and linked by stays (Task 34). */
+  app.patch("/vocabulary/:kind/:id", validate(renameParam, "param"), validate(adminRenameSchema), async (c) => {
+    const { kind, id } = c.req.valid("param");
+    const { label } = c.req.valid("json");
+    await as(c, (db) => admin.renameVocabulary(db, kind, id, label));
+    return c.json({ ok: true });
+  });
+
+  /** Stops offering a mentorship topic; members who chose it keep it (Task 34). */
+  app.post("/topics/:id/retire", validate(topicParam, "param"), async (c) => {
+    const { id } = c.req.valid("param");
+    await as(c, (db) => admin.retireTopic(db, id));
     return c.json({ ok: true });
   });
 
