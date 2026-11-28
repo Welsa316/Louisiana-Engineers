@@ -1,9 +1,11 @@
 import { resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerJob, registeredJobs, runJobOnce } from "./scheduler";
+import { completePastMeetingsJob } from "./complete-past-meetings";
 import { deletionsJob } from "./deletions";
 import { adminDigestJob } from "./digest";
 import { expireRequestsJob } from "./expire-requests";
+import { meetingCheckInJob } from "./meeting-check-in";
 import { remindersJob } from "./reminders";
 import { resumePausedJob } from "./resume-paused";
 import { retentionJob } from "./retention";
@@ -23,6 +25,8 @@ export function registerJobs(): void {
   registerJob(retentionJob);
   registerJob(adminDigestJob);
   registerJob(deletionsJob);
+  registerJob(completePastMeetingsJob);
+  registerJob(meetingCheckInJob);
 }
 
 /** `npm run job -- <name>` runs one job once, under the same lock as the scheduler. */

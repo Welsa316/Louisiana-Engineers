@@ -46,8 +46,6 @@ import {
 /** Room for the 200 000-byte photo plus the multipart framing; anything bigger is refused unread. */
 const MAX_UPLOAD_BODY = photoLimits.maxBytes + 64 * 1024;
 
-/** How long a browser may keep a photo. The URL carries the photo's id, so a replacement is a new URL. */
-const PHOTO_MAX_AGE = 3600;
 
 const tooLarge = () => new AppError(413, "too_large", "photo over the size limit");
 
@@ -123,7 +121,9 @@ export function createPhotoRoutes(): Hono {
     const viewer = await sessionUserId(c);
     const photo = await withUser(viewer, (db) => getProfilePhotoBytes(db, profileId));
     if (!photo) throw new AppError(404, "not_found", "no approved photo visible to the caller");
-    const cacheControl = `${photo.shareable ? "public" : "private"}, max-age=${PHOTO_MAX_AGE}`;
+    // no-cache: browsers keep the image but ask first (a 304 by ETag), so a
+    // takedown or a switch to members-only applies on the next view.
+    const cacheControl = `${photo.shareable ? "public" : "private"}, no-cache`;
     if (c.req.header("if-none-match") === `"${photo.version}"`) {
       c.header("Cache-Control", cacheControl);
       c.header("ETag", `"${photo.version}"`);

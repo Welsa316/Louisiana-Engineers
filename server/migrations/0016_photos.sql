@@ -249,6 +249,7 @@ BEGIN
   -- relationships end (so a departed mentee no longer holds a mentor's
   -- slot); every row stays, its free text emptied.
   PERFORM close_requests_of_departing(target);
+  PERFORM close_meetings_of_departing(target);
   UPDATE mentorship_requests r SET status = 'completed'
    WHERE r.status = 'accepted' AND (r.mentee_id = target OR r.mentor_id = target);
   UPDATE mentorship_relationships rel SET completed_at = now(), completed_by = target

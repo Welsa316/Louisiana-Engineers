@@ -262,7 +262,8 @@ describe("moderation", () => {
     expect(served.status).toBe(200);
     expect(served.headers.get("content-type")).toBe("image/jpeg");
     expect(served.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(served.headers.get("cache-control")).toMatch(/^public, max-age=\d+$/);
+    // Revalidated every time (a cheap 304), so a takedown or a visibility change applies at once.
+    expect(served.headers.get("cache-control")).toBe("public, no-cache");
     expect(Buffer.from(served.bytes).equals(Buffer.from(p.bytes))).toBe(true);
     const card = (await call(null, "GET", "/directory")).body.items.find((e: any) => e.id === p.owner);
     expect(card.photoUrl).toBe(`/api/photos/${p.owner}?v=${p.photoId}`);
@@ -277,7 +278,7 @@ describe("moderation", () => {
     expect((await call(null, "GET", `/photos/${p.owner}`)).status).toBe(404);
     const served = await call(await cookieFor(member), "GET", `/photos/${p.owner}`);
     expect(served.status).toBe(200);
-    expect(served.headers.get("cache-control")).toMatch(/^private, max-age=\d+$/);
+    expect(served.headers.get("cache-control")).toBe("private, no-cache");
   });
 
   it("photo_follows_the_profile_rule_when_the_profile_is_out_of_sight", async () => {
