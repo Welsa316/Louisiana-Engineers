@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   Settings,
   ShieldCheck,
+  UserPlus,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -33,7 +34,8 @@ export type NavItemId =
   | "saved"
   | "notifications"
   | "settings"
-  | "admin";
+  | "admin"
+  | "join";
 
 export interface NavItem {
   id: NavItemId;
@@ -76,6 +78,7 @@ const ITEMS: Record<NavItemId, NavItem> = {
   notifications: { id: "notifications", to: "/notifications", label: "Notifications", tabLabel: "Alerts", icon: Bell },
   settings: { id: "settings", to: "/settings", label: "Profile and settings", tabLabel: "Settings", icon: Settings },
   admin: { id: "admin", to: "/admin", label: "Administration", tabLabel: "Admin", icon: ShieldCheck },
+  join: { id: "join", to: "/onboarding", label: "Join the network", tabLabel: "Join", icon: UserPlus },
 };
 
 /** A professional whose mentorship is on, even while paused, has a mentor inbox. */
@@ -84,6 +87,19 @@ export function isMentor(user: NavUser): boolean {
 }
 
 export function navFor(user: NavUser): Nav {
+  // An administrator who has not filled in a profile (ADMIN_EMAILS) has only
+  // the admin area, and a way to join the network as a member later.
+  if (user.kind === null && user.isAdmin) {
+    return {
+      groups: [
+        { label: "Administration", items: [ITEMS.admin] },
+        { label: "Account", items: [ITEMS.join] },
+      ],
+      tabs: [ITEMS.admin, ITEMS.join],
+      menu: [],
+    };
+  }
+
   const mentor = isMentor(user);
 
   const groups: NavGroup[] = [

@@ -39,6 +39,17 @@ const schema = z.object({
   // Where replies to a sent email go. EMAIL_FROM can be a send-only address,
   // so this points replies at a real (for example forwarded) inbox.
   EMAIL_REPLY_TO: optionalString.pipe(z.string().email("EMAIL_REPLY_TO must be an email address such as admin@example.org").optional()),
+  // Addresses made administrators the first time they sign in, comma
+  // separated. A bootstrap for the first administrators: a role revoked later
+  // is not granted again. They land on the admin area and need no profile.
+  ADMIN_EMAILS: optionalString
+    .transform((value) =>
+      (value ?? "")
+        .split(",")
+        .map((address) => address.trim().toLowerCase())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.string().email("ADMIN_EMAILS must be email addresses separated by commas"))),
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
   PORT: z.coerce.number().int().min(1).max(65535).default(8787),

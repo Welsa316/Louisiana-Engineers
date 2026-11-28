@@ -1,6 +1,8 @@
 import type { SignInRedirect } from "@shared/types/auth";
 import { withSystem, type Db } from "../db/tx";
 import { createSession, deleteSession, isSecretShaped, newSecret, sha256Hex, type NewSession } from "./session";
+import { env } from "../env";
+import { grantListedAdmin } from "./admin-grant";
 
 /**
  * Magic-link sign-in (section 5.1). `requestMagicLink` stores the sha256 of
@@ -125,6 +127,7 @@ export async function signInEmail(db: Db, email: string, context: SignInContext 
 /** Replaces the browser's previous session (if any) with a new one and picks the landing page. */
 export async function startSession(db: Db, userId: string, context: SignInContext = {}): Promise<SignIn> {
   await db.query("INSERT INTO profiles (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [userId]);
+  await grantListedAdmin(db, userId, env.ADMIN_EMAILS);
   await deleteSession(db, context.previousCookie);
   const session = await createSession(db, userId, context.userAgent ?? null);
   return { userId, session, redirect: await landingPath(db, userId) };
@@ -133,11 +136,13 @@ export async function startSession(db: Db, userId: string, context: SignInContex
 /**
  * Where a signed-in person goes: the grace screen while a deletion is open
  * (before anything else, so a leaving member is never sent into onboarding),
- * onboarding while `kind` is null, otherwise their home.
+ * onboarding while `kind` is null, otherwise their home. An administrator
+ * who has not filled in a profile lands on the admin area instead.
  */
 export async function landingPath(db: Db, userId: string): Promise<SignInRedirect> {
-  const row = await db.one<{ kind: string | null; deleting: boolean }>(
+  const row = await db.one<{ kind: string | null; deleting: boolean; admin: boolean }>(
     `SELECT p.kind,
+            EXISTS (SELECT 1 FROM admin_roles a WHERE a.profile_id = p.id AND a.revoked_at IS NULL) AS admin,
             EXISTS (
               SELECT 1 FROM account_deletions d
                WHERE d.profile_id = p.id AND d.canceled_at IS NULL AND d.executed_at IS NULL
@@ -147,7 +152,7 @@ export async function landingPath(db: Db, userId: string): Promise<SignInRedirec
     [userId],
   );
   if (row.deleting) return "/network/scheduled-for-deletion";
-  if (row.kind === null) return "/network/onboarding";
+  if (row.kind === null) return row.admin ? "/network/admin" : "/network/onboarding";
   return "/network/me";
 }
 

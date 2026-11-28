@@ -42,7 +42,7 @@ export interface DevLastLinkResponse {
 }
 
 /** Where a successful sign-in lands. */
-export type SignInRedirect = "/network/onboarding" | "/network/scheduled-for-deletion" | "/network/me";
+export type SignInRedirect = "/network/onboarding" | "/network/scheduled-for-deletion" | "/network/me" | "/network/admin";
 
 /** Where a failed magic-link sign-in lands. */
 export const SIGN_IN_FAILED_PATH = "/network/signin?error=link";

@@ -10,6 +10,10 @@ import { defineConfig, devices } from "@playwright/test";
 // E2E_PORT lets the suite run beside a dev server already on 8787; point
 // DATABASE_URL at its own database too, since the global setup re-seeds it.
 const port = process.env.E2E_PORT ?? "8787";
+// One address per run for e2e/admin-bootstrap.spec.ts: a role revoked at the
+// end of a run is never granted again, so the next run needs a fresh address.
+// Set here so the server and the test workers both see it.
+process.env.E2E_BOOTSTRAP_ADMIN ??= `bootstrap-admin-${Date.now()}@example.test`;
 const origin = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
@@ -38,15 +42,26 @@ export default defineConfig({
       // X-Forwarded-For address, so repeated local runs against one database
       // do not exhaust the per-IP hourly limit (every request is 127.0.0.1).
       TRUST_PROXY: "true",
+      ADMIN_EMAILS: process.env.E2E_BOOTSTRAP_ADMIN,
     },
   },
   projects: [
     {
       name: "mobile-375",
+      testIgnore: /admin-bootstrap\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true },
     },
     {
       name: "desktop-1280",
+      testIgnore: /admin-bootstrap\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
+    },
+    // A third administrator changes what the admin specs see (the
+    // two-administrator minimum), so this one runs after both widths finish.
+    {
+      name: "admin-bootstrap",
+      testMatch: /admin-bootstrap\.spec\.ts/,
+      dependencies: ["mobile-375", "desktop-1280"],
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
     },
   ],

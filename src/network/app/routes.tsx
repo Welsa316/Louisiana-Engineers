@@ -83,16 +83,18 @@ export const routes: RouteObject[] = [
         </RequireOnboarded>
       </RequireMember>
     ),
-    children: [
-      ...memberPages,
-      {
-        element: (
-          <RequireAdmin>
-            <Outlet />
-          </RequireAdmin>
-        ),
-        children: adminPages,
-      },
-    ],
+    children: memberPages,
+  },
+  // The admin area does not wait for a profile: an administrator named in
+  // ADMIN_EMAILS can work here before (or without) joining as a member.
+  {
+    element: (
+      <RequireMember>
+        <RequireAdmin>
+          <MemberLayout />
+        </RequireAdmin>
+      </RequireMember>
+    ),
+    children: adminPages,
   },
 ];
