@@ -110,8 +110,8 @@ function declineReasonLabel(reason: RequestDetail["declineReason"]): string | nu
   return declineReasonOptions.find((o) => o.id === reason)?.label ?? null;
 }
 
-/** A phone gets a bottom sheet, a wider screen a side panel. */
-function usePhone(): boolean {
+/** A phone gets a bottom sheet, a wider screen a side panel (or a dialog). */
+export function usePhone(): boolean {
   const query = "(max-width: 47.99rem)";
   const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
   useEffect(() => {
