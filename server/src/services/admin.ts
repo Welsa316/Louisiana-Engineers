@@ -60,6 +60,8 @@ interface DashboardRow {
   members_inactive_6_months: number;
   requests_by_topic: AdminDashboard["requestsByTopic"];
   by_month: AdminDashboard["byMonth"];
+  meetings_held: number;
+  meetings_upcoming: number;
 }
 
 /** The success measures (01 section 8); migration 0009 defines each one. */
@@ -86,6 +88,8 @@ export async function dashboard(db: Db): Promise<AdminDashboard> {
     membersInactive6Months: row.members_inactive_6_months,
     requestsByTopic: row.requests_by_topic,
     byMonth: row.by_month,
+    meetingsHeld: row.meetings_held,
+    meetingsUpcoming: row.meetings_upcoming,
   };
 }
 

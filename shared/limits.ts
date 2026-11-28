@@ -80,6 +80,16 @@ export const fieldLimits = {
   slug: { min: 1, max: 60 },
   /** disciplines.label, mentorship_topics.label */
   vocabularyLabel: { min: 2, max: 80 },
+  /** availability_slots per proposal (`propose_times`) */
+  slotsPerProposal: { min: 1, max: 3 },
+  /** availability_slots.ends_at - starts_at, and meetings.duration_min, in minutes */
+  slotMinutes: { min: 15, max: 180 },
+  /** how far ahead a time may be proposed, in days */
+  slotDaysAhead: { max: 365 },
+  /** meetings.place */
+  meetingPlace: { min: 0, max: 200 },
+  /** meetings.agenda (02 section 4.3: max 400) */
+  meetingAgenda: { min: 0, max: 400 },
 } as const;
 
 /** List endpoints: `?page` (1-based) and `&size`. */

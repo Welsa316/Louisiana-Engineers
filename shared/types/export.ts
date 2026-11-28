@@ -8,6 +8,7 @@
 
 import type { ContactMethodId } from "../taxonomy";
 import type { DeclineReason, MeetingMode, NotificationCategory, RequestFormat, RequestKind, RequestStatus } from "./common";
+import type { ExportMeeting, ExportSlot } from "./meetings";
 import type { OwnProfile, OwnSettings } from "./me";
 import type { RequestRole } from "./requests";
 
@@ -79,6 +80,10 @@ export interface DataExport {
   settings: OwnSettings | null;
   requests: ExportRequest[];
   relationships: ExportRelationship[];
+  /** Meetings in either role (Task 30). */
+  meetings: ExportMeeting[];
+  /** Times proposed by either party of the caller's relationships (Task 30). */
+  availabilitySlots: ExportSlot[];
   notifications: ExportNotification[];
   audit: ExportAuditEntry[];
 }

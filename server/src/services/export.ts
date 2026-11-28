@@ -10,6 +10,7 @@ import {
 } from "@shared/types/export";
 import type { RequestRole } from "@shared/types/requests";
 import type { Db } from "../db/tx";
+import { exportMeetings } from "./meetings";
 import { getOwnProfile } from "./profiles";
 
 /**
@@ -18,6 +19,7 @@ import { getOwnProfile } from "./profiles";
  * policies and definer functions as the app: the own profile and settings
  * from the profiles service, requests and relationships from `my_requests`
  * (the other party's public fields only, of which only the name is kept),
+ * meetings and proposed times from the meetings service (names only),
  * notifications under the recipient policy, and audit entries from
  * `my_audit_entries()`. Contact values are never read: the handoff values
  * belong to the mentor, and the file carries only the method names.
@@ -162,6 +164,7 @@ export async function exportMyData(db: Db): Promise<DataExport> {
     settings = own;
   }
   const { requests, relationships } = await requestsAndRelationships(db);
+  const { meetings, availabilitySlots } = await exportMeetings(db);
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
@@ -170,6 +173,8 @@ export async function exportMyData(db: Db): Promise<DataExport> {
     settings,
     requests,
     relationships,
+    meetings,
+    availabilitySlots,
     notifications: await notifications(db),
     audit: await auditEntries(db),
   };
