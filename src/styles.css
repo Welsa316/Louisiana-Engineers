@@ -1122,6 +1122,44 @@
   background: var(--color-panel);
   color: var(--color-fg);
 }
+/* Room under the last row so the floating WhatsApp button never covers it. */
+.footer {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+}
+
+/* Floating link to the WhatsApp group: the site's own colours, no movement on hover. */
+.wa-float {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-fg) 14%, transparent);
+  transition: background-color 160ms ease;
+}
+.wa-float:hover {
+  background: color-mix(in srgb, var(--color-accent) 85%, var(--color-fg));
+}
+.wa-float:focus-visible {
+  outline: 2px solid var(--color-fg);
+  outline-offset: 3px;
+}
+@media (max-width: 47.99rem) {
+  .wa-float-wide {
+    display: none;
+  }
+}
+@media print {
+  .wa-float {
+    display: none;
+  }
+}
 .footer-logo {
   width: 9.5rem;
   height: auto;

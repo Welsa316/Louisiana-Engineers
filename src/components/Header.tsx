@@ -90,8 +90,8 @@ export function Header() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <a className="btn btn-outline" href="#get-involved">
-              Join MEST
+            <a className="btn btn-outline" href="/network/join">
+              Join the network
               <ArrowUpRight size={15} aria-hidden="true" />
             </a>
             <button
@@ -140,8 +140,8 @@ export function Header() {
             </ul>
           </nav>
           <div className="menu-foot">
-            <a className="btn btn-light" href="#get-involved" onClick={closeMenu}>
-              Join MEST
+            <a className="btn btn-light" href="/network/join" onClick={closeMenu}>
+              Join the network
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
             <p className="t-small" style={{ opacity: 0.6 }}>

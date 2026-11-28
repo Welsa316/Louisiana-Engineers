@@ -182,8 +182,8 @@ export function Hero() {
             <p className="t-small">{org.intro}</p>
           </div>
           <div className="hero-actions">
-            <a className="btn btn-light" href="#get-involved">
-              Join {org.short}
+            <a className="btn btn-light" href="/network/join">
+              Join the network
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
             <a className="link" href="#mission">

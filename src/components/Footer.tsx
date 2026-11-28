@@ -50,6 +50,13 @@ export function Footer() {
                   <span className="tba">Email to be announced</span>
                 )}
               </li>
+              {contact.phone ? (
+                <li>
+                  <a className="link-quiet link" href={contact.phoneHref}>
+                    {contact.phone}
+                  </a>
+                </li>
+              ) : null}
               <li>
                 <span>{contact.city}</span>
               </li>

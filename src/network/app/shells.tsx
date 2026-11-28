@@ -17,6 +17,8 @@ import { useMeta } from "../lib/meta";
 import { useSession, useSignOut } from "../lib/session";
 import { Empty, Sheet } from "../ui/ui";
 import { navFor, type NavBadges, type NavItem } from "./nav";
+import { WhatsAppButton } from "../../components/WhatsAppButton";
+import { whatsappGroup } from "../../content/site";
 
 /* ---------- Shared pieces ---------- */
 
@@ -180,12 +182,18 @@ export function PublicShell({ children, headerSlot }: { children: ReactNode; hea
           <a href="/" className="pn-menu-link">
             MEST main site
           </a>
+          {whatsappGroup ? (
+            <a href={whatsappGroup} className="pn-menu-link" target="_blank" rel="noopener noreferrer">
+              WhatsApp group
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          ) : null}
         </nav>
       </Sheet>
       <main id="main" tabIndex={-1}>
         {children}
       </main>
-      <footer className="border-t border-[var(--pn-line)]">
+      <footer className="border-t border-[var(--pn-line)] pb-16">
         <div className="shell py-10 flex flex-wrap items-center justify-between gap-4 text-fg-2 t-small">
           <span>Muslim Engineers in Science &amp; Tech · MEST Network</span>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
@@ -341,9 +349,14 @@ export function AppShell({
 
 export function PublicLayout({ headerSlot }: { headerSlot?: ReactNode }) {
   return (
-    <PublicShell headerSlot={headerSlot}>
-      <Outlet />
-    </PublicShell>
+    <>
+      <PublicShell headerSlot={headerSlot}>
+        <Outlet />
+      </PublicShell>
+      {/* Wide screens only: on phones the public pages' forms and bottom bars
+          fill that corner, and the menu carries the link. Not in the app shell. */}
+      <WhatsAppButton wideOnly />
+    </>
   );
 }
 

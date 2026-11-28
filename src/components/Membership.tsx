@@ -217,9 +217,20 @@ export function Membership() {
               ) : (
                 <p className="t-heading mt-4 text-fg-2">Email to be announced</p>
               )}
-              <p className="t-small membership-status mt-8">
-                Membership enrollment opens soon.
-              </p>
+              {contact.phone ? (
+                <a className="t-body link mt-2 block w-fit" href={contact.phoneHref}>
+                  {contact.phone}
+                </a>
+              ) : null}
+              <div className="mt-8">
+                <a className="btn btn-outline" href="/network/join">
+                  Join the MEST Network
+                  <ArrowUpRight size={15} aria-hidden="true" />
+                </a>
+                <p className="t-small text-fg-2 mt-3 measure">
+                  Create a profile to find a mentor, offer your time, or be found by colleagues.
+                </p>
+              </div>
             </div>
           )}
         </div>

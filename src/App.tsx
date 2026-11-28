@@ -6,6 +6,7 @@ import { Pillars } from "./components/Pillars";
 import { Events } from "./components/Events";
 import { Membership } from "./components/Membership";
 import { Footer } from "./components/Footer";
+import { WhatsAppButton } from "./components/WhatsAppButton";
 import { useMotion } from "./hooks/useMotion";
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
         <Membership />
       </main>
       <Footer />
+      <WhatsAppButton />
     </div>
   );
 }

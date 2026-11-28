@@ -16,6 +16,60 @@ test.describe("foundation", () => {
     await expect(page.locator(".pn-root")).toHaveCount(0);
   });
 
+  test("the landing page sends people to join the network, not to a membership form", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("section#hero")).toBeVisible();
+    // There is no formal MEST membership yet: no "Join MEST" anywhere.
+    await expect(page.getByText("Join MEST", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Membership enrollment opens soon.")).toHaveCount(0);
+    // The header (or, on phones, its menu) and the Get Involved section link to the network's sign-up.
+    const menu = page.getByRole("button", { name: "Open menu" });
+    if (await menu.isVisible()) await menu.click();
+    const headerJoin = page.getByRole("link", { name: "Join the network" }).filter({ visible: true }).first();
+    await expect(headerJoin).toHaveAttribute("href", "/network/join");
+    if (await page.getByRole("button", { name: "Close menu" }).isVisible()) await page.getByRole("button", { name: "Close menu" }).click();
+    // The section fades in as it scrolls into view, as a visitor would see it.
+    const section = page.locator("section#get-involved");
+    await section.scrollIntoViewIfNeeded();
+    await page.locator("footer").scrollIntoViewIfNeeded();
+    await section.getByRole("heading").first().scrollIntoViewIfNeeded();
+    await expect(section.getByRole("link", { name: /Join the MEST Network/ })).toHaveAttribute("href", "/network/join");
+    // The organizers can be reached by email and phone, in the section and the footer.
+    for (const where of [section, page.locator("footer")]) {
+      await where.scrollIntoViewIfNeeded();
+      const email = where.locator('a[href="mailto:admin@mestnola.com"]');
+      await expect(email).toBeVisible();
+      expect((await email.textContent())?.replace(/\s/g, "")).toBe("admin@mestnola.com");
+      await expect(where.getByRole("link", { name: "(504) 230-9499" })).toHaveAttribute("href", "tel:+15042309499");
+    }
+  });
+
+  test("the WhatsApp group is one tap away without covering anything", async ({ page }) => {
+    const group = "https://chat.whatsapp.com/HK75bKX3us2AfeIXWqzN9F?mode=gi_t";
+    const phone = (page.viewportSize()?.width ?? 0) < 768;
+    const button = page.getByRole("link", { name: "Join the MEST WhatsApp group (opens in a new tab)" });
+
+    await page.goto("/");
+    await expect(button).toBeVisible();
+    await expect(button).toHaveAttribute("href", group);
+    await expect(button).toHaveAttribute("target", "_blank");
+
+    // On the network's sign-in page it never sits on the email field.
+    await page.goto("/network/signin");
+    const email = page.getByLabel("Email");
+    await expect(email).toBeVisible();
+    if (phone) {
+      await expect(button).toBeHidden();
+      await page.getByRole("button", { name: "Menu" }).click();
+      await expect(page.getByRole("dialog", { name: "Menu" }).getByRole("link", { name: /WhatsApp group/ })).toHaveAttribute("href", group);
+    } else {
+      await expect(button).toBeVisible();
+      const [b, e] = [await button.boundingBox(), await email.boundingBox()];
+      const overlaps = b && e && b.x < e.x + e.width && b.x + b.width > e.x && b.y < e.y + e.height && b.y + b.height > e.y;
+      expect(overlaps).toBeFalsy();
+    }
+  });
+
   test("/network renders the network home inside the public shell", async ({ page }) => {
     await page.goto("/network");
     await expect(page.locator(".pn-root header.pn-header")).toBeVisible();

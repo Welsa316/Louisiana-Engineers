@@ -150,8 +150,14 @@ export const membershipEndpoint: string =
  */
 export const contact = {
   email: "admin@mestnola.com",
+  /** Shown as written; `phoneHref` is what a phone dials. */
+  phone: "(504) 230-9499",
+  phoneHref: "tel:+15042309499",
   city: "Greater New Orleans, Louisiana",
 };
+
+/** The community's WhatsApp group, opened from the floating button. Empty hides it. */
+export const whatsappGroup = "https://chat.whatsapp.com/HK75bKX3us2AfeIXWqzN9F?mode=gi_t";
 
 export const socials: { label: string; href: string }[] = [
   { label: "LinkedIn", href: "" },
