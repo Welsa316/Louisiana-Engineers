@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
-import type { Pool } from "./db/pool";
+import { requestPoolDisabledReason, type Pool } from "./db/pool";
 import { apiErrorHandler, apiNotFound, safeErrorSummary } from "./http/errors";
 import { landingHtml, noindexHtml, renderMeta } from "./meta";
 import { createApiRoutes } from "./routes/index";
@@ -46,7 +46,8 @@ export function createApp({ webDist, pool, cacheIndex = true }: AppOptions): Hon
   app.get("/api/health", async (c) => {
     try {
       const result = await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM schema_migrations");
-      return c.json({ ok: true, migrations: Number(result.rows[0].count) });
+      // requests: false means the request login failed its start check (see the log).
+      return c.json({ ok: true, migrations: Number(result.rows[0].count), requests: !requestPoolDisabledReason() });
     } catch (error) {
       console.error("[health] database check failed", error);
       return c.json({ ok: false, migrations: 0 }, 503);
@@ -112,7 +113,7 @@ export function createApp({ webDist, pool, cacheIndex = true }: AppOptions): Hon
 
 async function main(): Promise<void> {
   const { env } = await import("./env");
-  const { getPool, getRequestPool, closePool } = await import("./db/pool");
+  const { getPool, getRequestPool, disableRequestPool, closePool } = await import("./db/pool");
   const { runMigrations } = await import("./db/migrate");
   const { verifyRequestLogin } = await import("./db/request-login");
   const { webDist } = await import("./paths");
@@ -122,11 +123,18 @@ async function main(): Promise<void> {
   for (const name of migrated.applied) console.log(`[db] applied ${name}`);
 
   // In production the request pool must log in as mest_request with the
-  // password in REQUEST_DATABASE_URL. Refuse to start otherwise, so a bad
-  // deploy fails its health check instead of serving API errors.
+  // password in REQUEST_DATABASE_URL. When it cannot, data requests are
+  // switched off rather than run on an untrusted login, and the server still
+  // starts: the landing page shares this process and must stay up.
   if (env.NODE_ENV === "production") {
-    const login = await verifyRequestLogin(getRequestPool());
-    console.log(`[db] requests log in as ${login}`);
+    try {
+      const login = await verifyRequestLogin(getRequestPool());
+      console.log(`[db] requests log in as ${login}`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error(`[db] REQUESTS SWITCHED OFF: ${reason}`);
+      disableRequestPool(reason);
+    }
   }
 
   const app = createApp({ webDist: webDist(), pool, cacheIndex: env.NODE_ENV === "production" });

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createPool } from "../../src/db/pool";
+import { createPool, disableRequestPool, getRequestPool, requestPoolDisabledReason, setRequestPool } from "../../src/db/pool";
 import { verifyRequestLogin } from "../../src/db/request-login";
 import { createTestDb, type TestDb } from "../harness";
 
@@ -61,4 +61,15 @@ describe("verifyRequestLogin", () => {
       }
     });
   }
+
+  it("a_failed_check_switches_requests_off_instead_of_using_the_login", () => {
+    disableRequestPool("REQUEST_DATABASE_URL logs in as postgres");
+    try {
+      expect(requestPoolDisabledReason()).toMatch(/postgres/);
+      expect(() => getRequestPool()).toThrow(/requests are switched off/);
+    } finally {
+      setRequestPool(db.requestPool);
+    }
+    expect(requestPoolDisabledReason()).toBeUndefined();
+  });
 });

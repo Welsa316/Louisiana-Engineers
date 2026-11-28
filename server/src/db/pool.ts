@@ -50,8 +50,30 @@ export function getPool(): Pool {
   return shared;
 }
 
+let requestPoolDisabled: string | undefined;
+
+/**
+ * Stops every request from reaching the database, with the reason they
+ * fail. Used at start in production when the request login cannot be
+ * trusted: the server keeps serving the landing page and the app shell,
+ * and data requests answer with an error instead of running on a login
+ * that could bypass row-level security.
+ */
+export function disableRequestPool(reason: string): void {
+  requestPoolDisabled = reason;
+  const pool = sharedRequest;
+  sharedRequest = undefined;
+  void pool?.end().catch(() => {});
+}
+
+/** Whether data requests are switched off (`disableRequestPool`). */
+export function requestPoolDisabledReason(): string | undefined {
+  return requestPoolDisabled;
+}
+
 /** The process-wide request pool, created on first use. */
 export function getRequestPool(): Pool {
+  if (requestPoolDisabled) throw new Error(`requests are switched off: ${requestPoolDisabled}`);
   if (!sharedRequest) {
     if (env.NODE_ENV === "production" && !env.REQUEST_DATABASE_URL) {
       throw new Error("REQUEST_DATABASE_URL is required in production (role mest_request; see the runbook)");
@@ -64,6 +86,7 @@ export function getRequestPool(): Pool {
 /** Replaces the process-wide request pool (test harness only). */
 export function setRequestPool(pool: Pool | undefined): void {
   sharedRequest = pool;
+  requestPoolDisabled = undefined;
 }
 
 /**

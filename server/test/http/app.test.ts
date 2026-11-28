@@ -33,7 +33,7 @@ describe("http skeleton", () => {
     const res = await app.request("/api/health");
     expect(res.status).toBe(200);
     const count = await db.pool.query<{ count: string }>("SELECT count(*)::text AS count FROM schema_migrations");
-    expect(await res.json()).toEqual({ ok: true, migrations: Number(count.rows[0].count) });
+    expect(await res.json()).toEqual({ ok: true, migrations: Number(count.rows[0].count), requests: true });
   });
 
   it("root_and_network_paths_serve_index_html", async () => {
