@@ -756,7 +756,9 @@ describe("the sweep", () => {
     await makePerson(db.pool, { admin: true, visibility: "hidden" });
     await makePerson(db.pool, { admin: true, visibility: "hidden" });
     const reporter = await makeStudent(db.pool, { firstName: "Amina" });
-    await scalarAs<string>(db.pool, reporter, "SELECT report_profile($1, 'other', NULL) AS value", [leaver]);
+    const reportId = await scalarAs<string>(db.pool, reporter, "SELECT report_profile($1, 'other', NULL) AS value", [leaver]);
+    // A notice from before report notices carried their subject: found by the report id in its payload.
+    await db.pool.query("UPDATE notifications SET subject_type = NULL, subject_id = NULL WHERE payload->>'reportId' = $1", [reportId]);
     await sendRequest(db.pool, reporter, leaver);
     expect((await requestDeletion(leaver)).status).toBe(200);
     // Everything queued has gone out before the sweep.

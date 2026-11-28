@@ -403,6 +403,9 @@ BEGIN
          AND ((n.subject_type = 'mentorship_request' AND n.subject_id IN (
                 SELECT r.id FROM mentorship_requests r WHERE r.mentee_id = target OR r.mentor_id = target))
            OR (n.subject_type = 'report' AND n.subject_id IN (SELECT rp.id FROM reports rp WHERE rp.profile_id = target))
+           -- Report notices written before they carried their subject.
+           OR (n.payload ? 'reportId' AND n.payload->>'reportId' IN (
+                SELECT rp.id::text FROM reports rp WHERE rp.profile_id = target))
            OR (n.subject_type = 'profile_review' AND n.subject_id IN (
                 SELECT pr.id FROM profile_reviews pr WHERE pr.profile_id = target)))
       RETURNING n.id AS scrubbed_id

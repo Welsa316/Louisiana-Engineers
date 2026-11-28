@@ -170,10 +170,11 @@ If `APP_ORIGIN` changes, update both entries in the Google client, or Google ref
 Administrators are granted from the admin screen by another administrator. The first ones are granted from the command line, which is the only way in on an empty database:
 
 1. Each future administrator signs in once on the live site (email link or Google), so their account exists.
-2. Grant each one:
+2. Grant each one, typing the address they signed in with at the prompt (so the shell passes it through unchanged, quote marks included):
 
    ```sh
-   DATABASE_URL="$PROD_DB_URL" npm run admin:grant -- <the address they signed in with>
+   read -r -p "Address: " ADDR
+   DATABASE_URL="$PROD_DB_URL" npm run admin:grant -- "$ADDR"
    ```
 
    It prints the profile id and how many administrators are active. It refuses an address with no account, an account that has not confirmed its address, and a suspended or departing account. It writes `admin.granted` to the audit log.

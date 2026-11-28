@@ -485,7 +485,9 @@ describe("complete_onboarding", () => {
     );
     expect(audit.rows).toHaveLength(1);
     expect(audit.rows[0].actor_id).toBe(owner);
-    expect(audit.rows[0].detail).toMatchObject({ organization: { from: "Bayou Works", to: "New Firm LLC" } });
+    // Which fields changed, never their values: the audit log outlives account deletion.
+    expect(audit.rows[0].detail).toEqual({ fields: ["organization"] });
+    expect(JSON.stringify(audit.rows[0].detail)).not.toContain("Bayou Works");
 
     // An unverified row changes title silently.
     await runAs(db.pool, owner, "UPDATE professional_details SET title = 'Principal' WHERE profile_id = app_uid()");
