@@ -68,6 +68,7 @@ export const notificationCategories = [
   "report",
   "account",
   "admin_digest",
+  "member_digest",
 ] as const;
 export type NotificationCategory = (typeof notificationCategories)[number];
 

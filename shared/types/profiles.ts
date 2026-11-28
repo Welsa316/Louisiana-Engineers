@@ -111,6 +111,8 @@ export interface NotificationPreferences {
   profile: boolean;
   reports: boolean;
   adminDigest: boolean;
+  /** The opt-in weekly member digest; off by default. */
+  memberDigest: boolean;
   productUpdates: boolean;
 }
 

@@ -150,7 +150,7 @@ async function readSettings(db: Db, visibility: Visibility): Promise<OwnSettings
   const notifications = await db.maybeOne<NotificationPreferences>(
     `SELECT n.email_requests AS requests, n.email_responses AS responses, n.email_reminders AS reminders,
             n.email_profile AS profile, n.email_reports AS reports, n.email_admin_digest AS "adminDigest",
-            n.email_product_updates AS "productUpdates"
+            n.email_member_digest AS "memberDigest", n.email_product_updates AS "productUpdates"
        FROM notification_preferences n WHERE n.profile_id = app_uid()`,
   );
 
@@ -568,6 +568,7 @@ async function patchNotifications(db: Db, patch: NotificationPatch): Promise<voi
     email_profile: col(patch.profile),
     email_reports: col(patch.reports),
     email_admin_digest: col(patch.adminDigest),
+    email_member_digest: col(patch.memberDigest),
     email_product_updates: col(patch.productUpdates),
   });
   if (updated === 0) throw conflict("not_onboarded", "notification preferences start with onboarding");

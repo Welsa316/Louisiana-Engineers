@@ -75,6 +75,7 @@ export const notificationPatchSchema = z
     profile: z.boolean().optional(),
     reports: z.boolean().optional(),
     adminDigest: z.boolean().optional(),
+    memberDigest: z.boolean().optional(),
     productUpdates: z.boolean().optional(),
   })
   .strict();

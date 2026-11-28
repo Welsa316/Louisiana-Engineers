@@ -34,6 +34,7 @@ const TEMPLATES = [
   "deletion-canceled",
   "admin-digest",
   "photo-reviewed",
+  "member-digest",
 ] as const;
 
 type TemplateName = (typeof TEMPLATES)[number];
@@ -82,6 +83,13 @@ beforeAll(async () => {
     { label: "Layla's booking link", value: seedBookingUrl("layla-haddad") },
   ];
   for (const secret of secrets) expect(secret.value, secret.label).toMatch(/\S{6,}/);
+
+  // The member digest is opt-in (Task 35); Amina turns it on so its email is queued.
+  await db.pool.query(
+    `INSERT INTO notification_preferences (profile_id, email_member_digest) VALUES ($1, true)
+     ON CONFLICT (profile_id) DO UPDATE SET email_member_digest = true`,
+    [amina.id],
+  );
 });
 
 afterAll(async () => {
@@ -188,6 +196,12 @@ function callers(): Record<TemplateName, Caller> {
       recipient: layla.id, category: "profile", link: "/network/settings/profile",
       title: "Your profile photo was not approved", body: "Your initials show on your profile instead.",
       payload: { firstName: "Layla", decision: "rejected" }, mentions: ["Layla", "not approve"],
+    },
+    "member-digest": {
+      recipient: amina.id, category: "member_digest", link: "/network/directory",
+      title: "Your weekly MEST Network digest", body: "Taking requests for your topics: 1 mentor.",
+      payload: { firstName: "Amina", mentors: [{ id: layla.id, name: "Layla Haddad", title: "Coastal Engineer" }] },
+      mentions: ["Amina", "Layla Haddad, Coastal Engineer"],
     },
   };
 }
