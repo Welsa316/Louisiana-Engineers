@@ -297,6 +297,26 @@ describe("administrators", () => {
   });
 });
 
+describe("administrators who can still act", () => {
+  it("revoking counts only administrators who can act, not one who is leaving", async () => {
+    const leaving = await makePerson(db.pool, { admin: true, firstName: "Ada" });
+    const actor = await makePerson(db.pool, { admin: true, firstName: "Bea" });
+    const third = await makePerson(db.pool, { admin: true, firstName: "Cy" });
+    expect((await call(await cookieFor(leaving), "POST", "/me/deletion", { confirmName: "Ada" })).status).toBe(200);
+    await expect(runAs(db.pool, actor, "SELECT admin_revoke($1)", [third])).rejects.toThrow(/mest\.admin_minimum/);
+  });
+
+  it("suspending an administrator through a report keeps two who can act", async () => {
+    const actor = await makePerson(db.pool, { admin: true, firstName: "Bea" });
+    const reported = await makePerson(db.pool, { admin: true, firstName: "Dee" });
+    const reporter = await makeStudent(db.pool);
+    const reportId = await scalarAs<string>(db.pool, reporter, "SELECT report_profile($1, 'unsafe', NULL) AS value", [reported]);
+    await expect(
+      runAs(db.pool, actor, "SELECT admin_resolve_report($1, 'resolved', NULL, 'suspend_requests')", [reportId]),
+    ).rejects.toThrow(/mest\.admin_minimum/);
+  });
+});
+
 describe("keeping the account", () => {
   it("cancel_restores_visibility", async () => {
     const resumeOn = new Date(Date.now() + 30 * DAY).toISOString().slice(0, 10);
@@ -729,6 +749,29 @@ describe("the sweep", () => {
     expect(after).not.toContain("Layla");
     expect(after).not.toContain("Quintavalle");
     expect(after).toContain("Former member");
+  });
+
+  it("sweep_removes_the_name_from_report_notices_and_from_emails_already_sent", async () => {
+    const leaver = await makeLeaver();
+    await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    const reporter = await makeStudent(db.pool, { firstName: "Amina" });
+    await scalarAs<string>(db.pool, reporter, "SELECT report_profile($1, 'other', NULL) AS value", [leaver]);
+    await sendRequest(db.pool, reporter, leaver);
+    expect((await requestDeletion(leaver)).status).toBe(200);
+    // Everything queued has gone out before the sweep.
+    await db.pool.query("UPDATE email_outbox SET sent_at = now()");
+
+    expect(await runSweep(new Date(Date.now() + 15 * DAY))).toEqual({ deleted: 1, errored: 0 });
+    const left = await db.pool.query<{ where: string; text: string }>(
+      `SELECT 'notification' AS where, title || ' ' || coalesce(body, '') || ' ' || coalesce(payload::text, '') AS text
+         FROM notifications WHERE recipient_id <> $1
+       UNION ALL
+       SELECT 'outbox', payload::text FROM email_outbox`,
+      [leaver],
+    );
+    const named = left.rows.filter((r) => /Layla|Quintavalle/.test(r.text));
+    expect(named).toEqual([]);
   });
 
   it("the_sweep_is_for_the_jobs_only", async () => {

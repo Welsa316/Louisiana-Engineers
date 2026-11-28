@@ -115,6 +115,21 @@ $$;
 -- sets execute_after to now, so the next sweep deletes the account; an
 -- owner's deletion that is already open is made immediate the same way.
 -- Raises mest.deletion_scheduled when an owner asks twice.
+-- Administrators who can act right now, leaving one out: a role that is not
+-- revoked on an account that is verified, not suspended, not deleted and not
+-- in a deletion grace period. The two-administrator minimum counts these.
+CREATE FUNCTION acting_admin_count(excluding uuid) RETURNS int
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT count(*)::int
+    FROM admin_roles a JOIN users u ON u.id = a.profile_id
+   WHERE a.revoked_at IS NULL AND a.profile_id IS DISTINCT FROM excluding
+     AND u.email_verified_at IS NOT NULL AND u.suspended_at IS NULL AND u.deleted_at IS NULL
+     AND NOT EXISTS (SELECT 1 FROM account_deletions d
+                      WHERE d.profile_id = a.profile_id AND d.canceled_at IS NULL AND d.executed_at IS NULL)
+$$;
+
 CREATE FUNCTION schedule_account_deletion(target uuid, immediate boolean, reason text) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -139,11 +154,7 @@ BEGIN
   -- minimum as admin_revoke applies: count the others who can still act.
   PERFORM 1 FROM admin_roles a WHERE a.revoked_at IS NULL ORDER BY a.profile_id FOR UPDATE;
   IF EXISTS (SELECT 1 FROM admin_roles a WHERE a.profile_id = target AND a.revoked_at IS NULL)
-     AND (SELECT count(*) FROM admin_roles a JOIN users u ON u.id = a.profile_id
-           WHERE a.revoked_at IS NULL AND a.profile_id <> target
-             AND u.suspended_at IS NULL AND u.deleted_at IS NULL
-             AND NOT EXISTS (SELECT 1 FROM account_deletions d
-                              WHERE d.profile_id = a.profile_id AND d.canceled_at IS NULL AND d.executed_at IS NULL)) < 2 THEN
+     AND acting_admin_count(target) < 2 THEN
     RAISE EXCEPTION 'mest.admin_minimum' USING ERRCODE = '23514', DETAIL = 'at least two administrators stay';
   END IF;
 
@@ -396,10 +407,11 @@ BEGIN
                 SELECT pr.id FROM profile_reviews pr WHERE pr.profile_id = target)))
       RETURNING n.id AS scrubbed_id
     )
-    -- Their emails not yet sent, for the same notifications only.
+    -- Their emails for the same notifications, sent or not: a delivered row
+    -- still keeps its payload in the database.
     UPDATE email_outbox o
        SET payload = scrub_name_values(o.payload, names)
-     WHERE o.sent_at IS NULL AND o.notification_id IN (SELECT sc.scrubbed_id FROM scrubbed sc);
+     WHERE o.notification_id IN (SELECT sc.scrubbed_id FROM scrubbed sc);
   END IF;
 
   -- Per-member tables.
@@ -497,6 +509,12 @@ BEGIN
   ELSIF act = 'hide_profile' THEN
     PERFORM admin_hide_profile(rep.profile_id);
   ELSIF act = 'suspend_requests' THEN
+    -- A suspended administrator can no longer act, so the minimum applies.
+    PERFORM 1 FROM admin_roles a WHERE a.revoked_at IS NULL ORDER BY a.profile_id FOR UPDATE;
+    IF EXISTS (SELECT 1 FROM admin_roles a WHERE a.profile_id = rep.profile_id AND a.revoked_at IS NULL)
+       AND acting_admin_count(rep.profile_id) < 2 THEN
+      RAISE EXCEPTION 'mest.admin_minimum' USING ERRCODE = '23514', DETAIL = 'at least two administrators stay';
+    END IF;
     UPDATE users u SET suspended_at = now()
      WHERE u.id = rep.profile_id AND u.suspended_at IS NULL AND u.deleted_at IS NULL;
     PERFORM create_notification(
@@ -544,4 +562,5 @@ $$;
 -- Internal helpers and the sweep: definer functions and the jobs only.
 REVOKE EXECUTE ON FUNCTION close_requests_of_departing(uuid) FROM PUBLIC, app_user;
 REVOKE EXECUTE ON FUNCTION schedule_account_deletion(uuid, boolean, text) FROM PUBLIC, app_user;
+REVOKE EXECUTE ON FUNCTION acting_admin_count(uuid) FROM PUBLIC, app_user;
 REVOKE EXECUTE ON FUNCTION execute_account_deletion(uuid, timestamptz) FROM PUBLIC, app_user;

@@ -135,7 +135,10 @@ BEGIN
       'profileName', profile_display_name(target),
       'link', '/network/admin/reports'
     ),
-    others_open = 0
+    others_open = 0,
+    -- Tied to the report, so the deletion sweep can find these notices.
+    'report',
+    new_id
   )
     FROM admin_roles a JOIN users u ON u.id = a.profile_id
    WHERE a.revoked_at IS NULL AND u.suspended_at IS NULL AND u.deleted_at IS NULL
