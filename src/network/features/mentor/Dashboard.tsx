@@ -11,10 +11,10 @@
 
 import { Link } from "react-router";
 import { ArrowRight, Settings } from "lucide-react";
+import { useTopicLabels } from "../../lib/vocabulary";
 import { useMeta } from "../../lib/meta";
 import { useSession } from "../../lib/session";
 import { Card, Empty, Notice, PageHead, Stat, Status, plural } from "../../ui/ui";
-import { topicLabels } from "../public/Directory";
 import { useMyMentorship, useRequestList } from "../me/requests-api";
 import { useOwnProfile, useOwnSettings } from "../settings/api";
 import { calendarDay } from "../me/RequestActions";
@@ -45,6 +45,7 @@ function OfferStatus() {
 }
 
 export function Dashboard() {
+  const topicLabels = useTopicLabels();
   useMeta({ title: "Mentoring" });
   const { user } = useSession();
   const profile = useOwnProfile();

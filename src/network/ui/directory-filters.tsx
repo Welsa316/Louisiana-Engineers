@@ -8,7 +8,8 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { disciplineById, experienceBands, topicById } from "@shared/taxonomy";
+import { disciplineById, experienceBands } from "@shared/taxonomy";
+import { topicLabel, useTopics } from "../lib/vocabulary";
 import type { Filters } from "./directory";
 import { CheckRow, Chip } from "./ui";
 import "./directory-pages.css";
@@ -105,6 +106,7 @@ export function FilterChips({
   onLocation: (next: string) => void;
   onClear: () => void;
 }) {
+  const topics = useTopics();
   const without = <K extends "disciplines" | "topics" | "experience">(key: K, value: string) =>
     onFilters({ ...filters, [key]: (filters[key] as string[]).filter((v) => v !== value) });
   const chips = [
@@ -140,7 +142,7 @@ export function FilterChips({
     )),
     ...filters.topics.map((id) => (
       <Chip key={`t-${id}`} pressed removable onClick={() => without("topics", id)}>
-        {topicById(id)?.label ?? id}
+        {topicLabel(topics, id)}
       </Chip>
     )),
   ].filter(Boolean);

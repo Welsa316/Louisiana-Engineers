@@ -13,9 +13,9 @@ import { Navigate, useParams } from "react-router";
 import { Check, ShieldCheck } from "lucide-react";
 import { audiences } from "@shared/taxonomy";
 import type { RequestDetail } from "@shared/types/requests";
+import { useTopicLabels } from "../../lib/vocabulary";
 import { useMeta } from "../../lib/meta";
 import { Card, Empty, Monogram, fmtDate } from "../../ui/ui";
-import { topicLabels } from "../public/Directory";
 import {
   counterpartyFirstName,
   counterpartyInitials,
@@ -33,6 +33,7 @@ function Back() {
 }
 
 function RelationshipView({ r }: { r: RequestDetail }) {
+  const topicLabels = useTopicLabels();
   const [confirming, setConfirming] = useState(false);
   const complete = useRequestAction(r.id, "complete");
   const first = counterpartyFirstName(r.counterparty);

@@ -20,10 +20,10 @@ import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } 
 import { ArrowLeft, Settings } from "lucide-react";
 import type { RequestStatus } from "@shared/types/common";
 import type { RequestSummary } from "@shared/types/requests";
+import { useTopicLabels } from "../../lib/vocabulary";
 import { isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
 import { Card, Empty, Monogram, Notice, PageHead, Tabs, fmtDate } from "../../ui/ui";
-import { topicLabels } from "../public/Directory";
 import {
   counterpartyInitials,
   counterpartyName,
@@ -131,6 +131,7 @@ function readShow(value: string | null): Show {
 }
 
 function EmptyInbox({ show }: { show: Show }) {
+  const topicLabels = useTopicLabels();
   const settings = useOwnSettings();
   const m = settings.data?.mentorship;
   if (show === "waiting") {

@@ -16,7 +16,8 @@ import type { RequestCounterparty, RequestSummary } from "@shared/types/requests
 import { isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
 import { Card, Empty, Monogram, Notice, PageHead, Status, Tabs, fmtDate } from "../../ui/ui";
-import { displayName, initialsOf, topicLabels } from "../public/Directory";
+import { topicLabel } from "../../lib/vocabulary";
+import { displayName, initialsOf } from "../public/Directory";
 import { CLOSED_STATUSES, OPEN_STATUSES, REQUESTS_PAGE_SIZE, useRequestList } from "./requests-api";
 
 /* ------------------------------------------------------------- shared copy */
@@ -53,7 +54,8 @@ export function counterpartyInitials(c: RequestCounterparty): string {
 /** What the request is about: its topic, or "Introduction". */
 export function requestSubject(r: Pick<RequestSummary, "kind" | "topicId" | "topicLabel">): string {
   if (r.kind === "introduction") return "Introduction";
-  return r.topicLabel ?? (r.topicId ? topicLabels([r.topicId])[0] : "Mentorship");
+  // The server sends the label; the starting set is only a fallback.
+  return r.topicLabel ?? (r.topicId ? topicLabel([], r.topicId) : "Mentorship");
 }
 
 /** The date that matters for a row, mid-sentence. */

@@ -27,9 +27,9 @@ import { audiences, contactMethods, declineReasonOptions, type ContactMethodId }
 import type { DeclineReason } from "@shared/types/common";
 import type { OwnProfile, OwnSettings } from "@shared/types/me";
 import type { MyMentorship, RequestDetail } from "@shared/types/requests";
+import { useTopicLabels } from "../../lib/vocabulary";
 import { isApiError } from "../../lib/api";
 import { Drawer, Field, Monogram, Notice, Option, Select, Sheet, Textarea, Toast, fmtDate } from "../../ui/ui";
-import { topicLabels } from "../public/Directory";
 import {
   counterpartyFirstName,
   counterpartyInitials,
@@ -495,6 +495,7 @@ function Header({ r }: { r: RequestDetail }) {
 }
 
 function View({ r, capped, maxActive }: { r: RequestDetail; capped: boolean; maxActive: number | null }) {
+  const topicLabels = useTopicLabels();
   const first = counterpartyFirstName(r.counterparty);
   const m = r.mentee;
   const reason = declineReasonLabel(r.declineReason);

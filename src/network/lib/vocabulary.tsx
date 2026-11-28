@@ -36,3 +36,9 @@ export function withChosen(topics: VocabularyTopic[], chosen: string[]): Vocabul
 export function topicLabel(topics: VocabularyTopic[], id: string): string {
   return topics.find((t) => t.id === id)?.label ?? mentorshipTopics.find((t) => t.id === id)?.label ?? id;
 }
+
+/** Labels for topic ids from the live list, so a topic an administrator added reads as its name, not its id. */
+export function useTopicLabels(): (ids: string[]) => string[] {
+  const topics = useTopics();
+  return (ids) => ids.map((id) => topicLabel(topics, id));
+}

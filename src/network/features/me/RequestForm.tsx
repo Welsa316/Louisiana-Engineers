@@ -24,7 +24,8 @@ import type { MentorAvailability, MyMentorship, RequestSummary } from "@shared/t
 import { ApiError, isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
 import { Card, Field, Input, Monogram, Notice, Option, Steps, Textarea } from "../../ui/ui";
-import { displayName, initialsOf, topicLabels } from "../public/Directory";
+import { useTopicLabels } from "../../lib/vocabulary";
+import { displayName, initialsOf } from "../public/Directory";
 import { useProfile } from "../public/directory-api";
 import { calendarDay, requestFormPath } from "./RequestActions";
 import { useAvailability, useCreateRequest, useMyMentorship, useOpenMenteeRequests } from "./requests-api";
@@ -337,6 +338,7 @@ function Counter({ id, n, range, error }: { id: string; n: number; range: { min:
  * while it is on its way to the request page.
  */
 function Wizard({ profile, kind, opening }: { profile: ProfileView; kind: RequestKind; opening: GateReason | null }) {
+  const topicLabels = useTopicLabels();
   const navigate = useNavigate();
   const steps = STEPS[kind];
   const firstName = firstNameOf(profile);

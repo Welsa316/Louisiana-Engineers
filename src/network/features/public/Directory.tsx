@@ -10,7 +10,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { SlidersHorizontal } from "lucide-react";
-import { topicById } from "@shared/taxonomy";
 import type { DirectoryEntry } from "@shared/types/directory";
 import { useMeta } from "../../lib/meta";
 import { useSession } from "../../lib/session";
@@ -343,7 +342,3 @@ function Results({
   );
 }
 
-/** Topic labels for ids, falling back to the id for one an administrator added later. */
-export function topicLabels(ids: string[]): string[] {
-  return ids.map((id) => topicById(id)?.label ?? id);
-}

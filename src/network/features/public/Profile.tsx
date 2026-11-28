@@ -16,6 +16,7 @@ import { ArrowLeft, Briefcase, CalendarDays, Clock, GraduationCap, MapPin, Shiel
 import { audiences, experienceBands, participationOptions } from "@shared/taxonomy";
 import type { ProfileMentorship, ProfileView } from "@shared/types/directory";
 import type { ContactValue } from "@shared/types/profiles";
+import { useTopicLabels } from "../../lib/vocabulary";
 import { isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
 import type { SessionUser } from "@shared/types/auth";
@@ -23,7 +24,7 @@ import { useSession } from "../../lib/session";
 import { Card, Empty, Monogram, Notice, Status } from "../../ui/ui";
 import "../../ui/directory-pages.css";
 import { ContactPanel, ContactPreview } from "./ContactPanel";
-import { displayName, initialsOf, topicLabels, type DirectoryMode } from "./Directory";
+import { displayName, initialsOf, type DirectoryMode } from "./Directory";
 import { useProfile } from "./directory-api";
 import { isTakingRequests, offersMentorship, ProfileActions, type ProfileSlot } from "./ProfileActions";
 
@@ -141,6 +142,7 @@ function OwnerBanner({ profile }: { profile: ProfileView }) {
 }
 
 function MentorshipPanel({ profile, firstName }: { profile: ProfileView; firstName: string }) {
+  const topicLabels = useTopicLabels();
   const m = profile.mentorship;
   if (!m || !offersMentorship(profile)) {
     const open = profile.participation.filter((p) => p === "networking" || p === "speaking");

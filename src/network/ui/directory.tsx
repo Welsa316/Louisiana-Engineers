@@ -8,7 +8,8 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { Bookmark, BookmarkCheck, MapPin, Search, X } from "lucide-react";
-import { disciplineById, disciplineGroups, disciplines, experienceBands, mentorshipTopics, topicById } from "@shared/taxonomy";
+import { disciplineById, disciplineGroups, disciplines, experienceBands } from "@shared/taxonomy";
+import { topicLabel, useTopics, withChosen } from "../lib/vocabulary";
 import type { ExperienceBandId } from "@shared/types/common";
 import { CheckRow, Chip, Monogram, Status, UiLink } from "./ui";
 
@@ -76,6 +77,7 @@ export interface DirectoryControls {
 
 export function FilterPanel({ dir, showMentorship = true }: { dir: DirectoryControls; showMentorship?: boolean }) {
   const { filters, setFilters, counts } = dir;
+  const topics = useTopics();
   const toggle = <K extends ListKey>(key: K, value: Filters[K][number]) => setFilters((f) => toggleFilter(f, key, value));
   return (
     <div className="pn-filters">
@@ -134,7 +136,7 @@ export function FilterPanel({ dir, showMentorship = true }: { dir: DirectoryCont
         <div className="pn-filter-group">
           <h3>Can help with</h3>
           <div className="pn-chips">
-            {mentorshipTopics.map((t) => (
+            {withChosen(topics, filters.topics).map((t) => (
               <Chip key={t.id} pressed={filters.topics.includes(t.id)} onClick={() => toggle("topics", t.id)}>
                 {t.label}
               </Chip>
@@ -149,6 +151,7 @@ export function FilterPanel({ dir, showMentorship = true }: { dir: DirectoryCont
 /** The removable chips above the results. */
 export function ActiveFilters({ dir }: { dir: DirectoryControls }) {
   const { filters, setFilters } = dir;
+  const topics = useTopics();
   if (!activeFilterCount(filters)) return null;
   const toggle = <K extends ListKey>(key: K, value: Filters[K][number]) => setFilters((f) => toggleFilter(f, key, value));
   return (
@@ -175,7 +178,7 @@ export function ActiveFilters({ dir }: { dir: DirectoryControls }) {
       ))}
       {filters.topics.map((id) => (
         <Chip key={id} pressed removable onClick={() => toggle("topics", id)}>
-          {topicById(id)?.label ?? id}
+          {topicLabel(topics, id)}
         </Chip>
       ))}
       <button type="button" className="link link-quiet t-small ml-1" onClick={() => setFilters(clearedFilters)}>
