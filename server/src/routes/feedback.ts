@@ -17,7 +17,9 @@ import { getFeedback, leaveFeedback, listFeedbackComments } from "../services/fe
  *   request pages. Only the two parties reach it; anyone else, an
  *   administrator included, gets 404.
  * - `adminFeedbackRoutes` at `/admin`: `GET /feedback?page&size`, the
- *   comments with no author attached.
+ *   comments with no author attached, by quarter. Administrators for every
+ *   region only: a chapter administrator is answered
+ *   `409 { code: 'out_of_region' }`.
  *
  * `409 { code }` answers `not_completed` and `feedback_exists`
  * (`FeedbackErrorCode`).

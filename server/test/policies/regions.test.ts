@@ -1,5 +1,11 @@
+import { Hono } from "hono";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { asUser, createTestDb, truncateAll, type TestDb } from "../harness";
+import type { AdminPhoto } from "@shared/types/photos";
+import type { Paged } from "@shared/types/common";
+import { createSession } from "../../src/auth/session";
+import { wrapClient } from "../../src/db/tx";
+import { adminPhotoRoutes } from "../../src/routes/photos";
+import { asSystem, asUser, createTestDb, testApp, truncateAll, type TestDb } from "../harness";
 import { makePerson, newAccount, onboard, professionalPayload, rowsAs, runAs, scalarAs } from "./fixtures";
 
 /**
@@ -391,5 +397,98 @@ describe("wider administrators", () => {
     await runAs(db.pool, global, "SELECT request_account_deletion(false, null)");
     const leaving = await db.pool.query<{ profile_id: string }>("SELECT profile_id FROM account_deletions");
     expect(leaving.rows.map((r) => r.profile_id).sort()).toEqual([global, chapterA].sort());
+  });
+});
+
+describe("photo moderation", () => {
+  const ORIGIN = "http://127.0.0.1:8787";
+  const app = testApp(new Hono().route("/admin", adminPhotoRoutes));
+
+  async function cookieFor(userId: string): Promise<string> {
+    return asSystem(db.pool, async (client) => (await createSession(wrapClient(client), userId, null)).value);
+  }
+
+  async function call(cookie: string, method: string, path: string, json?: unknown) {
+    const headers: Record<string, string> = { origin: ORIGIN, cookie: `mest_session=${cookie}` };
+    if (json !== undefined) headers["content-type"] = "application/json";
+    const res = await app.request(`/api${path}`, { method, headers, body: json === undefined ? undefined : JSON.stringify(json) });
+    const text = await res.text();
+    return { status: res.status, body: text && res.headers.get("content-type")?.startsWith("application/json") ? JSON.parse(text) : null };
+  }
+
+  /** A photo row for `profile`, written as the owner: pending, or already approved. */
+  async function photoOf(profile: string, status: "pending" | "approved"): Promise<string> {
+    const image = Buffer.alloc(512, 7);
+    image.set([0xff, 0xd8, 0xff, 0xe0], 0);
+    const row = await db.pool.query<{ id: string }>(
+      `INSERT INTO profile_photos (profile_id, image, content_type, byte_size, status, reviewed_at)
+       VALUES ($1, $2, 'image/jpeg', $3, $4::photo_status, CASE WHEN $4 = 'pending' THEN NULL ELSE now() END)
+       RETURNING id`,
+      [profile, image, image.byteLength, status],
+    );
+    return row.rows[0].id;
+  }
+
+  it("chapter_admin_moderates_only_photos_in_its_region", async () => {
+    const { global, chapter, nolaPro, brPro } = await chapters();
+    const nolaWaiting = await photoOf(nolaPro, "pending");
+    const brWaiting = await photoOf(brPro, "pending");
+    const nolaShown = await makePerson(db.pool, { firstName: "Shown" });
+    const nolaApproved = await photoOf(nolaShown, "approved");
+    const chapterCookie = await cookieFor(chapter);
+    const globalCookie = await cookieFor(global);
+    const listed = async (cookie: string, status: string) => {
+      const res = await call(cookie, "GET", `/admin/photos?status=${status}`);
+      expect(res.status).toBe(200);
+      const body = res.body as Paged<AdminPhoto>;
+      return { ids: body.items.map((i) => i.id).sort(), total: body.total };
+    };
+
+    // The queue and the decided tabs hold only the chapter's own region,
+    // including an approved photo the policy would show any member.
+    expect(await listed(chapterCookie, "pending")).toEqual({ ids: [brWaiting], total: 1 });
+    expect(await listed(chapterCookie, "approved")).toEqual({ ids: [], total: 0 });
+    // Past the last page the count still leaves the other region out.
+    expect((await call(chapterCookie, "GET", "/admin/photos?status=pending&page=2")).body.total).toBe(1);
+
+    // Another region's image is not found, waiting or approved.
+    expect((await call(chapterCookie, "GET", `/admin/photos/${nolaWaiting}/image`)).status).toBe(404);
+    expect((await call(chapterCookie, "GET", `/admin/photos/${nolaApproved}/image`)).status).toBe(404);
+    expect((await call(chapterCookie, "GET", `/admin/photos/${brWaiting}/image`)).status).toBe(200);
+
+    // Nor can the chapter administrator decide it, either way.
+    for (const decision of ["approved", "rejected"]) {
+      const res = await call(chapterCookie, "POST", `/admin/photos/${nolaWaiting}`, { decision });
+      expect(res.status, decision).toBe(409);
+      expect(res.body).toEqual({ code: "out_of_region" });
+    }
+    const takeDown = await call(chapterCookie, "POST", `/admin/photos/${nolaApproved}`, { decision: "rejected" });
+    expect(takeDown.body).toEqual({ code: "out_of_region" });
+    await expect(runAs(db.pool, chapter, "SELECT admin_review_photo($1, 'approved')", [nolaWaiting])).rejects.toThrow(
+      /mest\.out_of_region/,
+    );
+    const states = await db.pool.query<{ id: string; status: string }>(
+      "SELECT id, status::text AS status FROM profile_photos ORDER BY id",
+    );
+    expect(Object.fromEntries(states.rows.map((r) => [r.id, r.status]))).toEqual({
+      [nolaWaiting]: "pending",
+      [brWaiting]: "pending",
+      [nolaApproved]: "approved",
+    });
+
+    // The read policy itself: another region's waiting photo is not readable.
+    const readable = await rowsAs<{ id: string }>(db.pool, chapter, "SELECT id FROM profile_photos ORDER BY id");
+    expect(readable.map((r) => r.id).sort()).toEqual([brWaiting, nolaApproved].sort());
+
+    // Its own region's photo it decides as before.
+    expect((await call(chapterCookie, "POST", `/admin/photos/${brWaiting}`, { decision: "approved" })).status).toBe(200);
+
+    // An administrator for every region still sees and decides everything.
+    expect(await listed(globalCookie, "pending")).toEqual({ ids: [nolaWaiting], total: 1 });
+    expect(await listed(globalCookie, "approved")).toEqual({ ids: [brWaiting, nolaApproved].sort(), total: 2 });
+    expect((await call(globalCookie, "GET", `/admin/photos/${nolaWaiting}/image`)).status).toBe(200);
+    expect((await call(globalCookie, "POST", `/admin/photos/${nolaWaiting}`, { decision: "rejected" })).status).toBe(200);
+    const all = await rowsAs<{ id: string }>(db.pool, global, "SELECT id FROM profile_photos");
+    expect(all).toHaveLength(3);
   });
 });

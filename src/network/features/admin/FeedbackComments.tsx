@@ -1,18 +1,29 @@
 /**
  * What members said after a relationship ended (Task 32), on the mentorship
  * activity screen: the comments from `GET /api/admin/feedback`, newest
- * first. Each one says which side wrote it, the month and the rating, and
- * nothing that names a person or a relationship.
+ * quarter first. Each one says which side wrote it, the quarter and the
+ * rating, and nothing that names a person or a relationship. Only an
+ * administrator for every region reads them; a chapter administrator sees a
+ * note saying so. Comments about a relationship the reader was part of are
+ * never listed.
  */
 
 import { useState } from "react";
+import { isApiError } from "../../lib/api";
 import { Card, Empty, Notice } from "../../ui/ui";
 import { Pager } from "../../ui/admin-controls";
 import { HELPFUL_LABELS } from "../../ui/feedback-scale";
 import { FEEDBACK_PAGE_SIZE, useAdminFeedback } from "../feedback/api";
 import { adminErrorText } from "./api";
-import { monthLabel } from "./measures";
 import "../../ui/feedback.css";
+
+const QUARTER_MONTHS = ["January to March", "April to June", "July to September", "October to December"];
+
+/** "2026-Q4" as "October to December 2026". */
+function quarterLabel(quarter: string): string {
+  const match = /^(\d{4})-Q([1-4])$/.exec(quarter);
+  return match ? `${QUARTER_MONTHS[Number(match[2]) - 1]} ${match[1]}` : quarter;
+}
 
 export function FeedbackComments() {
   const [page, setPage] = useState(1);
@@ -21,7 +32,13 @@ export function FeedbackComments() {
 
   return (
     <Card flush title="What members said">
-      {list.isError ? (
+      {isApiError(list.error, "out_of_region") ? (
+        <div className="p-5">
+          <Notice tone="info">
+            Members' comments are shown only to administrators for every region.
+          </Notice>
+        </div>
+      ) : list.isError ? (
         <div role="alert" className="p-5">
           <Notice tone="warn">{adminErrorText(list.error)}</Notice>
         </div>
@@ -45,9 +62,7 @@ export function FeedbackComments() {
                   <span>
                     {item.helpful} of 5, {HELPFUL_LABELS[item.helpful]?.toLowerCase() ?? ""}
                   </span>
-                  <span>
-                    {item.kind === "introduction" ? "Introduction" : "Mentorship"}, {monthLabel(item.month)}
-                  </span>
+                  <span>{quarterLabel(item.quarter)}</span>
                 </span>
                 <p className="t-body">{item.comment}</p>
               </li>

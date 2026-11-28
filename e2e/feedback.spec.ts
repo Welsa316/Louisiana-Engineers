@@ -10,8 +10,8 @@ import { reseed } from "./reseed";
  * see the two questions; her active one with Sumaya Osman (req-1005) is
  * what the desktop flow completes: Layla marks it completed, the form takes
  * focus, she answers; Sumaya is invited and sees her own form without
- * Layla's answer; the administrator sees the count, the average and the
- * comment with no name. That flow changes seeded rows, so it runs once,
+ * Layla's answer; the administrator sees the comment with no name, and the
+ * count and the average held back until there are 5 answers. That flow changes seeded rows, so it runs once,
  * in the desktop project, and re-seeds afterwards. Each member gets a
  * browser context of their own.
  */
@@ -62,6 +62,9 @@ async function expectNoSeriousAxe(page: Page) {
 }
 
 const form = (page: Page) => page.getByRole("region", { name: "How did it go?" });
+/** One dashboard measure, by its label exactly (the held-back value mentions "answers" too). */
+const stat = (page: Page, label: string) =>
+  page.locator(".pn-stat").filter({ has: page.locator(".pn-stat-label").getByText(label, { exact: true }) });
 const commentsCard = (page: Page) =>
   page.locator(".pn-card").filter({ has: page.getByRole("heading", { name: "What members said" }) });
 
@@ -110,8 +113,8 @@ test.describe("feedback screens (read-only)", () => {
   test("administrators see the feedback measures and the comment list", async ({ browser, baseURL }, testInfo) => {
     await asMember(browser, projectOptions(testInfo, baseURL), "admin", async (page) => {
       await page.goto("/network/admin/mentorship");
-      await expect(page.locator(".pn-stat").filter({ hasText: "Average helpfulness" })).toBeVisible();
-      await expect(page.locator(".pn-stat").filter({ hasText: "Answers" })).toBeVisible();
+      await expect(stat(page, "Average helpfulness")).toBeVisible();
+      await expect(stat(page, "Answers")).toBeVisible();
       await expect(commentsCard(page)).toBeVisible();
       await expect(commentsCard(page).getByRole("alert")).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
@@ -158,11 +161,12 @@ test.describe("feedback flow", () => {
       await expect(page.getByText(LAYLA_COMMENT)).toHaveCount(0);
     });
 
-    // The administrator reads the count, the average and the comment, with no name.
+    // The administrator reads the comment, with no name; one answer is too
+    // few for the count and the average, which would give it away.
     await asMember(browser, options, "admin", async (page) => {
       await page.goto("/network/admin/mentorship");
-      await expect(page.locator(".pn-stat").filter({ hasText: "Average helpfulness" })).toContainText("4");
-      await expect(page.locator(".pn-stat").filter({ hasText: "Answers" })).toContainText("1");
+      await expect(stat(page, "Average helpfulness")).toContainText("Shown after 5 answers");
+      await expect(stat(page, "Answers")).toContainText("Shown after 5 answers");
       const comments = commentsCard(page);
       await expect(comments).toContainText(LAYLA_COMMENT);
       await expect(comments).toContainText("From a mentor");

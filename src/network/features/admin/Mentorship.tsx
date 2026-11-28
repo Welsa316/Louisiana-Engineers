@@ -4,7 +4,9 @@
  * a table with month columns (it prints well for a board meeting), and which
  * topics mentees ask about. Aggregates only: no request, person or text.
  * Post-completion feedback (Task 32) adds the average helpfulness, the
- * number of answers and the comments, none of them tied to a person.
+ * number of answers and the comments, none of them tied to a person. The
+ * two measures wait for 5 answers and leave out answers about the viewer's
+ * own mentorships, so no single answer can be worked out from them.
  */
 
 import type { AdminDashboard } from "@shared/types/admin";
@@ -13,6 +15,9 @@ import { Card, Empty, Notice, PageHead, Stat, plural } from "../../ui/ui";
 import { adminErrorText, useAdminDashboard } from "./api";
 import { FeedbackComments } from "./FeedbackComments";
 import { measure, monthLabel, trim } from "./measures";
+
+/** What the two feedback measures say while they wait for enough answers. */
+const FEEDBACK_HELD = "Shown after 5 answers";
 
 type MonthKey = Exclude<keyof AdminDashboard["byMonth"][number], "month">;
 
@@ -95,13 +100,15 @@ export function Mentorship() {
           <div className="pn-stats">
             <Stat
               label="Average helpfulness"
-              value={d?.feedbackAverageHelpful != null ? trim(d.feedbackAverageHelpful) : measure(d?.feedbackAverageHelpful)}
+              value={
+                d?.feedbackAverageHelpful != null ? trim(d.feedbackAverageHelpful) : measure(d?.feedbackAverageHelpful, FEEDBACK_HELD)
+              }
               unit={d?.feedbackAverageHelpful != null ? "of 5" : undefined}
               note="1 is not helpful, 5 is very helpful"
             />
             <Stat
               label="Answers"
-              value={measure(d?.feedbackResponses)}
+              value={measure(d?.feedbackResponses, FEEDBACK_HELD)}
               note="From mentees and mentors, after a relationship ends"
             />
           </div>
@@ -191,7 +198,8 @@ export function Mentorship() {
         the 7-day share once its first week is over or a mentor has answered it. Canceled requests, and requests closed
         because a member left, count toward neither the 7-day share nor the acceptance rate. The expired share is of
         every request no longer waiting for an answer. Feedback is shown without names: a comment says only which side
-        wrote it and the month.
+        wrote it and the quarter. The feedback measures appear once there are 5 answers, and none of them counts
+        answers about a mentorship you took part in.
       </p>
     </>
   );
