@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { withSystem } from "../../src/db/tx";
 import { seedMeetings } from "../../seed/meetings";
-import { seedRequestId } from "../../seed/requests";
+import { SEED_REQUESTS, seedRequestId } from "../../seed/requests";
 import { SEED, runSeed } from "../../seed/seed";
 import { createTestDb, truncateAll, type TestDb } from "../harness";
 import { rowsAs } from "../policies/fixtures";
@@ -14,6 +14,7 @@ import { rowsAs } from "../policies/fixtures";
  */
 
 let db: TestDb;
+const SEEDED_REQUEST_IDS = SEED_REQUESTS.map((r) => seedRequestId(r.key));
 
 beforeAll(async () => {
   db = await createTestDb();
@@ -27,10 +28,8 @@ beforeEach(async () => {
   await truncateAll(db.pool);
 });
 
-const seedAllWithMeetings = async () => {
-  await runSeed();
-  await withSystem(seedMeetings);
-};
+// runSeed writes the schedule too (seed.ts calls seedMeetings after the requests).
+const seedAllWithMeetings = runSeed;
 
 interface MeetingView extends Record<string, unknown> {
   request_id: string;
@@ -100,8 +99,19 @@ describe("seeded meetings", () => {
 
     const left = await db.pool.query("SELECT 1 FROM mentorship_requests WHERE id = $1", [unlisted]);
     expect(left.rowCount).toBe(0);
-    expect((await db.pool.query("SELECT 1 FROM meetings")).rowCount).toBe(0);
-    expect((await db.pool.query("SELECT 1 FROM availability_slots")).rowCount).toBe(0);
+    // The seed now writes the listed schedule itself, so what is left is
+    // exactly that schedule, all of it on seeded relationships.
+    const stray = await db.pool.query(
+      `SELECT 1 FROM meetings m JOIN mentorship_relationships rel ON rel.id = m.relationship_id
+        WHERE NOT (rel.request_id = ANY ($1::uuid[]))`,
+      [SEEDED_REQUEST_IDS],
+    );
+    expect(stray.rowCount).toBe(0);
+    const again = await db.pool.query("SELECT count(*)::int AS n FROM meetings");
+    await runSeed();
+    const after = await db.pool.query("SELECT count(*)::int AS n FROM meetings");
+    expect(after.rows[0].n).toBe(again.rows[0].n);
+    expect(after.rows[0].n).toBeGreaterThan(0);
   });
 
   it("seed_meetings_writes_the_listed_schedule", async () => {

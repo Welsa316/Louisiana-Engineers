@@ -1,10 +1,12 @@
 import { Hono } from "hono";
 import { accountRoutes } from "./account";
 import { adminRoutes } from "./admin";
+import { calendarRoutes, meCalendarRoutes } from "./calendar";
 import { authRoutes } from "./auth";
 import { configRoutes } from "./config";
 import { directoryRoutes } from "./directory";
 import { exportRoutes } from "./export";
+import { adminFeedbackRoutes, requestFeedbackRoutes } from "./feedback";
 import { meetingRoutes, relationshipMeetingRoutes } from "./meetings";
 import { meRoutes } from "./me";
 import { notificationRoutes } from "./notifications";
@@ -34,17 +36,21 @@ export function createApiRoutes(): Hono {
   api.route("/me", accountRoutes);
   api.route("/me", exportRoutes);
   api.route("/me", mePhotoRoutes);
+  api.route("/me", meCalendarRoutes);
   api.route("/directory", directoryRoutes);
   api.route("/profiles", profileRoutes);
   api.route("/profiles", profileReportRoutes);
   api.route("/requests", requestRoutes);
+  api.route("/requests", requestFeedbackRoutes);
   api.route("/mentors", mentorRoutes);
   api.route("/relationships", relationshipMeetingRoutes);
   api.route("/meetings", meetingRoutes);
   api.route("/photos", photoRoutes);
+  api.route("/calendar", calendarRoutes);
   api.route("/notifications", notificationRoutes);
   api.route("/admin", adminRoutes);
   api.route("/admin", adminReportRoutes);
   api.route("/admin", adminPhotoRoutes);
+  api.route("/admin", adminFeedbackRoutes);
   return api;
 }

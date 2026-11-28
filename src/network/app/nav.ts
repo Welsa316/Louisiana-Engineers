@@ -11,6 +11,7 @@
 import {
   Bell,
   Bookmark,
+  CalendarDays,
   Compass,
   Home,
   Inbox,
@@ -28,6 +29,7 @@ export type NavItemId =
   | "find-mentors"
   | "requests"
   | "mentoring"
+  | "meetings"
   | "saved"
   | "notifications"
   | "settings"
@@ -69,6 +71,7 @@ const ITEMS: Record<NavItemId, NavItem> = {
   "find-mentors": { id: "find-mentors", to: "/me/discover", label: "Find mentors", tabLabel: "Mentors", icon: Compass },
   requests: { id: "requests", to: "/me/requests", label: "My requests", tabLabel: "Requests", icon: Inbox },
   mentoring: { id: "mentoring", to: "/mentor", label: "Mentoring", icon: Users },
+  meetings: { id: "meetings", to: "/me/meetings", label: "Meetings", icon: CalendarDays },
   saved: { id: "saved", to: "/me/saved", label: "Saved", icon: Bookmark },
   notifications: { id: "notifications", to: "/notifications", label: "Notifications", tabLabel: "Alerts", icon: Bell },
   settings: { id: "settings", to: "/settings", label: "Profile and settings", tabLabel: "Settings", icon: Settings },
@@ -85,7 +88,7 @@ export function navFor(user: NavUser): Nav {
 
   const groups: NavGroup[] = [
     { label: "Network", items: [ITEMS.home, ITEMS.directory, ITEMS["find-mentors"], ITEMS.saved] },
-    { label: "Mentorship", items: mentor ? [ITEMS.requests, ITEMS.mentoring] : [ITEMS.requests] },
+    { label: "Mentorship", items: mentor ? [ITEMS.requests, ITEMS.mentoring, ITEMS.meetings] : [ITEMS.requests, ITEMS.meetings] },
     {
       label: "Account",
       items: user.isAdmin ? [ITEMS.notifications, ITEMS.settings, ITEMS.admin] : [ITEMS.notifications, ITEMS.settings],

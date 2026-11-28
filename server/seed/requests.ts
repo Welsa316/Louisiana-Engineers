@@ -220,6 +220,13 @@ export async function seedRequests(db: Db): Promise<void> {
       WHERE s.relationship_id = rel.id AND (rel.mentee_id = ANY ($1::uuid[]) OR rel.mentor_id = ANY ($1::uuid[]))`,
     [people],
   );
+  // Feedback hangs off relationships too (seed/feedback.ts writes the seeded rows afresh).
+  await db.query(
+    `DELETE FROM relationship_feedback f
+      USING mentorship_relationships rel
+      WHERE f.relationship_id = rel.id AND (rel.mentee_id = ANY ($1::uuid[]) OR rel.mentor_id = ANY ($1::uuid[]))`,
+    [people],
+  );
 
   // Requests between seeded people that the seed did not write go, so a
   // re-run starts from the listed state (an open pair left by an earlier

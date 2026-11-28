@@ -6,6 +6,7 @@ import { deletionsJob } from "./deletions";
 import { adminDigestJob } from "./digest";
 import { expireRequestsJob } from "./expire-requests";
 import { meetingCheckInJob } from "./meeting-check-in";
+import { memberDigestJob } from "./member-digest";
 import { remindersJob } from "./reminders";
 import { resumePausedJob } from "./resume-paused";
 import { retentionJob } from "./retention";
@@ -27,6 +28,7 @@ export function registerJobs(): void {
   registerJob(deletionsJob);
   registerJob(completePastMeetingsJob);
   registerJob(meetingCheckInJob);
+  registerJob(memberDigestJob);
 }
 
 /** `npm run job -- <name>` runs one job once, under the same lock as the scheduler. */

@@ -65,6 +65,7 @@ test.describe("member settings", () => {
       /^Privacy and contact/,
       /^Mentorship/,
       /^Notifications/,
+      /^Calendar/,
       /^Preview/,
       /^Account/,
     ]);
@@ -82,6 +83,7 @@ test.describe("member settings", () => {
       ["Privacy and contact", "Who sees you and how they reach you."],
       ["Mentorship", "Your time, your rules."],
       ["Notifications", "What we email you."],
+      ["Calendar", "Your meetings in your calendar."],
       ["Preview", "See your profile as others do."],
       ["Profile", "How you appear in the directory."],
     ] as const) {
