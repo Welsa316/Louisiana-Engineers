@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import "../../src/email/templates/all";
 import { hasTemplate, renderTemplate, type RenderedEmail, type TemplateData } from "../../src/email/templates/registry";
+import { meetingFallbackPath } from "../../src/email/templates/meeting-scheduled";
 import { asSystem, createTestDb, truncateAll, type TestDb } from "../harness";
 import { chooseAs, makePair, proposeAs, slotAt, slotsOf, type Pair } from "../policies/meeting-fixtures";
 import { MENTOR_PHONE, WHY, resetRequestConfig } from "../policies/request-fixtures";
@@ -69,9 +70,9 @@ function leaks(email: RenderedEmail): string[] {
 }
 
 const cases = [
-  { template: "meeting-scheduled", recipient: () => pair.mentee, other: "Layla", side: "me" },
-  { template: "meeting-check-in", recipient: () => pair.mentee, other: "Layla", side: "me" },
-  { template: "meeting-check-in", recipient: () => pair.mentor, other: "Amina", side: "mentor" },
+  { template: "meeting-scheduled", recipient: () => pair.mentee, other: "Layla", side: "me", page: "requests" },
+  { template: "meeting-check-in", recipient: () => pair.mentee, other: "Layla", side: "me", page: "requests" },
+  { template: "meeting-check-in", recipient: () => pair.mentor, other: "Amina", side: "mentor", page: "mentees" },
 ] as const;
 
 describe("meeting email templates", () => {
@@ -80,16 +81,25 @@ describe("meeting email templates", () => {
     expect(hasTemplate("meeting-check-in")).toBe(true);
   });
 
-  it.each(cases)("$template to the $side side renders the stored payload privately", async ({ template, recipient, other, side }) => {
+  it.each(cases)("$template to the $side side renders the stored payload privately", async ({ template, recipient, other, side, page }) => {
     const payload = await outboxPayload(template, recipient());
     const email = renderTemplate(template, payload, { appOrigin: APP_ORIGIN });
     expect(leaks(email)).toEqual([]);
     expect(email.text).toContain(other);
     // The date is written out ("March 4, 2026"), from the stored Louisiana date.
     expect(email.text).toMatch(/(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, \d{4}/);
-    const link = `${APP_ORIGIN}/network/${side}/requests/${pair.requestId}`;
+    const link = `${APP_ORIGIN}/network/${side}/${page}/${pair.requestId}`;
     expect(email.text).toContain(link);
     expect(email.html).toContain(`href="${link}"`);
+  });
+
+  it("the fallback page is the mentees page for the mentor and the request for the mentee", () => {
+    const id = pair.requestId;
+    expect(meetingFallbackPath({ link: `/network/mentor/mentees/${id}`, requestId: id })).toBe(`/network/mentor/mentees/${id}`);
+    expect(meetingFallbackPath({ link: `/network/mentor/requests/${id}`, requestId: id })).toBe(`/network/mentor/mentees/${id}`);
+    expect(meetingFallbackPath({ link: `/network/me/requests/${id}`, requestId: id })).toBe(`/network/me/requests/${id}`);
+    expect(meetingFallbackPath({ link: "/network/mentor/mentees/x", requestId: "not-an-id" })).toBe("/network/mentor/mentees");
+    expect(meetingFallbackPath({ requestId: id })).toBe(`/network/me/requests/${id}`);
   });
 
   it("meeting-scheduled states the time, length and mode", async () => {

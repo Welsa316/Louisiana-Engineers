@@ -131,6 +131,7 @@ export function useMeetingOutcome() {
 
 const ERROR_TEXT: Record<MeetingActionErrorCode, string> = {
   not_active: "This mentorship is closed, so new times cannot be proposed or chosen.",
+  counterparty_unavailable: "The other person cannot schedule meetings right now, so new times cannot be proposed or chosen.",
   invalid_slots: "Each time must be in the future, within a year, and 15 minutes to 3 hours long.",
   slot_unavailable: "That time is no longer open. The list now shows what is.",
   slot_past: "That time has already passed. Choose another or propose new times.",

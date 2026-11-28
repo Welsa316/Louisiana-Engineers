@@ -108,7 +108,7 @@ describe("meeting-check-in", () => {
       link: `/network/me/requests/${pair.requestId}`,
       payload: { meetingId: meeting.id, otherFirstName: "Layla" },
     });
-    expect(mentor[0]).toMatchObject({ link: `/network/mentor/requests/${pair.requestId}`, payload: { otherFirstName: "Amina" } });
+    expect(mentor[0]).toMatchObject({ link: `/network/mentor/mentees/${pair.requestId}`, payload: { otherFirstName: "Amina" } });
 
     // However often it runs afterwards, nobody is asked again.
     expect(await run("meeting-check-in", at(meeting.startsAt, 2 * DAY))).toEqual({ asked: 0 });

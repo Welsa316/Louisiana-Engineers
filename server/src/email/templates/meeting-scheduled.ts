@@ -1,5 +1,5 @@
 import {
-  PREFERENCE_FOOTER, compose, count, firstName, formatDay, requestPath, text,
+  PREFERENCE_FOOTER, compose, count, firstName, formatDay, menteePath, requestPath, text,
   type RenderedEmail, type TemplateContext, type TemplateData,
 } from "./registry";
 
@@ -14,10 +14,12 @@ export function meetingMode(value: unknown): string {
   return value === "online" ? "online" : value === "in-person" ? "in person" : "";
 }
 
-/** The request page for the recipient's side, from the payload link's side when it names one. */
+/**
+ * The recipient's page, from the payload link's side when it names one: the
+ * mentor's mentorship page (where the meetings are) or the mentee's request.
+ */
 export function meetingFallbackPath(data: TemplateData): string {
-  const side = text(data.link).startsWith("/network/mentor/") ? "mentor" : "me";
-  return requestPath(side, data.requestId);
+  return text(data.link).startsWith("/network/mentor/") ? menteePath(data.requestId) : requestPath("me", data.requestId);
 }
 
 /**

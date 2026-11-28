@@ -187,7 +187,7 @@ describe("iCalendar text (RFC 5545)", () => {
     expect(first.STATUS).toBe("CONFIRMED");
     expect(first.URL).toBe(`${ORIGIN}/network/me/requests/${EVENT.requestId}`);
     expect(second.STATUS).toBe("CANCELLED");
-    expect(second.URL).toBe(`${ORIGIN}/network/mentor/requests/${EVENT.requestId}`);
+    expect(second.URL).toBe(`${ORIGIN}/network/mentor/mentees/${EVENT.requestId}`);
   });
 
   it("names_a_deleted_account_former_member", () => {
@@ -219,7 +219,7 @@ describe("GET /api/calendar/:token.ics", () => {
     const mentorFeed = await createFeed(mine.mentor);
     const mentorEvents = events((await fetchFeed(mentorFeed.path)).text);
     expect(mentorEvents.map((e) => e.SUMMARY)).toEqual(["MEST mentorship: Amina"]);
-    expect(mentorEvents[0].URL).toBe(`${ORIGIN}/network/mentor/requests/${mine.requestId}`);
+    expect(mentorEvents[0].URL).toBe(`${ORIGIN}/network/mentor/mentees/${mine.requestId}`);
 
     // A session does not widen it: the address alone decides whose meetings these are.
     const withCookie = await call(theirs.mentee, "GET", menteeFeed.path);

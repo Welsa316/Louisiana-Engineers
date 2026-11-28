@@ -106,7 +106,7 @@ describe("proposing and choosing", () => {
     expect(proposal.items.every((s) => s.proposedBy === "me" && s.status === "proposed" && s.durationMin === 45)).toBe(true);
 
     // The mentor is told, with a link to their side of the request.
-    const told = (await notificationsOf(pair.mentor)).filter((n) => n.link === `/network/mentor/requests/${pair.requestId}`);
+    const told = (await notificationsOf(pair.mentor)).filter((n) => n.link === `/network/mentor/mentees/${pair.requestId}`);
     expect(told.at(-1)).toMatchObject({ category: "request", email_status: "queued" });
 
     // The mentor sees the same three times, as the other party's.
@@ -282,7 +282,7 @@ describe("cancel and outcome", () => {
     expect(forMentor).toMatchObject({ status: "canceled", canceledBy: "them" });
     expect((await notificationsOf(pair.mentor)).at(-1)).toMatchObject({
       category: "request",
-      link: `/network/mentor/requests/${pair.requestId}`,
+      link: `/network/mentor/mentees/${pair.requestId}`,
     });
     expect(await call(pair.mentor, "POST", `/meetings/${meetingId}/cancel`)).toMatchObject({ status: 409, body: { code: "not_upcoming" } });
     // A canceled meeting has no outcome to give.
