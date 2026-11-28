@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { SCREENS, openScreen, screenLabel, screensFor, signInAs, type Viewer } from "./route-matrix";
 
 /**
- * axe on every screen of the network app (Task 28), at 375 and 1280 (the
+ * axe on every screen of the network app (Tasks 28 and 39), at 375 and 1280 (the
  * two projects), for every kind of viewer: no serious or critical
  * violation of WCAG 2.1 A and AA anywhere. Each viewer's screens run in one
  * test so a failure lists every page and rule at once.
