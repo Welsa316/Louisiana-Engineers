@@ -4,7 +4,9 @@
  * region, from `admin_list_members`. The filters live in the address, so a
  * filtered list can be shared or reloaded. The list carries the sign-up address's domain
  * and never the address or any contact value. Actions: hide a profile or
- * restore it, and grant the administrator role.
+ * restore it, and grant the administrator role for one region or for every
+ * region. A chapter administrator's list holds its own region only
+ * (`admin_list_members`), and it grants that region only.
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -15,8 +17,8 @@ import { approvalStates, mentorStatuses, profileKinds } from "@shared/types/comm
 import { useMeta } from "../../lib/meta";
 import { Pager } from "../../ui/admin-controls";
 import { Card, Empty, Modal, Monogram, Notice, PageHead, Select, Status, Toast } from "../../ui/ui";
-import { DEFAULT_REGION } from "../onboarding/form";
-import { ADMIN_PAGE_SIZE, adminErrorText, personInitials, personName, useAdminAction, useMembers } from "./api";
+import { regionLabel, useRegions } from "../../lib/vocabulary";
+import { ADMIN_PAGE_SIZE, adminErrorText, personInitials, personName, useAdminAction, useAdmins, useMembers } from "./api";
 
 type Tone = Parameters<typeof Status>[0]["tone"];
 
@@ -74,13 +76,6 @@ function toParams(filters: AdminMemberFilters, page = 1): Record<string, string>
   return out;
 }
 
-/** "greater-new-orleans" as "Greater New Orleans". */
-const regionLabel = (slug: string) =>
-  slug
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-
 export function Members() {
   useMeta({ title: "Members" });
   const [params, setParams] = useSearchParams();
@@ -90,8 +85,13 @@ export function Members() {
   const page = Math.max(1, Number(params.get("page")) || 1);
   const [draft, setDraft] = useState(q);
   const [granting, setGranting] = useState<AdminMember | null>(null);
+  const [grantScope, setGrantScope] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
   const list = useMembers(filters, page);
+  const activeRegions = useRegions();
+  // The viewer's own scope (null for every region), from the administrators list.
+  const admins = useAdmins();
+  const myScope = admins.data?.items.find((a) => a.isSelf)?.regionId ?? null;
 
   // Search as the administrator types, once they pause.
   useEffect(() => {
@@ -112,19 +112,31 @@ export function Members() {
   };
   const clearFilters = () => setParams(toParams({ q: draft.trim() || undefined }));
 
-  // The region choices: the one the network serves today, any a row on
-  // screen carries, and the one chosen.
+  // The region choices: the active regions in their order, then any other a
+  // row on screen carries or the address names (a retired region).
   const regions = useMemo(() => {
-    const seen = new Set([DEFAULT_REGION, ...(list.data?.items.map((m) => m.region) ?? [])]);
-    if (filters.region) seen.add(filters.region);
-    return [...seen].filter(Boolean).sort();
-  }, [list.data, filters.region]);
+    const ids = activeRegions.map((r) => r.id);
+    const extra = new Set([...(list.data?.items.map((m) => m.region) ?? []), filters.region ?? ""]);
+    for (const id of ids) extra.delete(id);
+    return [...ids, ...[...extra].filter(Boolean).sort()];
+  }, [activeRegions, list.data, filters.region]);
+  // A chapter administrator grants its own region; one for every region
+  // chooses any active region or every region.
+  const scopeChoices = myScope ? activeRegions.filter((r) => r.id === myScope) : activeRegions;
+  const openGrant = (m: AdminMember) => {
+    setGrantScope(myScope ?? "");
+    setGranting(m);
+  };
 
   const hide = useAdminAction((m: AdminMember) => ({
     path: `/admin/profiles/${m.id}/${m.adminHidden ? "restore" : "hide"}`,
     method: "POST",
   }));
-  const grant = useAdminAction((m: AdminMember) => ({ path: "/admin/admins", method: "POST", body: { profileId: m.id } }));
+  const grant = useAdminAction((v: { member: AdminMember; regionId: string | null }) => ({
+    path: "/admin/admins",
+    method: "POST",
+    body: { profileId: v.member.id, regionId: v.regionId },
+  }));
 
   const setPage = (next: number) => setParams(toParams(liveFilters(), next));
 
@@ -203,7 +215,7 @@ export function Members() {
             <option value="">Any</option>
             {regions.map((r) => (
               <option key={r} value={r}>
-                {regionLabel(r)}
+                {regionLabel(activeRegions, r)}
               </option>
             ))}
           </FilterSelect>
@@ -302,7 +314,7 @@ export function Members() {
                               </button>
                             ) : null}
                             {!m.isAdmin && m.kind !== null ? (
-                              <button type="button" className="btn btn-ghost btn-xs" onClick={() => setGranting(m)}>
+                              <button type="button" className="btn btn-ghost btn-xs" onClick={() => openGrant(m)}>
                                 Make administrator<span className="sr-only">: {personName(m)}</span>
                               </button>
                             ) : null}
@@ -334,12 +346,19 @@ export function Members() {
               disabled={grant.isPending}
               onClick={() =>
                 granting &&
-                grant.mutate(granting, {
-                  onSuccess: () => {
-                    setFlash(`${personName(granting)} is now an administrator.`);
-                    setGranting(null);
+                grant.mutate(
+                  { member: granting, regionId: grantScope || null },
+                  {
+                    onSuccess: () => {
+                      setFlash(
+                        grantScope
+                          ? `${personName(granting)} is now an administrator for ${regionLabel(activeRegions, grantScope)}.`
+                          : `${personName(granting)} is now an administrator for every region.`,
+                      );
+                      setGranting(null);
+                    },
                   },
-                })
+                )
               }
             >
               Make administrator
@@ -348,10 +367,30 @@ export function Members() {
         }
       >
         {granting ? (
-          <p className="t-body mt-3">
-            {personName(granting)} will see the approval queue, the members list and these settings, and can act on
-            them. Every action is recorded in the audit log.
-          </p>
+          <>
+            <p className="t-body mt-3">
+              {personName(granting)} will see the approval queue, the members list and these settings, and can act on
+              them for the region you choose. Every action is recorded in the audit log.
+            </p>
+            <div className="field mt-4">
+              <label className="field-label pn-field-label t-small" htmlFor="grant-scope">
+                Administers
+              </label>
+              <Select id="grant-scope" value={grantScope} onChange={(e) => setGrantScope(e.currentTarget.value)}>
+                {myScope ? null : <option value="">Every region</option>}
+                {scopeChoices.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+              </Select>
+              <p className="pn-field-hint">
+                {myScope
+                  ? "You administer one region, so you can grant that region only."
+                  : "A regional administrator acts only on members in that region."}
+              </p>
+            </div>
+          </>
         ) : null}
       </Modal>
     </>

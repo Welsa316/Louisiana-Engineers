@@ -24,7 +24,7 @@ import {
 import type { OwnProfile } from "@shared/types/me";
 import { isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
-import { useTopics, withChosen } from "../../lib/vocabulary";
+import { useRegions, useTopics, withChosen, withChosenRegion } from "../../lib/vocabulary";
 import {
   CharCount,
   ErrorSummary,
@@ -52,6 +52,7 @@ interface Draft {
   lastName: string;
   credentials: string;
   location: string;
+  region: string;
   bio: string;
   linkedinUrl: string;
   websiteUrl: string;
@@ -80,6 +81,7 @@ function toDraft(p: OwnProfile): Draft {
     lastName: p.lastName ?? "",
     credentials: p.credentials ?? "",
     location: p.location ?? "",
+    region: p.region,
     bio: p.bio ?? "",
     linkedinUrl: p.linkedinUrl ?? "",
     websiteUrl: p.websiteUrl ?? "",
@@ -120,6 +122,7 @@ function diff(p: OwnProfile, saved: Draft, draft: Draft): ProfilePatchInput {
   text("lastName");
   text("credentials");
   text("location");
+  if (saved.region !== draft.region) patch.region = draft.region;
   text("bio");
   text("linkedinUrl");
   text("websiteUrl");
@@ -160,6 +163,7 @@ const LABELS: Record<string, string> = {
   lastName: "Last name",
   credentials: "Credentials",
   location: "General location",
+  region: "Region",
   bio: "Biography",
   linkedinUrl: "LinkedIn profile",
   websiteUrl: "Personal website",
@@ -294,6 +298,9 @@ function ProfileForm({ profile }: { profile: OwnProfile }) {
   };
 
   const proposed = profile.professional?.expertise.filter((t) => t.status === "proposed").map((t) => t.label) ?? [];
+  // A region choice only once the network serves more than one.
+  const activeRegions = useRegions();
+  const regions = activeRegions.length > 1 ? withChosenRegion(activeRegions, draft.region) : null;
 
   return (
     <>
@@ -346,6 +353,26 @@ function ProfileForm({ profile }: { profile: OwnProfile }) {
               >
                 {(c) => <Input {...c} autoComplete="address-level2" value={draft.location} onChange={(e) => set("location", e.target.value)} />}
               </SettingsField>
+              {regions ? (
+                <SettingsField
+                  form={FORM}
+                  name="region"
+                  label="Region"
+                  privacy={professional ? "public" : "private"}
+                  hint="The MEST region you live or work in. The directory can be filtered by it."
+                  error={errors.region}
+                >
+                  {(c) => (
+                    <Select {...c} value={draft.region} onChange={(e) => set("region", e.currentTarget.value)}>
+                      {regions.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </SettingsField>
+              ) : null}
               <SettingsField
                 form={FORM}
                 name="bio"

@@ -1,7 +1,8 @@
 /**
  * Directory controls the app adds beside the shared filter panel in
- * directory.tsx: the verified and location filters, the active-filter chips
- * for every filter (the shared chips cannot clear the two added here), a
+ * directory.tsx: the verified, location and region filters (region only
+ * once the network serves more than one), the active-filter chips for every
+ * filter (the shared chips cannot clear the ones added here), a
  * text field that reports its value once typing pauses, and the pager.
  * Like the shared pieces they hold no data; the page owns the state.
  */
@@ -9,7 +10,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { disciplineById, experienceBands } from "@shared/taxonomy";
-import { topicLabel, useTopics } from "../lib/vocabulary";
+import { regionLabel, topicLabel, useRegions, useTopics } from "../lib/vocabulary";
 import type { Filters } from "./directory";
 import { CheckRow, Chip } from "./ui";
 import "./directory-pages.css";
@@ -44,20 +45,28 @@ export function useDebouncedText(value: string, onCommit: (next: string) => void
   return [text, setText] as const;
 }
 
-/** Verified affiliation and location, appended to the shared filter panel. */
+/** Verified affiliation, location and region, appended to the shared filter panel. */
 export function MoreFilters({
   verified,
   location,
+  region,
   onVerified,
   onLocation,
+  onRegion,
 }: {
   verified: boolean;
   location: string;
+  region: string;
   onVerified: (next: boolean) => void;
   onLocation: (next: string) => void;
+  onRegion: (next: string) => void;
 }) {
   const [text, setText] = useDebouncedText(location, onLocation);
   const id = useId();
+  const regions = useRegions();
+  // A region filter only means something once there is more than one, or
+  // when the address already names one.
+  const showRegion = regions.length > 1 || region !== "";
   return (
     <div className="pn-filters pn-filters-more">
       <div className="pn-filter-group">
@@ -84,6 +93,21 @@ export function MoreFilters({
           onChange={(e) => setText(e.target.value)}
         />
       </div>
+      {showRegion ? (
+        <div className="pn-filter-group">
+          <h3>Region</h3>
+          <div className="pn-filter-list">
+            <CheckRow pressed={region === ""} onClick={() => onRegion("")}>
+              Every region
+            </CheckRow>
+            {regions.map((r) => (
+              <CheckRow key={r.id} pressed={region === r.id} onClick={() => onRegion(region === r.id ? "" : r.id)}>
+                {r.label}
+              </CheckRow>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -93,20 +117,25 @@ export function FilterChips({
   filters,
   verified,
   location,
+  region,
   onFilters,
   onVerified,
   onLocation,
+  onRegion,
   onClear,
 }: {
   filters: Filters;
   verified: boolean;
   location: string;
+  region: string;
   onFilters: (next: Filters) => void;
   onVerified: (next: boolean) => void;
   onLocation: (next: string) => void;
+  onRegion: (next: string) => void;
   onClear: () => void;
 }) {
   const topics = useTopics();
+  const regions = useRegions();
   const without = <K extends "disciplines" | "topics" | "experience">(key: K, value: string) =>
     onFilters({ ...filters, [key]: (filters[key] as string[]).filter((v) => v !== value) });
   const chips = [
@@ -128,6 +157,11 @@ export function FilterChips({
     location.trim() && (
       <Chip key="location" pressed removable onClick={() => onLocation("")}>
         Near {location.trim()}
+      </Chip>
+    ),
+    region && (
+      <Chip key="region" pressed removable onClick={() => onRegion("")}>
+        {regionLabel(regions, region)}
       </Chip>
     ),
     ...filters.disciplines.map((id) => (

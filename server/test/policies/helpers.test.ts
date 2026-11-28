@@ -315,11 +315,13 @@ describe("integration review hardening", () => {
     await asUser(db.pool, owner, (client) =>
       client.query("UPDATE profiles SET linkedin_url = 'https://www.linkedin.com/in/x' WHERE id = app_uid()"),
     );
+    // Since 0020 a region must be an active regions row, whose id is a slug
+    // of at most 60 characters; the region trigger refuses a longer one first.
     await expect(
       asSystem(db.pool, (client) =>
         client.query("UPDATE profiles SET region = $1 WHERE id = $2", ["a".repeat(61), owner]),
       ),
-    ).rejects.toThrow(/check constraint/);
+    ).rejects.toThrow(/mest\.invalid_region/);
   });
 
   it("reminder_days_capped_at_two", async () => {

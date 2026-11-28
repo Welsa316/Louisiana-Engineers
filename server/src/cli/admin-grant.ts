@@ -97,7 +97,7 @@ export async function grantAdminByEmail(db: Db, email: string): Promise<AdminGra
     status = "granted";
   } else if (before.revoked) {
     await db.query(
-      "UPDATE admin_roles SET granted_by = NULL, granted_at = now(), revoked_at = NULL WHERE profile_id = $1",
+      "UPDATE admin_roles SET granted_by = NULL, granted_at = now(), revoked_at = NULL, region_id = NULL WHERE profile_id = $1",
       [account.id],
     );
     status = "restored";

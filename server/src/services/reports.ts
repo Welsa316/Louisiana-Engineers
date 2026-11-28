@@ -123,18 +123,22 @@ function toReport(row: ReportRow): AdminReport {
   };
 }
 
-/** Open reports oldest first (the queue); closed ones most recently closed first. */
+/**
+ * Open reports oldest first (the queue); closed ones most recently closed
+ * first. A chapter administrator sees the reports on profiles in its own
+ * region only (`admin_covers_profile`, migration 0020), the ones it can decide.
+ */
 export async function listReports(db: Db, status: ReportStatus, paging: PageArgs): Promise<Paged<AdminReport>> {
   const order = status === "open" ? "created_at ASC, id" : "resolved_at DESC, id";
+  const where = "status = $1::report_status AND admin_covers_profile(profile_id)";
   const rows = await db.query<ReportRow & { total: number }>(
     `SELECT ${REPORT_COLUMNS}, count(*) OVER ()::int AS total
-       FROM admin_reports WHERE status = $1::report_status
+       FROM admin_reports WHERE ${where}
       ORDER BY ${order} LIMIT $2 OFFSET $3`,
     [status, paging.size, offset(paging)],
   );
   const total =
-    rows[0]?.total ??
-    (await db.one<{ n: number }>("SELECT count(*)::int AS n FROM admin_reports WHERE status = $1::report_status", [status])).n;
+    rows[0]?.total ?? (await db.one<{ n: number }>(`SELECT count(*)::int AS n FROM admin_reports WHERE ${where}`, [status])).n;
   return { items: rows.map(toReport), total };
 }
 

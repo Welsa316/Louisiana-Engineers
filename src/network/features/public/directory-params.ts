@@ -2,13 +2,13 @@
  * The directory's filters live in the page URL, so a search can be shared,
  * reloaded and walked back with the browser's Back button. This module turns
  * the URL into the filter model the shared panel uses (src/network/ui/
- * directory.tsx) plus the two filters the app adds (verified, location),
+ * directory.tsx) plus the filters the app adds (verified, location, region),
  * and turns that back into the URL and into the `/api/directory` query.
  *
  * Page URL, all optional:
  *   q, discipline (repeated), topic (repeated), experience (repeated),
  *   mentoring = any | available | all, networking = 1, verified = 1,
- *   location, sort (omitted for relevance), page (omitted for 1)
+ *   location, region, sort (omitted for relevance), page (omitted for 1)
  *
  * A screen may preset `mentoring` (Find mentors starts at `available`); the
  * URL then names `mentoring` only when it differs from the preset.
@@ -24,6 +24,8 @@ export interface DirectoryState {
   filters: Filters;
   verified: boolean;
   location: string;
+  /** A region slug, or "" for every region. */
+  region: string;
   page: number;
 }
 
@@ -74,6 +76,7 @@ export function readDirectoryState(params: URLSearchParams, defaults: DirectoryD
     },
     verified: params.get("verified") === "1",
     location: (params.get("location") ?? "").slice(0, 80),
+    region: SLUG.test(params.get("region") ?? "") ? (params.get("region") as string) : "",
     page: Number.isInteger(page) && page > 1 ? page : 1,
   };
 }
@@ -92,6 +95,7 @@ export function writeDirectoryState(state: DirectoryState, defaults: DirectoryDe
   if (state.verified) out.set("verified", "1");
   const location = state.location.trim();
   if (location) out.set("location", location);
+  if (state.region) out.set("region", state.region);
   if (filters.sort !== "relevance") out.set("sort", filters.sort);
   if (state.page > 1) out.set("page", String(state.page));
   return out;
@@ -111,6 +115,7 @@ export function directoryApiQuery(state: DirectoryState): string {
   if (state.verified) out.set("verified", "1");
   const location = state.location.trim();
   if (location) out.set("location", location);
+  if (state.region) out.set("region", state.region);
   if (filters.sort !== "relevance") out.set("sort", filters.sort);
   if (state.page > 1) out.set("page", String(state.page));
   out.set("size", String(DIRECTORY_PAGE_SIZE));
@@ -127,7 +132,8 @@ export function activeCount(state: DirectoryState): number {
     (filters.mentorship !== "any" ? 1 : 0) +
     (filters.networking ? 1 : 0) +
     (state.verified ? 1 : 0) +
-    (state.location.trim() ? 1 : 0)
+    (state.location.trim() ? 1 : 0) +
+    (state.region ? 1 : 0)
   );
 }
 
@@ -137,6 +143,7 @@ export function clearedState(state: DirectoryState, defaults: DirectoryDefaults)
     filters: { ...EMPTY_FILTERS, q: state.filters.q, sort: state.filters.sort, mentorship: defaults.mentorship },
     verified: false,
     location: "",
+    region: "",
     page: 1,
   };
 }
