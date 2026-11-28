@@ -81,6 +81,16 @@ BEGIN
   IF EXISTS (SELECT 1 FROM relationship_feedback f WHERE f.relationship_id = rel.id AND f.author_id = me) THEN
     RAISE EXCEPTION 'mest.feedback_exists' USING ERRCODE = '23514';
   END IF;
+  -- Once the other party has left, the sweep has already taken their names
+  -- out of comments about them; a comment written afterwards would keep them.
+  -- The rating is still welcome.
+  IF clean IS NOT NULL AND EXISTS (
+    SELECT 1 FROM profiles p
+     WHERE p.id = CASE WHEN me = rel.mentee_id THEN rel.mentor_id ELSE rel.mentee_id END
+       AND p.anonymized_at IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'mest.comment_closed' USING ERRCODE = '23514';
+  END IF;
 
   INSERT INTO relationship_feedback (relationship_id, author_id, helpful, comment)
   VALUES (rel.id, me, leave_feedback.helpful, clean)
@@ -158,7 +168,9 @@ BEGIN
 
   other := CASE WHEN me = r.mentee_id THEN r.mentor_id ELSE r.mentee_id END;
   noun := CASE r.kind WHEN 'introduction' THEN 'introduction' ELSE 'mentorship' END;
-  path := CASE WHEN other = r.mentee_id THEN '/network/me/requests/' ELSE '/network/mentor/requests/' END || r.id;
+  -- The mentor answers on the relationship page (the request inbox has no
+  -- feedback form); the mentee on their request page.
+  path := CASE WHEN other = r.mentee_id THEN '/network/me/requests/' ELSE '/network/mentor/mentees/' END || r.id;
   PERFORM create_notification(
     other, CASE WHEN other = r.mentee_id THEN 'response' ELSE 'request' END::notification_category,
     profile_first_name(me) || ' marked your ' || noun || ' as completed',

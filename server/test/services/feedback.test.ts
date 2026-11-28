@@ -236,7 +236,7 @@ describe("leaving feedback", () => {
       "SELECT link FROM notifications WHERE template = 'feedback-invite' AND recipient_id = $1",
       [second.mentor],
     );
-    expect(mentorInvite.rows).toEqual([{ link: `/network/mentor/requests/${second.requestId}` }]);
+    expect(mentorInvite.rows).toEqual([{ link: `/network/mentor/mentees/${second.requestId}` }]);
   });
 });
 
@@ -330,6 +330,24 @@ describe("deletion and export", () => {
     const admin = await makePerson(db.pool, { admin: true });
     const dashboard = (await call(await cookieFor(admin), "GET", "/admin/dashboard")).body as AdminDashboard;
     expect(dashboard).toMatchObject({ feedbackResponses: 2, feedbackAverageHelpful: 4.5 });
+  });
+
+  it("no_comment_once_the_other_party_has_left", async () => {
+    const pair = await completedPair();
+    await sweep(pair.mentee);
+
+    // A comment now would name the leaver after the sweep took their names out.
+    const comment = await call(pair.mentorCookie, "POST", `/requests/${pair.requestId}/feedback`, {
+      helpful: 4,
+      comment: MENTOR_COMMENT,
+    });
+    expect(comment.status).toBe(409);
+    expect(comment.body).toMatchObject({ code: "comment_closed" });
+    expect(await feedbackRows()).toEqual([]);
+
+    // The rating alone still goes through.
+    expect((await call(pair.mentorCookie, "POST", `/requests/${pair.requestId}/feedback`, { helpful: 4 })).status).toBe(201);
+    expect((await feedbackRows()).map((r) => [r.author_id, r.helpful, r.comment])).toEqual([[pair.mentor, 4, null]]);
   });
 
   it("export_holds_only_own_feedback", async () => {

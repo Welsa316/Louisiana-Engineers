@@ -1,5 +1,5 @@
 import {
-  PREFERENCE_FOOTER, compose, firstName, requestPath,
+  PREFERENCE_FOOTER, compose, firstName, menteePath, requestPath,
   type RenderedEmail, type TemplateContext, type TemplateData,
 } from "./registry";
 
@@ -24,8 +24,9 @@ export function renderFeedbackInvite(data: TemplateData, context: TemplateContex
     ],
     button: "Share your feedback",
     link: data.link,
-    fallbackPath: requestPath(side, data.requestId),
+    fallbackPath: side === "mentor" ? menteePath(data.requestId) : requestPath(side, data.requestId),
     footer: PREFERENCE_FOOTER,
     context,
   });
 }
+

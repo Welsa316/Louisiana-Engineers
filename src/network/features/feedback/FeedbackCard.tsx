@@ -19,6 +19,8 @@ import { useFeedback, useLeaveFeedback } from "./api";
 
 function sendError(error: unknown): string {
   if (isApiError(error, "not_completed")) return "This is not marked as completed yet, so there is nothing to answer.";
+  if (isApiError(error, "comment_closed"))
+    return "The other member has left MEST, so comments are closed. Clear the comment box to send your rating on its own.";
   if (isApiError(error, "validation")) return "Check your answers and try again.";
   if (isApiError(error, "network")) return "That did not go through. Check your connection and try again.";
   return "That did not go through. Try again in a moment.";

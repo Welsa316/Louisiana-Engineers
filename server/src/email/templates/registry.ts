@@ -151,6 +151,12 @@ export function requestPath(side: "me" | "mentor", requestId: unknown): string {
   return UUID.test(id) ? `/network/${side}/requests/${id}` : `/network/${side}/requests`;
 }
 
+/** The mentor's page for one relationship (where the mentor's feedback form is). */
+export function menteePath(requestId: unknown): string {
+  const id = text(requestId);
+  return UUID.test(id) ? `/network/mentor/mentees/${id}` : "/network/mentor/mentees";
+}
+
 /** True for an in-app path or an absolute link on the app origin (what appLink keeps). */
 function isOnApp(raw: string, appOrigin: string): boolean {
   if (raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\")) return true;

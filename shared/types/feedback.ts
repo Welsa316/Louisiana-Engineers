@@ -35,9 +35,10 @@ export interface FeedbackResponse {
 
 /**
  * `409` codes of `POST /api/requests/:id/feedback`: the relationship is not
- * completed yet, or the caller already answered.
+ * completed yet, the caller already answered, or the other party has left
+ * and a comment can no longer be added (the rating alone still can).
  */
-export type FeedbackErrorCode = "not_completed" | "feedback_exists";
+export type FeedbackErrorCode = "not_completed" | "feedback_exists" | "comment_closed";
 
 /** One comment as administrators read it: which side wrote it and when (by month), nothing more. */
 export interface AdminFeedbackComment {
