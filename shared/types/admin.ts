@@ -63,6 +63,10 @@ export interface AdminDashboard extends AdminDashboardCounts {
   requestsByTopic: AdminDashboardTopic[];
   /** The last three months, oldest first, the current month last. */
   byMonth: AdminDashboardMonth[];
+  /** Meetings with status `completed` (01 section 8, "Meetings held"). */
+  meetingsHeld: number;
+  /** Meetings still to come. */
+  meetingsUpcoming: number;
 }
 
 /** The review queue's filter: open reviews, or decided ones by outcome. */

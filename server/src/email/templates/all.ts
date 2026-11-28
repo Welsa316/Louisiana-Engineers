@@ -1,6 +1,8 @@
 import { renderAdminDigest } from "./admin-digest";
 import { renderDeletionCanceled } from "./deletion-canceled";
 import { renderDeletionRequested } from "./deletion-requested";
+import { renderMeetingCheckIn } from "./meeting-check-in";
+import { renderMeetingScheduled } from "./meeting-scheduled";
 import { renderModerationAction } from "./moderation-action";
 import { renderProfileApproved } from "./profile-approved";
 import { renderProfileDeclined } from "./profile-declined";
@@ -35,3 +37,5 @@ registerTemplate("moderation-action", renderModerationAction);
 registerTemplate("deletion-requested", renderDeletionRequested);
 registerTemplate("deletion-canceled", renderDeletionCanceled);
 registerTemplate("admin-digest", renderAdminDigest);
+registerTemplate("meeting-scheduled", renderMeetingScheduled);
+registerTemplate("meeting-check-in", renderMeetingCheckIn);
