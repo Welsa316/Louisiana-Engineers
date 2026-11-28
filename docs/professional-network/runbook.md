@@ -336,9 +336,9 @@ A photo is optional; every member shows their initials until an administrator ap
 
 Nothing notifies administrators when a photo arrives; the number beside Photos in the administration menu is the only signal, so look at it when you look at the approval queue. A member who uploads a new photo replaces the old one, and the new one waits for review even if the old one was shown.
 
-Each decision is written to the audit log (`photo.approved` or `photo.rejected`, as is each upload, `photo.uploaded`) and tells the member in the app and by email (template `photo-reviewed`, under their profile email setting). An approved photo shows only to people who may see the profile, and browsers check with the service before reusing a copy, so a takedown applies the next time anyone opens the page.
+Each decision is written to the audit log (`photo.approved` or `photo.rejected`, as is each upload, `photo.uploaded`, and each removal by the member, `photo.removed`) and tells the member in the app and by email (template `photo-reviewed`, under their profile email setting). An approved photo shows only to people who may see the profile, and browsers check with the service before reusing a copy, so a takedown applies the next time anyone opens the page.
 
-The queue covers every region: any administrator, a chapter administrator included, sees and decides every member's photo. When an account is deleted its photo is deleted with it. The data export says whether a photo exists, its state, type and size, but not the image.
+A chapter administrator sees and decides only the photos of members in its region; an administrator for every region sees them all. When an account is deleted its photo is deleted with it. The data export says whether a photo exists, its state, type and size, but not the image.
 
 ### 3.9 The calendar feed
 
@@ -356,7 +356,7 @@ The network serves one region, Greater New Orleans, until another is added. Ther
 
 **Granting for one region.** In Administration, Members, **Make administrator** asks what the new administrator administers: one region, or every region. A chapter administrator (one scoped to a region) acts only on members in that region: approving and verifying profiles, hiding and restoring them, deciding reports and granting or revoking the role. Their members list shows only their region, they can grant only their own region, and they never act on a region-wide administrator. Administration, Administrators shows each administrator's region.
 
-Some administrator screens still cover every region whatever the scope. Section 5.4 of [02-technical-architecture.md](02-technical-architecture.md) lists which.
+A chapter administrator also reads only its region: profiles, student details, reviews, reports, photos and requests that involve a member there, and only the administrator notifications about its own members. Platform settings, the vocabulary, tags and the feedback comments change or show for the whole network, so only an administrator for every region can use them; a chapter administrator who tries is told the action is outside its region. The dashboard counts and the administrators list still cover everyone. Section 5.4 of [02-technical-architecture.md](02-technical-architecture.md) lists each path.
 
 **Keeping an administrator for every region.** The last region-wide administrator who can act cannot be revoked, narrowed to one region, suspended or removed, and cannot delete their own account, so a region-wide role can always be granted from the screen. If none can act anyway (for example, none can sign in), the command in section 2.8 is the way back: `npm run admin:grant -- <email>` always grants for every region. On someone who is already a chapter administrator it widens their role to every region, prints `Widened the administrator role to every region`, and writes `admin.granted` to the audit log.
 
