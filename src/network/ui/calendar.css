@@ -1,0 +1,27 @@
+/* ------------------------------------------------------------------ */
+/* Settings, Calendar (Task 37): the feed address and its actions.     */
+/* ------------------------------------------------------------------ */
+.pn-calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The address is one long unbroken string; it scrolls inside the field
+   rather than widening the card. */
+.pn-calendar-url {
+  min-width: 0;
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+}
+
+.pn-calendar-confirm {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--pn-line);
+  border-left: 2px solid var(--pn-warn);
+  border-radius: var(--pn-radius);
+}

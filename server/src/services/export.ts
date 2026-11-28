@@ -11,6 +11,7 @@ import {
 import type { RequestRole } from "@shared/types/requests";
 import type { Db } from "../db/tx";
 import { exportFeedback } from "./feedback";
+import { calendarFeedForExport } from "./calendar";
 import { exportMeetings } from "./meetings";
 import { photoForExport } from "./photos";
 import { getOwnProfile } from "./profiles";
@@ -25,7 +26,8 @@ import { getOwnProfile } from "./profiles";
  * the caller's own feedback answers (never the other party's),
  * notifications under the recipient policy, and audit entries from
  * `my_audit_entries()`. A profile photo is noted (state, type and size),
- * never copied into the file. Contact values are never read: the handoff values
+ * never copied into the file, and a calendar feed by its start date, never
+ * its address. Contact values are never read: the handoff values
  * belong to the mentor, and the file carries only the method names.
  */
 
@@ -181,6 +183,7 @@ export async function exportMyData(db: Db): Promise<DataExport> {
     meetings,
     availabilitySlots,
     feedback: await exportFeedback(db),
+    calendarFeed: await calendarFeedForExport(db),
     notifications: await notifications(db),
     audit: await auditEntries(db),
   };

@@ -7,6 +7,7 @@
  */
 
 import type { ContactMethodId } from "../taxonomy";
+import type { ExportCalendarFeed } from "./calendar";
 import type { DeclineReason, MeetingMode, NotificationCategory, RequestFormat, RequestKind, RequestStatus } from "./common";
 import type { ExportFeedback } from "./feedback";
 import type { ExportMeeting, ExportSlot } from "./meetings";
@@ -99,6 +100,8 @@ export interface DataExport {
   availabilitySlots: ExportSlot[];
   /** The caller's own post-completion feedback (Task 32); never the other party's. */
   feedback: ExportFeedback[];
+  /** Whether a calendar feed is on and since when (Task 37); null when off. Never the address. */
+  calendarFeed: ExportCalendarFeed | null;
   notifications: ExportNotification[];
   audit: ExportAuditEntry[];
 }

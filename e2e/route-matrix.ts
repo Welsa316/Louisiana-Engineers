@@ -67,6 +67,7 @@ export const SCREENS: Record<Viewer, Screen[]> = {
     { path: "/network/settings/profile" },
     { path: "/network/settings/privacy" },
     { path: "/network/settings/notifications" },
+    { path: "/network/settings/calendar" },
     { path: "/network/settings/preview" },
     { path: "/network/settings/account" },
   ],

@@ -9,6 +9,7 @@
 import type { RouteObject } from "react-router";
 import { NotFoundPage } from "../../app/shells";
 import { AccountSettings } from "./Account";
+import { CalendarSettings } from "./CalendarSettings";
 import { SettingsLayout } from "./Layout";
 import { MentorshipSettings } from "./MentorshipSettings";
 import { NotificationSettings } from "./NotificationSettings";
@@ -27,6 +28,7 @@ export const settingsRoutes: RouteObject[] = [
       { path: "privacy", element: <PrivacySettings /> },
       { path: "mentorship", element: <MentorshipSettings /> },
       { path: "notifications", element: <NotificationSettings /> },
+      { path: "calendar", element: <CalendarSettings /> },
       { path: "preview", element: <Preview /> },
       { path: "account", element: <AccountSettings /> },
       { path: "*", element: <NotFoundPage inApp /> },

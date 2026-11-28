@@ -31,6 +31,7 @@ export function settingsSections(kind: "student" | "professional" | null | undef
         ]
       : []),
     { to: "/settings/notifications", label: "Notifications", note: "Which emails we send you" },
+    { to: "/settings/calendar", label: "Calendar", note: "A private feed of your meetings for your calendar app" },
     ...(professional ? [{ to: "/settings/preview", label: "Preview", note: "Your profile as a visitor and a member see it" }] : []),
     { to: "/settings/account", label: "Account", note: "Export your data or delete your account" },
   ];
