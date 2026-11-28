@@ -59,6 +59,9 @@ export function deletionErrorText(error: unknown): string {
   if (isApiError(error, "admin_minimum")) {
     return "MEST Network needs at least two administrators. Ask another member to take on the role before you delete your account.";
   }
+  if (isApiError(error, "last_global_admin")) {
+    return "MEST Network needs at least one administrator for every region. Ask another administrator to take on every region before you delete your account.";
+  }
   if (isApiError(error, "no_deletion")) return "Your account is not scheduled for deletion, so there is nothing to keep.";
   if (isApiError(error, "removed_by_admin")) {
     return "An administrator removed this account, so it cannot be kept from here. Write to the MEST team if you think this is a mistake.";

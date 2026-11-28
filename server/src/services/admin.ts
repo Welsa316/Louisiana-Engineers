@@ -10,6 +10,7 @@ import type {
   AdminReviewSnapshot,
   AdminReviewStatus,
   AdminRole,
+  AdminScope,
   AdminTag,
   AdminTopic,
   AdminVocabularyLists,
@@ -343,6 +344,14 @@ export async function listMembers(db: Db, filters: AdminMemberFilters, paging: P
 }
 
 /* --------------------------------------------------------- administrators */
+
+/** The caller's own scope (`admin_roles.region_id`, migration 0020); null is every region. */
+export async function adminScope(db: Db): Promise<AdminScope> {
+  const row = await db.maybeOne<{ region_id: string | null }>(
+    "SELECT region_id FROM admin_roles WHERE profile_id = app_uid() AND revoked_at IS NULL",
+  );
+  return { regionId: row?.region_id ?? null };
+}
 
 export async function listAdmins(db: Db, viewerId: string, paging: PageArgs): Promise<Paged<AdminRole>> {
   const rows = await db.query<{

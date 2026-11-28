@@ -88,6 +88,8 @@ The roadmap gates Phase 2 on two months of use and a board decision, Phase 3 on 
 
 **Depends on:** all of the above.
 - Route matrix, axe and overflow specs cover every new screen; runbook adds photos, the calendar feed, regions and the new jobs; 02 and 04 record what was built; full Codex and privacy audits on the whole Phases 2 to 4 diff, findings fixed, then the final push.
+- Decision carried from Task 38's review: administrator reads are still network-wide. A chapter administrator can read every region's profiles (`profiles_admin_read`), student details (`student_details_admin_read`), `profile_reviews_admin_read`, the `admin_reports` view, the dashboard counts and the administrator notifications; only the functions that act on a profile, and the members, review and report lists, are scoped. The privacy audit decides, with the board if needed, whether those reads take `admin_covers_profile(...)` too (student details from other regions first), and records the answer in 02.
+- Runbook for regions: `npm run admin:grant -- <email>` acts for every region. On a current chapter administrator it widens the role to every region (status "widened", audited), which is the way back if no administrator for every region can act.
 
 ## Waves
 

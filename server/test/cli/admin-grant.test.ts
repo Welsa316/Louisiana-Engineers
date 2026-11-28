@@ -130,6 +130,28 @@ describe("grantAdminByEmail", () => {
     expect(row.rows).toEqual([{ region_id: null, revoked_at: null }]);
   });
 
+  it("widens_an_active_chapter_role_to_every_region", async () => {
+    // The break-glass path when no administrator acts for every region any
+    // more: an active chapter administrator is widened, not left as is.
+    await db.pool.query("INSERT INTO regions (id, label) VALUES ('baton-rouge', 'Greater Baton Rouge') ON CONFLICT DO NOTHING");
+    const other = await makePerson(db.pool, { email: "other@example.test", admin: true, adminRegion: "baton-rouge" });
+    const id = await makePerson(db.pool, { email: "chapter@example.test", admin: true, adminRegion: "baton-rouge" });
+
+    const widened = await grant("chapter@example.test");
+    expect(widened).toEqual({ status: "widened", profileId: id, activeAdmins: 2 });
+    const row = await db.pool.query("SELECT region_id, revoked_at FROM admin_roles WHERE profile_id = $1", [id]);
+    expect(row.rows).toEqual([{ region_id: null, revoked_at: null }]);
+    expect(await scalarAs<boolean>(db.pool, id, "SELECT is_admin_for(NULL) AS value")).toBe(true);
+    expect(await auditRows(id)).toEqual([
+      { actor_id: null, action: "admin.granted", detail: { via: "admin-grant", region: null } },
+    ]);
+    // The other chapter administrator is untouched, and a repeat changes nothing.
+    const scope = await db.pool.query("SELECT region_id FROM admin_roles WHERE profile_id = $1", [other]);
+    expect(scope.rows).toEqual([{ region_id: "baton-rouge" }]);
+    expect((await grant("chapter@example.test")).status).toBe("already_admin");
+    expect(await auditRows(id)).toHaveLength(1);
+  });
+
   it("errors_are_admin_grant_errors", async () => {
     const error = await grant("nobody@example.test").catch((e: unknown) => e);
     expect(error).toBeInstanceOf(AdminGrantError);

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { AdminMember, AdminReviewItem, AdminRole } from "@shared/types/admin";
+import type { AdminMember, AdminReviewItem, AdminRole, AdminScope } from "@shared/types/admin";
 import type { Paged } from "@shared/types/common";
 import type { DirectoryResponse } from "@shared/types/directory";
 import type { AdminReport } from "@shared/types/reports";
@@ -161,6 +161,20 @@ describe("chapter administrators in the administration area", () => {
 
     const bad = await call(global, "POST", "/admin/admins", { profileId: brMember, regionId: "Not a slug" });
     expect(bad.status).toBe(400);
+  });
+
+  it("scope_endpoint_answers_the_callers_own_scope", async () => {
+    // The grant screen reads the caller's scope from here, not from the
+    // first page of the administrators list.
+    const { global, chapter } = await chapters();
+    for (let i = 0; i < 3; i += 1) await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    expect(await json<AdminScope>(await call(chapter, "GET", "/admin/scope"))).toEqual({ regionId: BR });
+    expect(await json<AdminScope>(await call(global, "GET", "/admin/scope"))).toEqual({ regionId: null });
+    const pageOne = await json<Paged<AdminRole>>(await call(chapter, "GET", "/admin/admins?size=1"));
+    expect(pageOne.items.some((a) => a.isSelf)).toBe(false);
+    expect(await json<AdminScope>(await call(chapter, "GET", "/admin/scope"))).toEqual({ regionId: BR });
+    const member = await makePerson(db.pool, { kind: "student", visibility: "hidden" });
+    expect((await call(member, "GET", "/admin/scope")).status).toBe(403);
   });
 
   it("chapter_admin_lists_only_its_region", async () => {

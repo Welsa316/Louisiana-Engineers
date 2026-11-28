@@ -14,6 +14,7 @@ import type {
   AdminReviewItem,
   AdminReviewStatus,
   AdminRole,
+  AdminScope,
   AdminTag,
   AdminVocabularyLists,
 } from "@shared/types/admin";
@@ -30,6 +31,7 @@ export const adminKeys = {
   review: (id: string) => ["admin", "review", id] as const,
   members: (filters: AdminMemberFilters, page: number) => ["admin", "members", filters, page] as const,
   admins: ["admin", "admins"] as const,
+  scope: ["admin", "scope"] as const,
   tags: (status: TagStatus, page: number) => ["admin", "tags", status, page] as const,
   vocabulary: ["admin", "vocabulary"] as const,
   config: ["admin", "config"] as const,
@@ -69,6 +71,11 @@ export function useMembers(filters: AdminMemberFilters, page: number) {
     queryFn: () => api<Paged<AdminMember>>(`/admin/members?${qs({ ...filters, page, size: ADMIN_PAGE_SIZE })}`),
     placeholderData: keepPreviousData,
   });
+}
+
+/** `GET /api/admin/scope`: the region the viewer administers (null is every region). */
+export function useAdminScope() {
+  return useQuery({ queryKey: adminKeys.scope, queryFn: () => api<AdminScope>("/admin/scope") });
 }
 
 export function useAdmins() {

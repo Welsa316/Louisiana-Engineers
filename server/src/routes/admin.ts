@@ -106,6 +106,9 @@ export function createAdminRoutes(): Hono {
 
   /* Administrators */
 
+  /** The caller's own scope, which the grant screen offers within. */
+  app.get("/scope", async (c) => c.json(await as(c, admin.adminScope)));
+
   app.get("/admins", validate(pageQuerySchema, "query"), async (c) => {
     const viewer = userIdOf(c);
     const { page, size } = c.req.valid("query");

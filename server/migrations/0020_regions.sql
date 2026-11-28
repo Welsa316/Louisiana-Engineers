@@ -14,9 +14,11 @@
 --    mest.out_of_region otherwise, and so do the two administrator update
 --    policies. The members list returns only the caller's regions.
 -- 4. Granting chooses a scope within the caller's own, and the last
---    administrator who can act for every region is neither revoked nor
---    narrowed (mest.last_global_admin), so a region-wide role can always
---    still be granted from the screen.
+--    administrator who can act for every region is neither revoked,
+--    narrowed, suspended nor removed, and cannot leave
+--    (mest.last_global_admin), so a region-wide role can always still be
+--    granted from the screen. A chapter administrator never acts against a
+--    region-wide administrator's own profile either (assert_admin_covers_role).
 --
 -- Nothing here stores member data: a region is a vocabulary row and the
 -- scope belongs to the role, so execute_account_deletion and the export are
@@ -103,6 +105,27 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF NOT admin_covers_profile(assert_admin_covers.profile_id) THEN
+    RAISE EXCEPTION 'mest.out_of_region' USING ERRCODE = '42501';
+  END IF;
+END
+$$;
+
+-- Raises mest.out_of_region when the profile holds an administrator role the
+-- caller does not cover: the rule admin_revoke applies (a chapter
+-- administrator never acts against a region-wide one), for the sanctions a
+-- report or the members screen can take against an administrator's own
+-- profile. A region-wide administrator's profile sits in a region too, so
+-- covering the profile is not enough.
+CREATE FUNCTION assert_admin_covers_role(profile_id uuid) RETURNS void
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  scope text;
+BEGIN
+  SELECT a.region_id INTO scope FROM admin_roles a
+   WHERE a.profile_id = assert_admin_covers_role.profile_id AND a.revoked_at IS NULL;
+  IF FOUND AND NOT is_admin_for(scope) THEN
     RAISE EXCEPTION 'mest.out_of_region' USING ERRCODE = '42501';
   END IF;
 END
@@ -245,6 +268,7 @@ BEGIN
     RAISE EXCEPTION 'mest.not_found' USING ERRCODE = '23514';
   END IF;
   PERFORM assert_admin_covers(target);
+  PERFORM assert_admin_covers_role(target);
   IF already IS NOT NULL THEN
     RETURN;
   END IF;
@@ -280,6 +304,7 @@ BEGIN
     RAISE EXCEPTION 'mest.not_found' USING ERRCODE = '23514';
   END IF;
   PERFORM assert_admin_covers(target);
+  PERFORM assert_admin_covers_role(target);
   IF hidden IS NULL THEN
     RETURN;
   END IF;
@@ -375,7 +400,12 @@ END
 $$;
 
 -- From 0010: a report is decided by an administrator of the reported
--- profile's region. The actions it runs (admin_hide_profile) check again.
+-- profile's region, and an action against an administrator needs the
+-- caller to cover that administrator's role as well (so a chapter
+-- administrator never suspends, hides or removes a region-wide one).
+-- Suspending the last region-wide administrator who can act is refused like
+-- revoking them; removal gets the same check in schedule_account_deletion.
+-- The actions it runs (admin_hide_profile) check again.
 CREATE OR REPLACE FUNCTION admin_resolve_report(id uuid, status report_status, note text, action text) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -405,6 +435,9 @@ BEGIN
     RAISE EXCEPTION 'mest.not_found' USING ERRCODE = '23514';
   END IF;
   PERFORM assert_admin_covers(rep.profile_id);
+  IF act <> 'none' THEN
+    PERFORM assert_admin_covers_role(rep.profile_id);
+  END IF;
   IF rep.status <> 'open' THEN
     RAISE EXCEPTION 'mest.report_closed' USING ERRCODE = '23514';
   END IF;
@@ -426,6 +459,11 @@ BEGIN
     IF EXISTS (SELECT 1 FROM admin_roles a WHERE a.profile_id = rep.profile_id AND a.revoked_at IS NULL)
        AND acting_admin_count(rep.profile_id) < 2 THEN
       RAISE EXCEPTION 'mest.admin_minimum' USING ERRCODE = '23514', DETAIL = 'at least two administrators stay';
+    END IF;
+    IF EXISTS (SELECT 1 FROM admin_roles a
+                WHERE a.profile_id = rep.profile_id AND a.revoked_at IS NULL AND a.region_id IS NULL)
+       AND acting_global_admin_count(rep.profile_id) < 1 THEN
+      RAISE EXCEPTION 'mest.last_global_admin' USING ERRCODE = '23514', DETAIL = 'one administrator for every region stays';
     END IF;
     UPDATE users u SET suspended_at = now()
      WHERE u.id = rep.profile_id AND u.suspended_at IS NULL AND u.deleted_at IS NULL;
@@ -466,6 +504,112 @@ BEGIN
 
   PERFORM write_audit('report.resolved', 'report', rep.id,
     jsonb_build_object('status', admin_resolve_report.status, 'action', act, 'profile', rep.profile_id));
+END
+$$;
+
+-- From 0010: leaving takes the administrator role with it, so besides the
+-- two-administrator minimum the last region-wide administrator who can act
+-- stays (the same rule as admin_revoke). Covers a member's own deletion and
+-- an administrator's removal through admin_resolve_report.
+CREATE OR REPLACE FUNCTION schedule_account_deletion(target uuid, immediate boolean, reason text) RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  p profiles%ROWTYPE;
+  open_row account_deletions%ROWTYPE;
+  new_id uuid;
+  clean_reason text := nullif(btrim(coalesce(reason, '')), '');
+  is_immediate boolean := coalesce(immediate, false);
+  execute_on text;
+BEGIN
+  SELECT * INTO p FROM profiles pr WHERE pr.id = target FOR UPDATE;
+  IF NOT FOUND OR p.anonymized_at IS NOT NULL
+     OR NOT EXISTS (SELECT 1 FROM users u WHERE u.id = target AND u.deleted_at IS NULL) THEN
+    RAISE EXCEPTION 'mest.not_found' USING ERRCODE = '23514';
+  END IF;
+  IF clean_reason IS NOT NULL AND char_length(clean_reason) > 1000 THEN
+    RAISE EXCEPTION 'mest.invalid_reason' USING ERRCODE = '22023';
+  END IF;
+  -- Leaving takes the administrator role with it, so the same two-administrator
+  -- minimum as admin_revoke applies: count the others who can still act.
+  PERFORM 1 FROM admin_roles a WHERE a.revoked_at IS NULL ORDER BY a.profile_id FOR UPDATE;
+  IF EXISTS (SELECT 1 FROM admin_roles a WHERE a.profile_id = target AND a.revoked_at IS NULL)
+     AND acting_admin_count(target) < 2 THEN
+    RAISE EXCEPTION 'mest.admin_minimum' USING ERRCODE = '23514', DETAIL = 'at least two administrators stay';
+  END IF;
+  IF EXISTS (SELECT 1 FROM admin_roles a WHERE a.profile_id = target AND a.revoked_at IS NULL AND a.region_id IS NULL)
+     AND acting_global_admin_count(target) < 1 THEN
+    RAISE EXCEPTION 'mest.last_global_admin' USING ERRCODE = '23514', DETAIL = 'one administrator for every region stays';
+  END IF;
+
+  SELECT * INTO open_row FROM account_deletions d
+   WHERE d.profile_id = target AND d.canceled_at IS NULL AND d.executed_at IS NULL
+   FOR UPDATE;
+  IF FOUND THEN
+    IF NOT is_immediate THEN
+      RAISE EXCEPTION 'mest.deletion_scheduled' USING ERRCODE = '23514';
+    END IF;
+    -- An administrator's removal of a member already in their grace period:
+    -- the profile is already hidden and the requests closed.
+    UPDATE account_deletions d
+       SET immediate = true, execute_after = least(d.execute_after, now()), reason = coalesce(clean_reason, d.reason)
+     WHERE d.id = open_row.id;
+    PERFORM close_requests_of_departing(target);
+    PERFORM write_audit('account.deletion_requested', 'profile', target,
+      jsonb_build_object('immediate', true, 'reason', clean_reason));
+    RETURN open_row.id;
+  END IF;
+
+  INSERT INTO account_deletions (profile_id, requested_at, execute_after, previous_visibility, reason, immediate)
+  VALUES (
+    target, now(),
+    CASE WHEN is_immediate THEN now() ELSE now() + interval '14 days' END,
+    p.visibility,
+    CASE WHEN is_immediate THEN clean_reason END,
+    is_immediate
+  )
+  RETURNING id INTO new_id;
+
+  UPDATE profiles pr SET visibility = 'hidden' WHERE pr.id = target;
+  -- An administrator's hide already holds the real status in previous_status
+  -- (and the status is off); leave it for admin_restore_profile.
+  IF p.admin_hidden_at IS NULL THEN
+    UPDATE mentorship_settings s SET previous_status = s.status, status = 'off' WHERE s.profile_id = target;
+  END IF;
+  PERFORM close_requests_of_departing(target);
+
+  IF is_immediate THEN
+    PERFORM create_notification(
+      target, 'account',
+      'An administrator removed your account',
+      'An administrator reviewed your profile and removed your MEST Network account. '
+        || 'If you think this is a mistake, write to the MEST team.',
+      '/network/me',
+      'moderation-action',
+      jsonb_build_object('action', 'remove_account', 'firstName', profile_first_name(target), 'link', '/network/me'),
+      true,
+      'profile', target
+    );
+  ELSE
+    SELECT to_char(d.execute_after AT TIME ZONE 'America/Chicago', 'YYYY-MM-DD') INTO execute_on
+      FROM account_deletions d WHERE d.id = new_id;
+    PERFORM create_notification(
+      target, 'account',
+      'Your account is scheduled for deletion',
+      'It will be deleted on ' || execute_on || '. To keep it, sign in before then and choose Keep my account.',
+      '/network/scheduled-for-deletion',
+      'deletion-requested',
+      jsonb_build_object('firstName', profile_first_name(target), 'executeOn', execute_on,
+                         'link', '/network/scheduled-for-deletion'),
+      true,
+      'profile', target
+    );
+  END IF;
+
+  PERFORM write_audit('account.deletion_requested', 'profile', target,
+    jsonb_build_object('immediate', is_immediate, 'reason', CASE WHEN is_immediate THEN clean_reason END));
+  RETURN new_id;
 END
 $$;
 
@@ -573,4 +717,5 @@ CREATE POLICY regions_read ON regions FOR SELECT TO app_user USING (true);
 -- requests may ask them (the administration lists filter with them). The
 -- raising helper and the count are internal.
 REVOKE EXECUTE ON FUNCTION assert_admin_covers(uuid) FROM PUBLIC, app_user;
+REVOKE EXECUTE ON FUNCTION assert_admin_covers_role(uuid) FROM PUBLIC, app_user;
 REVOKE EXECUTE ON FUNCTION acting_global_admin_count(uuid) FROM PUBLIC, app_user;

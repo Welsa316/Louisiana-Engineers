@@ -324,3 +324,72 @@ describe("chapter administrators", () => {
     });
   });
 });
+
+describe("wider administrators", () => {
+  it("chapter_admin_cannot_sanction_a_wider_administrator_in_its_region", async () => {
+    // A region-wide administrator's own profile sits in a region; a chapter
+    // administrator for that region covers the profile but not the role.
+    const { global, global2 } = await chapters();
+    const nolaChapter = await makePerson(db.pool, { admin: true, adminRegion: NOLA, visibility: "hidden", firstName: "Nora" });
+    const nolaPeer = await makePerson(db.pool, { admin: true, adminRegion: NOLA, firstName: "Nell" });
+    // Listed, so a member can report the profile.
+    await db.pool.query("UPDATE profiles SET visibility = 'public' WHERE id = $1", [global]);
+    const reporter = await makePerson(db.pool, { kind: "student", visibility: "hidden" });
+    const report = (profile: string) =>
+      scalarAs<string>(db.pool, reporter, "SELECT report_profile($1, 'spam', 'Selling courses.') AS value", [profile]);
+    const onGlobal = await report(global);
+
+    for (const action of ["suspend_requests", "remove_account", "hide_profile"]) {
+      await expect(
+        runAs(db.pool, nolaChapter, "SELECT admin_resolve_report($1, 'resolved', null, $2)", [onGlobal, action]),
+        action,
+      ).rejects.toThrow(/mest\.out_of_region/);
+    }
+    for (const sql of ["SELECT admin_hide_profile($1)", "SELECT admin_restore_profile($1)"]) {
+      await expect(runAs(db.pool, nolaChapter, sql, [global]), sql).rejects.toThrow(/mest\.out_of_region/);
+    }
+
+    const state = await db.pool.query<{ suspended: boolean; hidden: boolean; leaving: boolean }>(
+      `SELECT u.suspended_at IS NOT NULL AS suspended, p.admin_hidden_at IS NOT NULL AS hidden,
+              EXISTS (SELECT 1 FROM account_deletions d WHERE d.profile_id = u.id) AS leaving
+         FROM users u JOIN profiles p ON p.id = u.id WHERE u.id = $1`,
+      [global],
+    );
+    expect(state.rows[0]).toEqual({ suspended: false, hidden: false, leaving: false });
+    expect((await db.pool.query("SELECT acting_global_admin_count(NULL) AS n")).rows[0].n).toBe(2);
+    expect((await db.pool.query("SELECT status FROM reports WHERE id = $1", [onGlobal])).rows[0].status).toBe("open");
+
+    // The same chapter administrator still decides a report on a peer with
+    // the same scope, and a region-wide one decides the report on the other.
+    const onPeer = await report(nolaPeer);
+    await runAs(db.pool, nolaChapter, "SELECT admin_resolve_report($1, 'resolved', null, 'suspend_requests')", [onPeer]);
+    await runAs(db.pool, global2, "SELECT admin_resolve_report($1, 'resolved', null, 'hide_profile')", [onGlobal]);
+    const suspended = await db.pool.query<{ id: string }>("SELECT id FROM users WHERE suspended_at IS NOT NULL");
+    expect(suspended.rows.map((r) => r.id)).toEqual([nolaPeer]);
+    const hidden = await db.pool.query<{ id: string }>("SELECT id FROM profiles WHERE admin_hidden_at IS NOT NULL");
+    expect(hidden.rows.map((r) => r.id)).toEqual([global]);
+  });
+
+  it("the_last_administrator_for_every_region_cannot_leave", async () => {
+    await addRegion(BR, "Greater Baton Rouge");
+    const global = await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    const chapterA = await makePerson(db.pool, { admin: true, adminRegion: BR, region: BR, visibility: "hidden" });
+    const chapterB = await makePerson(db.pool, { admin: true, adminRegion: BR, region: BR, visibility: "hidden" });
+    await makePerson(db.pool, { admin: true, adminRegion: BR, region: BR, visibility: "hidden" });
+
+    // Three others can act, so the two-administrator minimum holds, but
+    // none acts for every region.
+    await expect(runAs(db.pool, global, "SELECT request_account_deletion(false, null)")).rejects.toThrow(
+      /mest\.last_global_admin/,
+    );
+    expect((await db.pool.query("SELECT 1 FROM account_deletions")).rowCount).toBe(0);
+    // A chapter administrator may still leave.
+    await runAs(db.pool, chapterA, "SELECT request_account_deletion(false, null)");
+
+    // Once another administrator acts for every region, the first may leave.
+    await runAs(db.pool, global, "SELECT admin_grant($1)", [chapterB]);
+    await runAs(db.pool, global, "SELECT request_account_deletion(false, null)");
+    const leaving = await db.pool.query<{ profile_id: string }>("SELECT profile_id FROM account_deletions");
+    expect(leaving.rows.map((r) => r.profile_id).sort()).toEqual([global, chapterA].sort());
+  });
+});

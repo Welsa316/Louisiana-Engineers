@@ -18,7 +18,7 @@ import { useMeta } from "../../lib/meta";
 import { Pager } from "../../ui/admin-controls";
 import { Card, Empty, Modal, Monogram, Notice, PageHead, Select, Status, Toast } from "../../ui/ui";
 import { regionLabel, useRegions } from "../../lib/vocabulary";
-import { ADMIN_PAGE_SIZE, adminErrorText, personInitials, personName, useAdminAction, useAdmins, useMembers } from "./api";
+import { ADMIN_PAGE_SIZE, adminErrorText, personInitials, personName, useAdminAction, useAdminScope, useMembers } from "./api";
 
 type Tone = Parameters<typeof Status>[0]["tone"];
 
@@ -85,13 +85,18 @@ export function Members() {
   const page = Math.max(1, Number(params.get("page")) || 1);
   const [draft, setDraft] = useState(q);
   const [granting, setGranting] = useState<AdminMember | null>(null);
-  const [grantScope, setGrantScope] = useState("");
+  // The scope chosen in the grant dialog; undefined until the administrator
+  // picks one, which means the viewer's own.
+  const [chosenScope, setChosenScope] = useState<string | undefined>(undefined);
   const [flash, setFlash] = useState<string | null>(null);
   const list = useMembers(filters, page);
   const activeRegions = useRegions();
-  // The viewer's own scope (null for every region), from the administrators list.
-  const admins = useAdmins();
-  const myScope = admins.data?.items.find((a) => a.isSelf)?.regionId ?? null;
+  // The viewer's own scope (null for every region). The dialog waits for it,
+  // so a chapter administrator is never offered every region.
+  const scope = useAdminScope();
+  const scopeKnown = scope.data !== undefined;
+  const myScope = scope.data?.regionId ?? null;
+  const grantScope = chosenScope ?? myScope ?? "";
 
   // Search as the administrator types, once they pause.
   useEffect(() => {
@@ -124,7 +129,7 @@ export function Members() {
   // chooses any active region or every region.
   const scopeChoices = myScope ? activeRegions.filter((r) => r.id === myScope) : activeRegions;
   const openGrant = (m: AdminMember) => {
-    setGrantScope(myScope ?? "");
+    setChosenScope(undefined);
     setGranting(m);
   };
 
@@ -343,9 +348,10 @@ export function Members() {
             <button
               type="button"
               className="btn btn-solid btn-sm"
-              disabled={grant.isPending}
+              disabled={grant.isPending || !scopeKnown}
               onClick={() =>
                 granting &&
+                scopeKnown &&
                 grant.mutate(
                   { member: granting, regionId: grantScope || null },
                   {
@@ -372,24 +378,34 @@ export function Members() {
               {personName(granting)} will see the approval queue, the members list and these settings, and can act on
               them for the region you choose. Every action is recorded in the audit log.
             </p>
-            <div className="field mt-4">
-              <label className="field-label pn-field-label t-small" htmlFor="grant-scope">
-                Administers
-              </label>
-              <Select id="grant-scope" value={grantScope} onChange={(e) => setGrantScope(e.currentTarget.value)}>
-                {myScope ? null : <option value="">Every region</option>}
-                {scopeChoices.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </Select>
-              <p className="pn-field-hint">
-                {myScope
-                  ? "You administer one region, so you can grant that region only."
-                  : "A regional administrator acts only on members in that region."}
+            {scopeKnown ? (
+              <div className="field mt-4">
+                <label className="field-label pn-field-label t-small" htmlFor="grant-scope">
+                  Administers
+                </label>
+                <Select id="grant-scope" value={grantScope} onChange={(e) => setChosenScope(e.currentTarget.value)}>
+                  {myScope ? null : <option value="">Every region</option>}
+                  {scopeChoices.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.label}
+                    </option>
+                  ))}
+                </Select>
+                <p className="pn-field-hint">
+                  {myScope
+                    ? "You administer one region, so you can grant that region only."
+                    : "A regional administrator acts only on members in that region."}
+                </p>
+              </div>
+            ) : scope.isError ? (
+              <p className="t-small mt-4" role="alert">
+                {adminErrorText(scope.error)}
               </p>
-            </div>
+            ) : (
+              <p className="t-small mt-4" role="status">
+                Checking which regions you can grant.
+              </p>
+            )}
           </>
         ) : null}
       </Modal>

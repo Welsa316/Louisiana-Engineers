@@ -168,6 +168,11 @@ export interface AdminMember extends AdminMemberRow {
   detail: string | null;
 }
 
+/** `GET /api/admin/scope`: the region the caller administers; null means every region. */
+export interface AdminScope {
+  regionId: string | null;
+}
+
 /** One active administrator, from `GET /api/admin/admins`. */
 export interface AdminRole {
   profileId: string;
