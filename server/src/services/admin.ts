@@ -10,6 +10,7 @@ import type {
   AdminReviewSnapshot,
   AdminReviewStatus,
   AdminRole,
+  AdminScope,
   AdminTag,
   AdminTagMergeResult,
   AdminTopic,
@@ -164,9 +165,13 @@ function reviewItem(row: ReviewRow): AdminReviewItem {
   };
 }
 
-/** Open reviews oldest first (03 section 8.1); decided ones most recent first. */
+/**
+ * Open reviews oldest first (03 section 8.1); decided ones most recent first.
+ * A chapter administrator sees the reviews of its own region only
+ * (`admin_covers_profile`, migration 0020), the ones it can decide.
+ */
 export async function listReviews(db: Db, status: AdminReviewStatus, paging: PageArgs): Promise<Paged<AdminReviewItem>> {
-  const where = status === "pending" ? "r.decision IS NULL" : "r.decision = $3::review_decision";
+  const where = `admin_covers_profile(r.profile_id) AND ${status === "pending" ? "r.decision IS NULL" : "r.decision = $3::review_decision"}`;
   const order = status === "pending" ? "q.submitted_at ASC, q.id" : "q.decided_at DESC, q.id";
   const params: unknown[] = [paging.size, offset(paging)];
   if (status !== "pending") params.push(status);
@@ -183,8 +188,8 @@ export async function listReviews(db: Db, status: AdminReviewStatus, paging: Pag
 async function countReviews(db: Db, status: AdminReviewStatus): Promise<number> {
   const row = await db.one<{ n: number }>(
     status === "pending"
-      ? "SELECT count(*)::int AS n FROM profile_reviews WHERE decision IS NULL"
-      : "SELECT count(*)::int AS n FROM profile_reviews WHERE decision = $1::review_decision",
+      ? "SELECT count(*)::int AS n FROM profile_reviews WHERE decision IS NULL AND admin_covers_profile(profile_id)"
+      : "SELECT count(*)::int AS n FROM profile_reviews WHERE decision = $1::review_decision AND admin_covers_profile(profile_id)",
     status === "pending" ? [] : [status],
   );
   return row.n;
@@ -345,6 +350,14 @@ export async function listMembers(db: Db, filters: AdminMemberFilters, paging: P
 
 /* --------------------------------------------------------- administrators */
 
+/** The caller's own scope (`admin_roles.region_id`, migration 0020); null is every region. */
+export async function adminScope(db: Db): Promise<AdminScope> {
+  const row = await db.maybeOne<{ region_id: string | null }>(
+    "SELECT region_id FROM admin_roles WHERE profile_id = app_uid() AND revoked_at IS NULL",
+  );
+  return { regionId: row?.region_id ?? null };
+}
+
 export async function listAdmins(db: Db, viewerId: string, paging: PageArgs): Promise<Paged<AdminRole>> {
   const rows = await db.query<{
     profile_id: string;
@@ -352,13 +365,17 @@ export async function listAdmins(db: Db, viewerId: string, paging: PageArgs): Pr
     last_name: string | null;
     granted_at: Date;
     granted_by_name: string | null;
+    region_id: string | null;
+    region_label: string | null;
     total: number;
   }>(
     `SELECT a.profile_id, p.first_name, p.last_name, a.granted_at, count(*) OVER ()::int AS total,
-            nullif(btrim(coalesce(g.first_name, '') || ' ' || coalesce(g.last_name, '')), '') AS granted_by_name
+            nullif(btrim(coalesce(g.first_name, '') || ' ' || coalesce(g.last_name, '')), '') AS granted_by_name,
+            a.region_id, reg.label AS region_label
        FROM admin_roles a
        JOIN profiles p ON p.id = a.profile_id
        LEFT JOIN profiles g ON g.id = a.granted_by
+       LEFT JOIN regions reg ON reg.id = a.region_id
       WHERE a.revoked_at IS NULL
       ORDER BY a.granted_at, p.last_name, a.profile_id
       LIMIT $1 OFFSET $2`,
@@ -372,12 +389,19 @@ export async function listAdmins(db: Db, viewerId: string, paging: PageArgs): Pr
     grantedAt: r.granted_at.toISOString(),
     grantedByName: r.granted_by_name,
     isSelf: r.profile_id === viewerId,
+    regionId: r.region_id,
+    regionLabel: r.region_label,
   }));
   return { items, total };
 }
 
-export async function grantAdmin(db: Db, profileId: string): Promise<void> {
-  await db.query("SELECT admin_grant($1)", [profileId]);
+/**
+ * Grants the role for one region, or for every region when `regionId` is
+ * null; on a current administrator it changes the scope. `admin_grant`
+ * keeps the scope within the caller's own.
+ */
+export async function grantAdmin(db: Db, profileId: string, regionId: string | null = null): Promise<void> {
+  await db.query("SELECT admin_grant($1, $2)", [profileId, regionId]);
 }
 
 export async function revokeAdmin(db: Db, profileId: string): Promise<void> {

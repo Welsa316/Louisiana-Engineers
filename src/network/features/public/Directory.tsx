@@ -106,8 +106,10 @@ export function Directory({ mode = "directory" }: { mode?: DirectoryMode }) {
     <MoreFilters
       verified={state.verified}
       location={state.location}
+      region={state.region}
       onVerified={(verified) => update({ ...state, verified })}
       onLocation={(location) => update({ ...state, location })}
+      onRegion={(region) => update({ ...state, region })}
     />
   );
 
@@ -178,9 +180,11 @@ export function Directory({ mode = "directory" }: { mode?: DirectoryMode }) {
             filters={state.filters}
             verified={state.verified}
             location={state.location}
+            region={state.region}
             onFilters={(filters) => update({ ...state, filters })}
             onVerified={(verified) => update({ ...state, verified })}
             onLocation={(location) => update({ ...state, location })}
+            onRegion={(region) => update({ ...state, region })}
             onClear={clear}
           />
 

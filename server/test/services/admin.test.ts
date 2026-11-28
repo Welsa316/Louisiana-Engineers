@@ -242,6 +242,8 @@ describe("members", () => {
         "UPDATE professional_details SET verified = true, verified_method = 'linkedin', verified_at = now() WHERE profile_id = $1",
         [mentor],
       );
+      // A profile's region is a regions row (migration 0020).
+      await client.query("INSERT INTO regions (id, label, sort_order) VALUES ('acadiana', 'Acadiana', 2) ON CONFLICT DO NOTHING");
       await client.query("UPDATE profiles SET region = 'acadiana' WHERE id = $1", [paused]);
     });
 

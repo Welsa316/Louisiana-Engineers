@@ -1,14 +1,15 @@
 /**
- * The mentorship topics members choose from, read from
- * `GET /api/config/vocabulary` so a topic an administrator adds is offered
- * in onboarding, settings and the directory filter at once, and one they
- * retire is not. Until the answer arrives (or if it fails) the starting set
- * in `shared/taxonomy.ts` stands in, so the choices never render empty.
+ * The mentorship topics members choose from and the regions the network
+ * serves, read from `GET /api/config/vocabulary` so a topic or region an
+ * administrator adds is offered in onboarding, settings and the filters at
+ * once, and a topic they retire is not. Until the answer arrives (or if it
+ * fails) the starting sets stand in (`shared/taxonomy.ts` for topics,
+ * Greater New Orleans for regions), so the choices never render empty.
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { mentorshipTopics } from "@shared/taxonomy";
-import type { PublicVocabulary, VocabularyTopic } from "@shared/types/vocabulary";
+import type { PublicVocabulary, VocabularyRegion, VocabularyTopic } from "@shared/types/vocabulary";
 import { api } from "./api";
 import { queryKeys } from "./query";
 
@@ -26,14 +27,51 @@ async function fetchVocabulary(): Promise<PublicVocabulary> {
   return vocabulary;
 }
 
-/** The active topics: the only ones to offer as choices. */
-export function useTopics(): VocabularyTopic[] {
+function useVocabulary(): PublicVocabulary | undefined {
   const { data } = useQuery({
     queryKey: queryKeys.vocabulary,
     queryFn: fetchVocabulary,
     staleTime: 5 * 60_000,
   });
-  return data?.topics ?? mentorshipTopics;
+  return data;
+}
+
+export function useTopics(): VocabularyTopic[] {
+  return useVocabulary()?.topics ?? mentorshipTopics;
+}
+
+/** The region every profile starts in (the `profiles.region` default, migration 0020's seed). */
+export const STARTING_REGIONS: VocabularyRegion[] = [{ id: "greater-new-orleans", label: "Greater New Orleans" }];
+
+/**
+ * The active regions in display order. A screen offers a region choice
+ * (or a region filter) only when this holds more than one.
+ */
+export function useRegions(): VocabularyRegion[] {
+  const regions = useVocabulary()?.regions;
+  return regions && regions.length > 0 ? regions : STARTING_REGIONS;
+}
+
+/**
+ * A region's label, from the live list first, then the starting set, then
+ * the slug read as words ("acadiana" as "Acadiana") for a region no longer
+ * active.
+ */
+export function regionLabel(regions: VocabularyRegion[], id: string): string {
+  return (
+    regions.find((r) => r.id === id)?.label ??
+    STARTING_REGIONS.find((r) => r.id === id)?.label ??
+    id
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ")
+  );
+}
+
+/** The regions to offer, plus the one already chosen if it is no longer active, so it stays visible. */
+export function withChosenRegion(regions: VocabularyRegion[], chosen: string): VocabularyRegion[] {
+  if (!chosen || regions.some((r) => r.id === chosen)) return regions;
+  return [...regions, { id: chosen, label: regionLabel(regions, chosen) }];
 }
 
 /**

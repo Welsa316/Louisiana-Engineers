@@ -49,13 +49,14 @@ const tagsQuery = pageQuerySchema.extend({
   status: z.enum(tagStatuses).optional(),
   q: z.string().trim().max(fieldLimits.vocabularyLabel.max).optional(),
 });
-const grantSchema = z.object({ profileId: uuidSchema });
 const topicParam = z.object({ id: slugSchema });
 /** A discipline or topic is named by its slug, a tag by its uuid. */
 const renameParam = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("tag"), id: uuidSchema }),
   z.object({ kind: z.enum(vocabularyKinds), id: slugSchema }),
 ]);
+/** `regionId` null or left out grants every region; `admin_grant` keeps it within the caller's own scope. */
+const grantSchema = z.object({ profileId: uuidSchema, regionId: slugSchema.nullable().optional() });
 const vocabularySchema = adminVocabularySchema.extend({ groupName: z.enum(disciplineGroups as [string, ...string[]]).optional() });
 
 export function createAdminRoutes(): Hono {
@@ -116,6 +117,9 @@ export function createAdminRoutes(): Hono {
 
   /* Administrators */
 
+  /** The caller's own scope, which the grant screen offers within. */
+  app.get("/scope", async (c) => c.json(await as(c, admin.adminScope)));
+
   app.get("/admins", validate(pageQuerySchema, "query"), async (c) => {
     const viewer = userIdOf(c);
     const { page, size } = c.req.valid("query");
@@ -123,8 +127,8 @@ export function createAdminRoutes(): Hono {
   });
 
   app.post("/admins", validate(grantSchema), async (c) => {
-    const { profileId } = c.req.valid("json");
-    await as(c, (db) => admin.grantAdmin(db, profileId));
+    const { profileId, regionId } = c.req.valid("json");
+    await as(c, (db) => admin.grantAdmin(db, profileId, regionId ?? null));
     return c.json({ ok: true });
   });
 

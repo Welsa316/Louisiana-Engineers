@@ -14,6 +14,7 @@ import type {
   AdminReviewItem,
   AdminReviewStatus,
   AdminRole,
+  AdminScope,
   AdminTag,
   AdminVocabularyLists,
 } from "@shared/types/admin";
@@ -30,6 +31,7 @@ export const adminKeys = {
   review: (id: string) => ["admin", "review", id] as const,
   members: (filters: AdminMemberFilters, page: number) => ["admin", "members", filters, page] as const,
   admins: ["admin", "admins"] as const,
+  scope: ["admin", "scope"] as const,
   tags: (status: TagStatus, page: number, q = "") => ["admin", "tags", status, page, q] as const,
   vocabulary: ["admin", "vocabulary"] as const,
   config: ["admin", "config"] as const,
@@ -69,6 +71,11 @@ export function useMembers(filters: AdminMemberFilters, page: number) {
     queryFn: () => api<Paged<AdminMember>>(`/admin/members?${qs({ ...filters, page, size: ADMIN_PAGE_SIZE })}`),
     placeholderData: keepPreviousData,
   });
+}
+
+/** `GET /api/admin/scope`: the region the viewer administers (null is every region). */
+export function useAdminScope() {
+  return useQuery({ queryKey: adminKeys.scope, queryFn: () => api<AdminScope>("/admin/scope") });
 }
 
 export function useAdmins() {
@@ -140,6 +147,13 @@ export function adminErrorText(error: unknown): string {
   if (isApiError(error, "tag_merged")) return "That tag was merged into another one, so it can no longer change.";
   if (isApiError(error, "not_found")) return "That record no longer exists. It may have been removed.";
   if (isApiError(error, "not_admin")) return "Your administrator role has been removed.";
+  if (isApiError(error, "out_of_region")) {
+    return "That member or role is outside the region you administer. An administrator for that region, or for every region, can do this.";
+  }
+  if (isApiError(error, "last_global_admin")) {
+    return "At least one administrator must keep every region. Give another administrator every region before changing this one.";
+  }
+  if (isApiError(error, "invalid_region")) return "That region is no longer offered. Reload the page and choose again.";
   if (isApiError(error, "validation")) {
     return error.issues[0]?.message ?? "Check the highlighted fields and try again.";
   }

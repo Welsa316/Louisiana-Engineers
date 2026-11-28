@@ -17,7 +17,7 @@ import type { Db } from "../db/tx";
  * administrator anyway (unverified, suspended, leaving or deleted).
  */
 
-export type AdminGrantStatus = "granted" | "restored" | "already_admin";
+export type AdminGrantStatus = "granted" | "restored" | "widened" | "already_admin";
 
 export interface AdminGrantOutcome {
   status: AdminGrantStatus;
@@ -56,8 +56,10 @@ export function parseAdminGrantArgs(args: readonly string[]): string {
 
 /**
  * Grants the administrator role to the account with `email` (matched without
- * regard to case). Restores a revoked role; a current administrator is left
- * as is. Writes `admin.granted` to the audit log with no actor, since no one
+ * regard to case), for every region (migration 0020). Restores a revoked
+ * role; widens a current chapter administrator to every region, the way back
+ * when no administrator acts for every region; a current region-wide
+ * administrator is left as is. Writes `admin.granted` to the audit log with no actor, since no one
  * is signed in, and no address.
  */
 export async function grantAdminByEmail(db: Db, email: string): Promise<AdminGrantOutcome> {
@@ -87,8 +89,8 @@ export async function grantAdminByEmail(db: Db, email: string): Promise<AdminGra
   if (account.suspended) throw new AdminGrantError("suspended");
   if (account.deleting) throw new AdminGrantError("deleting");
 
-  const before = await db.maybeOne<{ revoked: boolean }>(
-    "SELECT revoked_at IS NOT NULL AS revoked FROM admin_roles WHERE profile_id = $1 FOR UPDATE",
+  const before = await db.maybeOne<{ revoked: boolean; region_id: string | null }>(
+    "SELECT revoked_at IS NOT NULL AS revoked, region_id FROM admin_roles WHERE profile_id = $1 FOR UPDATE",
     [account.id],
   );
   let status: AdminGrantStatus;
@@ -97,17 +99,21 @@ export async function grantAdminByEmail(db: Db, email: string): Promise<AdminGra
     status = "granted";
   } else if (before.revoked) {
     await db.query(
-      "UPDATE admin_roles SET granted_by = NULL, granted_at = now(), revoked_at = NULL WHERE profile_id = $1",
+      "UPDATE admin_roles SET granted_by = NULL, granted_at = now(), revoked_at = NULL, region_id = NULL WHERE profile_id = $1",
       [account.id],
     );
     status = "restored";
+  } else if (before.region_id !== null) {
+    // A chapter administrator: the command's roles act for every region.
+    await db.query("UPDATE admin_roles SET region_id = NULL WHERE profile_id = $1", [account.id]);
+    status = "widened";
   } else {
     status = "already_admin";
   }
   if (status !== "already_admin") {
     await db.query("SELECT write_audit('admin.granted', 'profile', $1, $2::jsonb)", [
       account.id,
-      JSON.stringify({ via: "admin-grant" }),
+      JSON.stringify(status === "widened" ? { via: "admin-grant", region: null } : { via: "admin-grant" }),
     ]);
   }
 
@@ -130,6 +136,7 @@ async function main(): Promise<void> {
     const what = {
       granted: "Granted the administrator role",
       restored: "Restored the administrator role",
+      widened: "Widened the administrator role to every region",
       already_admin: "Already an administrator; nothing changed",
     }[outcome.status];
     console.log(`${what} (profile ${outcome.profileId}).`);
