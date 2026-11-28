@@ -15,11 +15,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Info } from "lucide-react";
 import { fieldLimits, limits } from "@shared/limits";
 import { settingsPatchSchema, type MentorshipPatch } from "@shared/schemas/settings";
-import { audiences, mentorshipTopics, type AudienceId } from "@shared/taxonomy";
+import { audiences, type AudienceId } from "@shared/taxonomy";
 import type { MeetingMode, MentoringFormat, MentorStatus } from "@shared/types/common";
 import type { OwnProfile, OwnSettings } from "@shared/types/me";
 import { isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
+import { useTopics, withChosen } from "../../lib/vocabulary";
 import { ErrorSummary, SaveRow, SettingsField, fieldId, issuesToErrors, useFieldErrors } from "../../ui/settings-controls";
 import { Card, Chip, Input, Notice, Option, PageHead, Select, Status, Toast, UiLink } from "../../ui/ui";
 import { settingsErrorText, useOwnProfile, useOwnSettings, useSaveSettings } from "./api";
@@ -143,6 +144,7 @@ function MentorshipForm({ profile, mentorship }: { profile: OwnProfile; mentorsh
   const [general, setGeneral] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const save = useSaveSettings();
+  const liveTopics = useTopics();
   const offersMentoring = profile.professional?.participation.includes("mentoring") ?? false;
 
   useEffect(() => {
@@ -232,8 +234,7 @@ function MentorshipForm({ profile, mentorship }: { profile: OwnProfile; mentorsh
   };
 
   const savedTone = saved.status === "active" ? "active" : saved.status === "paused" ? "paused" : "off";
-  const knownTopics = new Set(mentorshipTopics.map((t) => t.id));
-  const topics = [...mentorshipTopics, ...draft.topics.filter((t) => !knownTopics.has(t)).map((id) => ({ id, label: id }))];
+  const topics = withChosen(liveTopics, draft.topics);
 
   return (
     <>

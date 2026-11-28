@@ -9,6 +9,7 @@ import type {
   AdminConfig,
   AdminDashboard,
   AdminMember,
+  AdminMemberFilters,
   AdminReviewDetail,
   AdminReviewItem,
   AdminReviewStatus,
@@ -27,14 +28,14 @@ export const adminKeys = {
   dashboard: ["admin", "dashboard"] as const,
   reviews: (status: AdminReviewStatus, page: number) => ["admin", "reviews", status, page] as const,
   review: (id: string) => ["admin", "review", id] as const,
-  members: (q: string, page: number) => ["admin", "members", q, page] as const,
+  members: (filters: AdminMemberFilters, page: number) => ["admin", "members", filters, page] as const,
   admins: ["admin", "admins"] as const,
   tags: (status: TagStatus, page: number) => ["admin", "tags", status, page] as const,
   vocabulary: ["admin", "vocabulary"] as const,
   config: ["admin", "config"] as const,
 };
 
-const qs = (params: Record<string, string | number | undefined>) => {
+const qs = (params: Record<string, string | number | boolean | undefined>) => {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") search.set(key, String(value));
@@ -62,10 +63,10 @@ export function useReview(id: string | undefined) {
   });
 }
 
-export function useMembers(q: string, page: number) {
+export function useMembers(filters: AdminMemberFilters, page: number) {
   return useQuery({
-    queryKey: adminKeys.members(q, page),
-    queryFn: () => api<Paged<AdminMember>>(`/admin/members?${qs({ q, page, size: ADMIN_PAGE_SIZE })}`),
+    queryKey: adminKeys.members(filters, page),
+    queryFn: () => api<Paged<AdminMember>>(`/admin/members?${qs({ ...filters, page, size: ADMIN_PAGE_SIZE })}`),
     placeholderData: keepPreviousData,
   });
 }

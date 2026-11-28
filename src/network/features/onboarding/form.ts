@@ -118,7 +118,9 @@ export function defaultValues(kind: ProfileKind | "" = ""): OnboardingValues {
       mode: "either",
       availabilityText: "",
       durationMin: "45",
-      maxActive: "3",
+      // Filled from `config.default_max_active` once the public config
+      // arrives (the wizard does it); left empty, the server applies it.
+      maxActive: "",
     },
     visibility: "public",
     // Phone and every other method start off; Requests through MEST is always on.

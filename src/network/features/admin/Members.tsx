@@ -1,17 +1,21 @@
 /**
- * Members (03 section 8.3): everyone with an account, searched by name,
- * from `admin_list_members`. The list carries the sign-up address's domain
+ * Members (03 section 8.3): everyone with an account, searched by name and
+ * filtered by kind, approval state, mentoring status, the verified mark and
+ * region, from `admin_list_members`. The filters live in the address, so a
+ * filtered list can be shared or reloaded. The list carries the sign-up address's domain
  * and never the address or any contact value. Actions: hide a profile or
  * restore it, and grant the administrator role.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
-import type { AdminMember } from "@shared/types/admin";
+import type { AdminMember, AdminMemberFilters } from "@shared/types/admin";
+import { approvalStates, mentorStatuses, profileKinds } from "@shared/types/common";
 import { useMeta } from "../../lib/meta";
 import { Pager } from "../../ui/admin-controls";
-import { Card, Empty, Modal, Monogram, Notice, PageHead, Status, Toast } from "../../ui/ui";
+import { Card, Empty, Modal, Monogram, Notice, PageHead, Select, Status, Toast } from "../../ui/ui";
+import { DEFAULT_REGION } from "../onboarding/form";
 import { ADMIN_PAGE_SIZE, adminErrorText, personInitials, personName, useAdminAction, useMembers } from "./api";
 
 type Tone = Parameters<typeof Status>[0]["tone"];
@@ -28,23 +32,93 @@ export function memberStatus(m: AdminMember): { tone: Tone; label: string } {
 }
 
 const KIND_LABEL = { professional: "Professional", student: "Student" } as const;
+const APPROVAL_LABEL = { pending: "Pending review", approved: "Approved", declined: "Needs changes" } as const;
+const MENTOR_LABEL = { active: "Mentoring", paused: "Paused", off: "Not mentoring" } as const;
+
+/** The address keys of the filters other than the name search. */
+const FILTER_KEYS = ["kind", "approval", "mentorStatus", "verified", "region"] as const;
+type FilterKey = (typeof FILTER_KEYS)[number];
+
+const oneOf = <T extends string>(list: readonly T[], value: string | null): T | undefined =>
+  list.includes(value as T) ? (value as T) : undefined;
+
+/** The filters in the address, keeping only values the server accepts. */
+function filtersFrom(params: URLSearchParams): AdminMemberFilters {
+  const verified = params.get("verified");
+  const region = params.get("region");
+  return {
+    q: params.get("q")?.trim() || undefined,
+    kind: oneOf(profileKinds, params.get("kind")),
+    approval: oneOf(approvalStates, params.get("approval")),
+    mentorStatus: oneOf(mentorStatuses, params.get("mentorStatus")),
+    verified: verified === "true" ? true : verified === "false" ? false : undefined,
+    region: region && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(region) ? region : undefined,
+  };
+}
+
+/**
+ * The filters in the address bar right now. The router re-renders after the
+ * address changes (inside a transition), so a second change made before that
+ * render would otherwise start from the filters of the render before it and
+ * bring back a filter just cleared.
+ */
+const liveFilters = () => filtersFrom(new URLSearchParams(window.location.search));
+
+/** The filters as address parameters (empty ones left out). */
+function toParams(filters: AdminMemberFilters, page = 1): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== "") out[key] = String(value);
+  }
+  if (page > 1) out.page = String(page);
+  return out;
+}
+
+/** "greater-new-orleans" as "Greater New Orleans". */
+const regionLabel = (slug: string) =>
+  slug
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 
 export function Members() {
   useMeta({ title: "Members" });
   const [params, setParams] = useSearchParams();
-  const q = params.get("q") ?? "";
+  const filters = useMemo(() => filtersFrom(params), [params]);
+  const q = filters.q ?? "";
+  const filtered = FILTER_KEYS.some((key) => filters[key] !== undefined);
   const page = Math.max(1, Number(params.get("page")) || 1);
   const [draft, setDraft] = useState(q);
   const [granting, setGranting] = useState<AdminMember | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
-  const list = useMembers(q, page);
+  const list = useMembers(filters, page);
 
   // Search as the administrator types, once they pause.
   useEffect(() => {
     if (draft.trim() === q) return;
-    const timer = window.setTimeout(() => setParams(draft.trim() ? { q: draft.trim() } : {}, { replace: true }), 300);
+    const timer = window.setTimeout(
+      () => setParams(toParams({ ...liveFilters(), q: draft.trim() || undefined }), { replace: true }),
+      300,
+    );
     return () => window.clearTimeout(timer);
   }, [draft, q, setParams]);
+
+  /** Changing a filter starts again at the first page. */
+  const setFilter = (key: FilterKey, value: string) => {
+    const next: AdminMemberFilters = { ...liveFilters(), q: draft.trim() || undefined };
+    if (key === "verified") next.verified = value === "" ? undefined : value === "true";
+    else (next as Record<string, unknown>)[key] = value || undefined;
+    setParams(toParams(next));
+  };
+  const clearFilters = () => setParams(toParams({ q: draft.trim() || undefined }));
+
+  // The region choices: the one the network serves today, any a row on
+  // screen carries, and the one chosen.
+  const regions = useMemo(() => {
+    const seen = new Set([DEFAULT_REGION, ...(list.data?.items.map((m) => m.region) ?? [])]);
+    if (filters.region) seen.add(filters.region);
+    return [...seen].filter(Boolean).sort();
+  }, [list.data, filters.region]);
 
   const hide = useAdminAction((m: AdminMember) => ({
     path: `/admin/profiles/${m.id}/${m.adminHidden ? "restore" : "hide"}`,
@@ -52,7 +126,7 @@ export function Members() {
   }));
   const grant = useAdminAction((m: AdminMember) => ({ path: "/admin/admins", method: "POST", body: { profileId: m.id } }));
 
-  const setPage = (next: number) => setParams({ ...(q ? { q } : {}), ...(next > 1 ? { page: String(next) } : {}) });
+  const setPage = (next: number) => setParams(toParams(liveFilters(), next));
 
   return (
     <>
@@ -67,8 +141,8 @@ export function Members() {
         </div>
       ) : null}
 
-      <form className="mt-8 max-w-md" role="search" onSubmit={(e) => e.preventDefault()}>
-        <div className="pn-search">
+      <form className="mt-8" role="search" aria-label="Members" onSubmit={(e) => e.preventDefault()}>
+        <div className="pn-search max-w-md">
           <Search size={16} aria-hidden="true" />
           <input
             type="search"
@@ -79,6 +153,66 @@ export function Members() {
             style={{ minHeight: "2.75rem" }}
           />
         </div>
+        <fieldset className="pn-admin-filters mt-4">
+          <legend className="sr-only">Filter members</legend>
+          <FilterSelect id="members-kind" label="Kind" value={filters.kind ?? ""} onChange={(v) => setFilter("kind", v)}>
+            <option value="">Any</option>
+            {profileKinds.map((k) => (
+              <option key={k} value={k}>
+                {KIND_LABEL[k]}
+              </option>
+            ))}
+          </FilterSelect>
+          <FilterSelect
+            id="members-approval"
+            label="Approval"
+            value={filters.approval ?? ""}
+            onChange={(v) => setFilter("approval", v)}
+          >
+            <option value="">Any</option>
+            {approvalStates.map((a) => (
+              <option key={a} value={a}>
+                {APPROVAL_LABEL[a]}
+              </option>
+            ))}
+          </FilterSelect>
+          <FilterSelect
+            id="members-mentoring"
+            label="Mentoring"
+            value={filters.mentorStatus ?? ""}
+            onChange={(v) => setFilter("mentorStatus", v)}
+          >
+            <option value="">Any</option>
+            {mentorStatuses.map((m) => (
+              <option key={m} value={m}>
+                {MENTOR_LABEL[m]}
+              </option>
+            ))}
+          </FilterSelect>
+          <FilterSelect
+            id="members-verified"
+            label="Verified"
+            value={filters.verified === undefined ? "" : String(filters.verified)}
+            onChange={(v) => setFilter("verified", v)}
+          >
+            <option value="">Any</option>
+            <option value="true">Verified</option>
+            <option value="false">Not verified</option>
+          </FilterSelect>
+          <FilterSelect id="members-region" label="Region" value={filters.region ?? ""} onChange={(v) => setFilter("region", v)}>
+            <option value="">Any</option>
+            {regions.map((r) => (
+              <option key={r} value={r}>
+                {regionLabel(r)}
+              </option>
+            ))}
+          </FilterSelect>
+        </fieldset>
+        {filtered ? (
+          <button type="button" className="btn btn-ghost btn-xs mt-3" onClick={clearFilters}>
+            Clear filters
+          </button>
+        ) : null}
       </form>
 
       {hide.isError || grant.isError ? (
@@ -96,7 +230,10 @@ export function Members() {
           <p className="p-5 t-small text-fg-2">Loading members</p>
         ) : list.data.items.length === 0 ? (
           <div className="p-5">
-            <Empty inline title={q ? "No members match that name." : "No members yet."} />
+            <Empty
+              inline
+              title={filtered ? "No members match these filters." : q ? "No members match that name." : "No members yet."}
+            />
           </div>
         ) : (
           <>
@@ -218,5 +355,30 @@ export function Members() {
         ) : null}
       </Modal>
     </>
+  );
+}
+
+function FilterSelect({
+  id,
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="pn-admin-filter">
+      <label className="field-label pn-field-label t-small" htmlFor={id}>
+        {label}
+      </label>
+      <Select id={id} value={value} onChange={(e) => onChange(e.currentTarget.value)}>
+        {children}
+      </Select>
+    </div>
   );
 }

@@ -32,7 +32,7 @@ import {
   removeOnboardingDraft,
   writeOnboardingDraft,
 } from "../../lib/onboarding-draft";
-import { useSession } from "../../lib/session";
+import { usePublicConfig, useSession } from "../../lib/session";
 import { ErrorSummary } from "../../ui/onboarding-fields";
 import { Notice, Steps } from "../../ui/ui";
 import { clearJoinIntent, readJoinIntent } from "../auth/join-intent";
@@ -187,8 +187,16 @@ function Wizard({
 }) {
   const client = useQueryClient();
   const form = useForm<OnboardingValues>({ defaultValues: initial.values });
-  const { control, getValues } = form;
+  const { control, getValues, setValue } = form;
   const values = useWatch({ control }) as OnboardingValues;
+
+  // "Mentees at once" starts at the network's default (an administrator's
+  // setting), unless the member or their draft already holds a number.
+  const defaultMaxActive = usePublicConfig().data?.defaultMaxActive;
+  useEffect(() => {
+    if (defaultMaxActive === undefined || getValues("mentorship.maxActive").trim() !== "") return;
+    setValue("mentorship.maxActive", String(defaultMaxActive));
+  }, [defaultMaxActive, getValues, setValue]);
 
   const steps = stepsFor(values);
   const [stepId, setStepId] = useState<StepId>(() =>
