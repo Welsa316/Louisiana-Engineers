@@ -22,8 +22,10 @@ import type { Db } from "../db/tx";
  * tells the reporter the status only). Administrators read through the
  * `admin_reports` and `admin_requests` views, which return nothing to
  * anyone else; the request free text in `admin_requests` is masked unless
- * an open report names a party. Nothing here reads an email address or a
- * contact value.
+ * an open report names a party. For a chapter administrator both views keep
+ * to its region (migration 0023): reports on a profile it covers, requests
+ * with a party it covers, and the text only when the reported party is one
+ * it covers. Nothing here reads an email address or a contact value.
  */
 
 export interface PageArgs {

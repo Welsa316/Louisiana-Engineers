@@ -28,7 +28,10 @@ import { AppError } from "../http/errors";
  * administrator's own `withUser` transaction: reads go through the
  * administrator policies on each table, and every change is one of the
  * `admin_*` SQL functions from migrations 0002, 0004 and 0017, which check
- * `is_admin()` again and write the audit entry. Nothing here reads
+ * `is_admin()` again and write the audit entry. A chapter administrator
+ * reads and acts only inside its region, and the network-wide changes
+ * (settings, vocabulary, tags) need an administrator for every region
+ * (migrations 0020 and 0023). Nothing here reads
  * `contact_preferences`, `profiles.linkedin_url` or `users.email`; the only
  * trace of an address is its domain, from `admin_list_members`.
  */
@@ -199,6 +202,10 @@ async function countReviews(db: Db, status: AdminReviewStatus): Promise<number> 
   return row.n;
 }
 
+/**
+ * One review with the member's history. Outside a chapter administrator's
+ * region it does not exist (404), as the review policy answers (0023).
+ */
 export async function getReview(db: Db, id: string): Promise<AdminReviewDetail> {
   const row = await db.maybeOne<
     ReviewRow & {
@@ -211,7 +218,7 @@ export async function getReview(db: Db, id: string): Promise<AdminReviewDetail> 
   >(
     `SELECT q.*, r.snapshot, d.verified_method, p.visibility, p.admin_hidden_at IS NOT NULL AS admin_hidden,
             p.created_at AS joined_at
-       FROM (${REVIEW_SELECT} WHERE r.id = $1) q
+       FROM (${REVIEW_SELECT} WHERE r.id = $1 AND admin_covers_profile(r.profile_id)) q
        JOIN profile_reviews r ON r.id = q.id
        JOIN profiles p ON p.id = q.profile_id
        LEFT JOIN professional_details d ON d.profile_id = q.profile_id`,
@@ -373,19 +380,14 @@ export async function listAdmins(db: Db, viewerId: string, paging: PageArgs): Pr
     region_label: string | null;
     total: number;
   }>(
-    `SELECT a.profile_id, p.first_name, p.last_name, a.granted_at, count(*) OVER ()::int AS total,
-            nullif(btrim(coalesce(g.first_name, '') || ' ' || coalesce(g.last_name, '')), '') AS granted_by_name,
-            a.region_id, reg.label AS region_label
-       FROM admin_roles a
-       JOIN profiles p ON p.id = a.profile_id
-       LEFT JOIN profiles g ON g.id = a.granted_by
-       LEFT JOIN regions reg ON reg.id = a.region_id
-      WHERE a.revoked_at IS NULL
-      ORDER BY a.granted_at, p.last_name, a.profile_id
+    `SELECT r.profile_id, r.first_name, r.last_name, r.granted_at, count(*) OVER ()::int AS total,
+            r.granted_by_name, r.region_id, r.region_label
+       FROM admin_roster r
+      ORDER BY r.granted_at, r.last_name, r.profile_id
       LIMIT $1 OFFSET $2`,
     [paging.size, offset(paging)],
   );
-  const total = rows[0]?.total ?? (await db.one<{ n: number }>("SELECT count(*)::int AS n FROM admin_roles WHERE revoked_at IS NULL")).n;
+  const total = rows[0]?.total ?? (await db.one<{ n: number }>("SELECT count(*)::int AS n FROM admin_roster")).n;
   const items = rows.map((r) => ({
     profileId: r.profile_id,
     firstName: r.first_name,
