@@ -30,7 +30,7 @@ export const adminKeys = {
   review: (id: string) => ["admin", "review", id] as const,
   members: (filters: AdminMemberFilters, page: number) => ["admin", "members", filters, page] as const,
   admins: ["admin", "admins"] as const,
-  tags: (status: TagStatus, page: number) => ["admin", "tags", status, page] as const,
+  tags: (status: TagStatus, page: number, q = "") => ["admin", "tags", status, page, q] as const,
   vocabulary: ["admin", "vocabulary"] as const,
   config: ["admin", "config"] as const,
 };
@@ -75,11 +75,14 @@ export function useAdmins() {
   return useQuery({ queryKey: adminKeys.admins, queryFn: () => api<Paged<AdminRole>>("/admin/admins?size=50") });
 }
 
-export function useTags(status: TagStatus, page: number, size = ADMIN_PAGE_SIZE) {
+/** Tags in one status, paged; `q` narrows to labels containing it (the merge picker's search). */
+export function useTags(status: TagStatus, page: number, size = ADMIN_PAGE_SIZE, q = "", enabled = true) {
+  const search = q.trim();
   return useQuery({
-    queryKey: [...adminKeys.tags(status, page), size],
-    queryFn: () => api<Paged<AdminTag>>(`/admin/tags?${qs({ status, page, size })}`),
+    queryKey: [...adminKeys.tags(status, page, search), size],
+    queryFn: () => api<Paged<AdminTag>>(`/admin/tags?${qs({ status, page, size, q: search })}`),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
@@ -109,6 +112,8 @@ export function useAdminAction<TVars = void, TResult = unknown>(
       await Promise.all([
         client.invalidateQueries({ queryKey: adminKeys.all }),
         client.invalidateQueries({ queryKey: ["directory"] }),
+        // A renamed or retired topic changes what every picker offers.
+        client.invalidateQueries({ queryKey: queryKeys.vocabulary }),
         client.invalidateQueries({ queryKey: queryKeys.session }),
       ]);
     },
@@ -129,6 +134,10 @@ export function adminErrorText(error: unknown): string {
     return "That value is outside what the platform allows. Reminder days must come before the request expires.";
   }
   if (isApiError(error, "invalid_vocabulary")) return "Use a short lowercase id with hyphens and a label of 2 to 80 characters.";
+  if (isApiError(error, "invalid_merge")) {
+    return "Merge into a different, approved tag that has not itself been merged. Approve the tag you want to keep first.";
+  }
+  if (isApiError(error, "tag_merged")) return "That tag was merged into another one, so it can no longer change.";
   if (isApiError(error, "not_found")) return "That record no longer exists. It may have been removed.";
   if (isApiError(error, "not_admin")) return "Your administrator role has been removed.";
   if (isApiError(error, "validation")) {

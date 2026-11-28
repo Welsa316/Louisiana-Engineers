@@ -193,6 +193,8 @@ export interface AdminTag {
   createdAt: string;
   /** Profiles currently using the tag. */
   usage: number;
+  /** For a tag retired by a merge, the label of the tag that replaced it. */
+  mergedIntoLabel: string | null;
 }
 
 export interface AdminDiscipline {
@@ -206,6 +208,11 @@ export interface AdminTopic {
   id: string;
   label: string;
   active: boolean;
+}
+
+/** `POST /api/admin/tags/:id/merge`: how many profiles carried the merged tag. */
+export interface AdminTagMergeResult {
+  moved: number;
 }
 
 /** `GET /api/admin/vocabulary` */

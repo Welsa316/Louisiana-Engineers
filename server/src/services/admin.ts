@@ -11,13 +11,14 @@ import type {
   AdminReviewStatus,
   AdminRole,
   AdminTag,
+  AdminTagMergeResult,
   AdminTopic,
   AdminVocabularyLists,
 } from "@shared/types/admin";
 import type { Paged, ReviewDecision, TagStatus, VerifiedMethod, Visibility } from "@shared/types/common";
 import type { AdminMemberRow } from "@shared/types/profiles";
 import type { DisciplineGroup } from "@shared/taxonomy";
-import type { ConfigPatch } from "@shared/schemas/admin";
+import type { ConfigPatch, RenameKind } from "@shared/schemas/admin";
 import type { Db } from "../db/tx";
 import { AppError } from "../http/errors";
 
@@ -25,7 +26,7 @@ import { AppError } from "../http/errors";
  * The administration area (03 section 8). Every call runs inside the
  * administrator's own `withUser` transaction: reads go through the
  * administrator policies on each table, and every change is one of the
- * `admin_*` SQL functions from migrations 0002 and 0004, which check
+ * `admin_*` SQL functions from migrations 0002, 0004 and 0017, which check
  * `is_admin()` again and write the audit entry. Nothing here reads
  * `contact_preferences`, `profiles.linkedin_url` or `users.email`; the only
  * trace of an address is its domain, from `admin_list_members`.
@@ -385,8 +386,22 @@ export async function revokeAdmin(db: Db, profileId: string): Promise<void> {
 
 /* ------------------------------------------------------------------- tags */
 
-/** Proposed tags oldest first (a queue); the others alphabetically. */
-export async function listTags(db: Db, status: TagStatus | undefined, paging: PageArgs): Promise<Paged<AdminTag>> {
+/** `value` as a literal inside a LIKE pattern (backslash is the default escape). */
+function likeEscape(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
+/**
+ * Proposed tags oldest first (a queue); the others alphabetically. `q`
+ * keeps the labels that contain it, case-insensitively.
+ */
+export async function listTags(
+  db: Db,
+  status: TagStatus | undefined,
+  paging: PageArgs,
+  q?: string,
+): Promise<Paged<AdminTag>> {
+  const search = q?.trim() ? `%${likeEscape(q.trim())}%` : null;
   const rows = await db.query<{
     id: string;
     label: string;
@@ -395,24 +410,28 @@ export async function listTags(db: Db, status: TagStatus | undefined, paging: Pa
     proposed_by_name: string | null;
     created_at: Date;
     usage: number;
+    merged_into_label: string | null;
     total: number;
   }>(
     `SELECT t.id, t.label, t.slug, t.status, t.created_at,
             (SELECT a.proposer_name FROM admin_tag_proposers(ARRAY[t.id]) a) AS proposed_by_name,
             (SELECT count(*) FROM profile_expertise pe WHERE pe.tag_id = t.id)::int AS usage,
+            (SELECT m.label FROM expertise_tags m WHERE m.id = t.merged_into) AS merged_into_label,
             count(*) OVER ()::int AS total
        FROM expertise_tags t
-      WHERE $1::tag_status IS NULL OR t.status = $1::tag_status
+      WHERE ($1::tag_status IS NULL OR t.status = $1::tag_status)
+        AND ($4::text IS NULL OR t.label ILIKE $4::text)
       ORDER BY CASE WHEN t.status = 'proposed' THEN t.created_at END ASC NULLS LAST, lower(t.label), t.id
       LIMIT $2 OFFSET $3`,
-    [status ?? null, paging.size, offset(paging)],
+    [status ?? null, paging.size, offset(paging), search],
   );
   let total = rows[0]?.total;
   if (total === undefined) {
     total = (
       await db.one<{ n: number }>(
-        "SELECT count(*)::int AS n FROM expertise_tags t WHERE $1::tag_status IS NULL OR t.status = $1::tag_status",
-        [status ?? null],
+        `SELECT count(*)::int AS n FROM expertise_tags t
+          WHERE ($1::tag_status IS NULL OR t.status = $1::tag_status) AND ($2::text IS NULL OR t.label ILIKE $2::text)`,
+        [status ?? null, search],
       )
     ).n;
   }
@@ -426,12 +445,19 @@ export async function listTags(db: Db, status: TagStatus | undefined, paging: Pa
       proposedByName: r.proposed_by_name,
       createdAt: r.created_at.toISOString(),
       usage: r.usage,
+      mergedIntoLabel: r.merged_into_label,
     })),
   };
 }
 
 export async function decideTag(db: Db, tagId: string, decision: "approved" | "rejected"): Promise<void> {
   await db.query("SELECT admin_review_tag($1, $2::tag_status)", [tagId, decision]);
+}
+
+/** Moves every profile from `fromTagId` to `intoTagId` and retires the old tag (`admin_merge_tags`, 0017). */
+export async function mergeTags(db: Db, fromTagId: string, intoTagId: string): Promise<AdminTagMergeResult> {
+  const row = await db.one<{ moved: number }>("SELECT admin_merge_tags($1::uuid, $2::uuid) AS moved", [fromTagId, intoTagId]);
+  return { moved: row.moved };
 }
 
 /* ------------------------------------------------------------- vocabulary */
@@ -461,6 +487,16 @@ export async function addVocabulary(
     entry.label,
     entry.kind === "discipline" ? (entry.groupName ?? null) : null,
   ]);
+}
+
+/** Relabels a discipline, topic or tag; ids and slugs stay (`admin_rename_vocabulary`, 0017). */
+export async function renameVocabulary(db: Db, kind: RenameKind, id: string, label: string): Promise<void> {
+  await db.query("SELECT admin_rename_vocabulary($1, $2, $3)", [kind, id, label]);
+}
+
+/** Stops offering a mentorship topic; existing choices stay (`admin_retire_topic`, 0017). */
+export async function retireTopic(db: Db, id: string): Promise<void> {
+  await db.query("SELECT admin_retire_topic($1)", [id]);
 }
 
 /* ---------------------------------------------------------- configuration */

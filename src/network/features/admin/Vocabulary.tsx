@@ -1,12 +1,14 @@
 /**
  * Vocabulary (03 section 8.5): expertise tags members proposed, waiting for a
  * decision, and the discipline and mentorship topic lists, which an
- * administrator can add to. Rows are never deleted; rejecting a tag removes
- * it from the profiles that used it.
+ * administrator can add to. Tags can be merged into an approved one and
+ * renamed; disciplines and topics renamed; topics retired (Task 34). Rows
+ * are never deleted; rejecting a tag removes it from the profiles that used
+ * it, and a merged tag stays as a retired row pointing at its replacement.
  */
 
 import { useId, useState, type FormEvent } from "react";
-import { Check, Plus, X } from "lucide-react";
+import { Archive, Check, GitMerge, Pencil, Plus, X } from "lucide-react";
 import { adminVocabularySchema } from "@shared/schemas/admin";
 import { disciplineGroups, type DisciplineGroup } from "@shared/taxonomy";
 import type { AdminDiscipline, AdminTag, AdminTopic } from "@shared/types/admin";
@@ -15,6 +17,7 @@ import { useMeta } from "../../lib/meta";
 import { Pager } from "../../ui/admin-controls";
 import { Card, Empty, Input, Notice, PageHead, Select, Tabs, Toast, fmtDate, plural } from "../../ui/ui";
 import { ADMIN_PAGE_SIZE, adminErrorText, useAdminAction, useTags, useVocabulary } from "./api";
+import { VocabularyDialogs, type VocabularyAction } from "./VocabularyDialogs";
 
 const TAG_TABS: { id: TagStatus; label: string }[] = [
   { id: "proposed", label: "Proposed" },
@@ -36,12 +39,13 @@ export function slugify(label: string): string {
 export function Vocabulary() {
   useMeta({ title: "Vocabulary" });
   const [flash, setFlash] = useState<string | null>(null);
+  const [action, setAction] = useState<VocabularyAction | null>(null);
   return (
     <>
       <PageHead
         kicker="Vocabulary"
         title="The words the directory is built on."
-        lead="Approve or reject expertise tags members propose, and add disciplines and mentorship topics when the network needs them."
+        lead="Approve the expertise tags members propose and merge the duplicates. Add or rename disciplines and mentorship topics, and retire a topic the network no longer offers."
       />
       {flash ? (
         <div className="mt-6">
@@ -49,17 +53,18 @@ export function Vocabulary() {
         </div>
       ) : null}
       <div className="mt-8 grid grid-cols-1 gap-6">
-        <TagQueue onDone={setFlash} />
+        <TagQueue onDone={setFlash} onAction={setAction} />
         <div className="pn-split">
-          <VocabularyList kind="discipline" onDone={setFlash} />
-          <VocabularyList kind="topic" onDone={setFlash} />
+          <VocabularyList kind="discipline" onDone={setFlash} onAction={setAction} />
+          <VocabularyList kind="topic" onDone={setFlash} onAction={setAction} />
         </div>
       </div>
+      <VocabularyDialogs action={action} onClose={() => setAction(null)} onDone={setFlash} />
     </>
   );
 }
 
-function TagQueue({ onDone }: { onDone: (text: string) => void }) {
+function TagQueue({ onDone, onAction }: { onDone: (text: string) => void; onAction: (action: VocabularyAction) => void }) {
   const [status, setStatus] = useState<TagStatus>("proposed");
   const [page, setPage] = useState(1);
   const tags = useTags(status, page);
@@ -128,6 +133,9 @@ function TagQueue({ onDone }: { onDone: (text: string) => void }) {
                   <tr key={t.id}>
                     <td>
                       <strong className="font-medium">{t.label}</strong>
+                      {t.mergedIntoLabel ? (
+                        <span className="block t-small text-fg-2">Merged into {t.mergedIntoLabel}</span>
+                      ) : null}
                     </td>
                     <td data-label="Proposed by">{t.proposedByName ?? "Seeded list"}</td>
                     <td className="pn-num" data-label="Profiles">
@@ -135,8 +143,8 @@ function TagQueue({ onDone }: { onDone: (text: string) => void }) {
                     </td>
                     <td data-label="Added">{fmtDate(t.createdAt, true)}</td>
                     <td>
-                      <div className="pn-table-actions">
-                        {t.status !== "approved" ? (
+                      <div className="pn-table-actions flex-wrap xl:flex-nowrap">
+                        {t.status !== "approved" && !t.mergedIntoLabel ? (
                           <button
                             type="button"
                             className="btn btn-outline btn-xs"
@@ -158,6 +166,26 @@ function TagQueue({ onDone }: { onDone: (text: string) => void }) {
                             Reject<span className="sr-only"> {t.label}</span>
                           </button>
                         ) : null}
+                        {!t.mergedIntoLabel ? (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => onAction({ type: "merge", tag: t })}
+                            >
+                              <GitMerge size={13} aria-hidden="true" />
+                              Merge<span className="sr-only"> {t.label}</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => onAction({ type: "rename", kind: "tag", id: t.id, label: t.label })}
+                            >
+                              <Pencil size={13} aria-hidden="true" />
+                              Rename<span className="sr-only"> {t.label}</span>
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -168,11 +196,12 @@ function TagQueue({ onDone }: { onDone: (text: string) => void }) {
           <Pager page={page} size={ADMIN_PAGE_SIZE} total={tags.data.total} onPage={setPage} label="Tag pages" />
         </>
       )}
-      {status !== "rejected" ? (
-        <p className="t-small text-fg-2 px-5 pb-5 pt-3">
-          Rejecting a tag removes it from {status === "proposed" ? "the profiles that proposed it" : "every profile using it"}.
-        </p>
-      ) : null}
+      <p className="t-small text-fg-2 px-5 pb-5 pt-3">
+        {status !== "rejected"
+          ? `Rejecting a tag removes it from ${status === "proposed" ? "the profiles that proposed it" : "every profile using it"}. `
+          : ""}
+        Merging moves every profile to an approved tag and retires the old one.
+      </p>
     </Card>
   );
 }
@@ -186,7 +215,15 @@ const KIND_COPY: Record<VocabularyKind, { title: string; noun: string }> = {
   topic: { title: "Mentorship topics", noun: "topic" },
 };
 
-function VocabularyList({ kind, onDone }: { kind: VocabularyKind; onDone: (text: string) => void }) {
+function VocabularyList({
+  kind,
+  onDone,
+  onAction,
+}: {
+  kind: VocabularyKind;
+  onDone: (text: string) => void;
+  onAction: (action: VocabularyAction) => void;
+}) {
   const vocabulary = useVocabulary();
   const rows = kind === "discipline" ? vocabulary.data?.disciplines : vocabulary.data?.topics;
   const copy = KIND_COPY[kind];
@@ -200,21 +237,56 @@ function VocabularyList({ kind, onDone }: { kind: VocabularyKind; onDone: (text:
       ) : (
         <>
           <p className="t-small text-fg-2">{plural(rows.length, copy.noun)}</p>
-          <ul className="grid gap-2 t-small mt-3">
+          <ul className="grid grid-cols-[minmax(0,1fr)] t-small mt-3 border-t border-[var(--pn-line)]">
             {rows.map((r) => (
-              <li key={r.id} className="flex items-center gap-3">
-                <span className="min-w-0 truncate">{r.label}</span>
-                <span className="flex-1 h-px bg-[var(--pn-line)]" aria-hidden="true" />
-                <span className="text-fg-2 whitespace-nowrap">
-                  {[groupOf(r), r.active ? null : "inactive"].filter(Boolean).join(", ")}
-                </span>
-              </li>
+              <VocabularyRow key={r.id} kind={kind} row={r} onAction={onAction} />
             ))}
           </ul>
         </>
       )}
       <AddVocabulary kind={kind} onDone={onDone} />
     </Card>
+  );
+}
+
+/** One discipline or topic: its label and state, with rename (and retire, for an active topic). */
+function VocabularyRow({
+  kind,
+  row,
+  onAction,
+}: {
+  kind: VocabularyKind;
+  row: AdminDiscipline | AdminTopic;
+  onAction: (action: VocabularyAction) => void;
+}) {
+  const meta = [groupOf(row), row.active ? null : kind === "topic" ? "Retired" : "Inactive"].filter(Boolean).join(", ");
+  return (
+    <li className="flex min-w-0 items-center gap-3 py-2 border-b border-[var(--pn-line)]">
+      <span className="min-w-0 flex-1">
+        <span className={row.active ? "block" : "block text-fg-2"}>{row.label}</span>
+        {meta ? <span className="block text-fg-2">{meta}</span> : null}
+      </span>
+      <span className="flex shrink-0 flex-wrap justify-end gap-1">
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs"
+          onClick={() => onAction({ type: "rename", kind, id: row.id, label: row.label })}
+        >
+          <Pencil size={13} aria-hidden="true" />
+          Rename<span className="sr-only"> {row.label}</span>
+        </button>
+        {kind === "topic" && row.active ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            onClick={() => onAction({ type: "retire", id: row.id, label: row.label })}
+          >
+            <Archive size={13} aria-hidden="true" />
+            Retire<span className="sr-only"> {row.label}</span>
+          </button>
+        ) : null}
+      </span>
+    </li>
   );
 }
 

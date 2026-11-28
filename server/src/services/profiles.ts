@@ -533,15 +533,26 @@ async function patchMentorship(db: Db, patch: MentorshipPatch): Promise<void> {
   });
 
   if (patch.topics !== undefined) {
+    // An active topic, or a retired one the mentor already offers (retiring
+    // a topic keeps existing choices; it only stops new ones).
     const known = await db.one<{ n: number }>(
-      "SELECT count(*)::int AS n FROM mentorship_topics t WHERE t.active AND t.id = ANY ($1::text[])",
+      `SELECT count(*)::int AS n FROM mentorship_topics t
+        WHERE t.id = ANY ($1::text[])
+          AND (t.active OR EXISTS (SELECT 1 FROM mentor_topics mt WHERE mt.profile_id = app_uid() AND mt.topic_id = t.id))`,
       [patch.topics],
     );
     if (known.n !== patch.topics.length) throw conflict("invalid_topic", "unknown mentorship topic");
-    await db.query("DELETE FROM mentor_topics WHERE profile_id = app_uid()");
-    await db.query("INSERT INTO mentor_topics (profile_id, topic_id) SELECT app_uid(), t FROM unnest($1::text[]) AS t", [
+    // Only the difference is written: a kept retired topic is never
+    // re-inserted, which the insert policy (active topics only) would refuse.
+    await db.query("DELETE FROM mentor_topics WHERE profile_id = app_uid() AND NOT (topic_id = ANY ($1::text[]))", [
       patch.topics,
     ]);
+    await db.query(
+      `INSERT INTO mentor_topics (profile_id, topic_id)
+       SELECT app_uid(), t FROM unnest($1::text[]) AS t
+        WHERE NOT EXISTS (SELECT 1 FROM mentor_topics mt WHERE mt.profile_id = app_uid() AND mt.topic_id = t)`,
+      [patch.topics],
+    );
   }
 
   if (patch.status !== undefined) {
