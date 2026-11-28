@@ -10,6 +10,7 @@ import {
 } from "@shared/types/export";
 import type { RequestRole } from "@shared/types/requests";
 import type { Db } from "../db/tx";
+import { exportFeedback } from "./feedback";
 import { exportMeetings } from "./meetings";
 import { photoForExport } from "./photos";
 import { getOwnProfile } from "./profiles";
@@ -21,6 +22,7 @@ import { getOwnProfile } from "./profiles";
  * from the profiles service, requests and relationships from `my_requests`
  * (the other party's public fields only, of which only the name is kept),
  * meetings and proposed times from the meetings service (names only),
+ * the caller's own feedback answers (never the other party's),
  * notifications under the recipient policy, and audit entries from
  * `my_audit_entries()`. A profile photo is noted (state, type and size),
  * never copied into the file. Contact values are never read: the handoff values
@@ -178,6 +180,7 @@ export async function exportMyData(db: Db): Promise<DataExport> {
     relationships,
     meetings,
     availabilitySlots,
+    feedback: await exportFeedback(db),
     notifications: await notifications(db),
     audit: await auditEntries(db),
   };

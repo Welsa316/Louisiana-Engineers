@@ -9,7 +9,7 @@
  *   declined   the reason, and others who offer the same topic
  *   expired    no reply in time, said kindly, and others who offer the topic
  *   canceled   when it was sent and withdrawn
- *   completed  when, and who marked it
+ *   completed  when, and who marked it; then the two feedback questions (Task 32)
  *
  * Accepted and completed requests also carry the Meetings card (Task 31,
  * features/meetings/Scheduling.tsx), the same one the mentor sees.
@@ -28,6 +28,7 @@ import { useMeta } from "../../lib/meta";
 import { useSession } from "../../lib/session";
 import { Card, Empty, Modal, Monogram, Notice, fmtDate } from "../../ui/ui";
 import { HandoffMethods } from "../../ui/requests-handoff";
+import { FeedbackCard } from "../feedback/FeedbackCard";
 import { displayName, initialsOf } from "../public/Directory";
 import {
   counterpartyFirstName,
@@ -340,6 +341,8 @@ function DetailView({ r }: { r: Detail }) {
   const sentTo = (location.state as { sent?: string } | null)?.sent;
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
+  // Set when the mentee just marked it completed: the feedback form takes focus.
+  const [justCompleted, setJustCompleted] = useState(false);
   const cancel = useRequestAction(r.id, "cancel");
   const complete = useRequestAction(r.id, "complete");
   const first = counterpartyFirstName(r.counterparty);
@@ -392,6 +395,9 @@ function DetailView({ r }: { r: Detail }) {
       <div className="pn-split mt-8">
         <div className="grid gap-6 content-start">
           <StatusBlock r={r} />
+          {r.status === "completed" ? (
+            <FeedbackCard requestId={r.id} otherFirstName={first} kind={r.kind} focusOnMount={justCompleted} />
+          ) : null}
           {r.status === "accepted" || r.status === "completed" ? (
             <MeetingsPanel requestId={r.id} first={first} active={r.status === "accepted"} preferredMode={r.mode} />
           ) : null}
@@ -421,9 +427,17 @@ function DetailView({ r }: { r: Detail }) {
         confirm="Mark as completed"
         pending={complete.isPending}
         error={complete.isError ? actionError(complete.error) : null}
-        onConfirm={() => complete.mutate(undefined, { onSuccess: () => setConfirmComplete(false) })}
+        onConfirm={() =>
+          complete.mutate(undefined, {
+            onSuccess: () => {
+              setConfirmComplete(false);
+              setJustCompleted(true);
+            },
+          })
+        }
       >
-        {first} is told in the app. The request stays in your history, and you can send {first} a new one later.
+        {first} is told and asked for feedback. The request stays in your history, and you can send {first} a new one
+        later.
       </Confirm>
     </>
   );

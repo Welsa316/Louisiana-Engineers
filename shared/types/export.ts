@@ -8,6 +8,7 @@
 
 import type { ContactMethodId } from "../taxonomy";
 import type { DeclineReason, MeetingMode, NotificationCategory, RequestFormat, RequestKind, RequestStatus } from "./common";
+import type { ExportFeedback } from "./feedback";
 import type { ExportMeeting, ExportSlot } from "./meetings";
 import type { OwnProfile, OwnSettings } from "./me";
 import type { PhotoContentType, PhotoStatus } from "./photos";
@@ -96,6 +97,8 @@ export interface DataExport {
   meetings: ExportMeeting[];
   /** Times proposed by either party of the caller's relationships (Task 30). */
   availabilitySlots: ExportSlot[];
+  /** The caller's own post-completion feedback (Task 32); never the other party's. */
+  feedback: ExportFeedback[];
   notifications: ExportNotification[];
   audit: ExportAuditEntry[];
 }

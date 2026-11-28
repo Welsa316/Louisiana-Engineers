@@ -10,11 +10,12 @@
  */
 
 import { useState } from "react";
-import { Navigate, useParams } from "react-router";
+import { Navigate, useLocation, useParams } from "react-router";
 import { Check, ShieldCheck } from "lucide-react";
 import { audiences } from "@shared/taxonomy";
 import type { RequestDetail } from "@shared/types/requests";
 import { useTopicLabels } from "../../lib/vocabulary";
+import { FeedbackCard } from "../feedback/FeedbackCard";
 import { useMeta } from "../../lib/meta";
 import { Card, Empty, Monogram, fmtDate } from "../../ui/ui";
 import {
@@ -37,6 +38,11 @@ function Back() {
 function RelationshipView({ r }: { r: RequestDetail }) {
   const topicLabels = useTopicLabels();
   const [confirming, setConfirming] = useState(false);
+  // Set when this mentor just marked it completed, here or from the mentees list.
+  const location = useLocation();
+  const [justCompleted, setJustCompleted] = useState(
+    () => (location.state as { feedback?: boolean } | null)?.feedback === true,
+  );
   const complete = useRequestAction(r.id, "complete");
   const first = counterpartyFirstName(r.counterparty);
   const name = counterpartyName(r.counterparty);
@@ -90,6 +96,9 @@ function RelationshipView({ r }: { r: RequestDetail }) {
                 {completedWhen ? ` on ${fmtDate(completedWhen, true)}` : ""}. Thank you for taking part.
               </p>
             </Card>
+          ) : null}
+          {r.status === "completed" ? (
+            <FeedbackCard requestId={r.id} otherFirstName={first} kind={r.kind} focusOnMount={justCompleted} />
           ) : null}
           <MeetingsPanel requestId={r.id} first={first} active={r.status === "accepted"} preferredMode={r.mode} />
           <Card title="The request" flush>
@@ -183,7 +192,14 @@ function RelationshipView({ r }: { r: RequestDetail }) {
         first={first}
         pending={complete.isPending}
         error={complete.isError ? completeErrorText(complete.error) : null}
-        onConfirm={() => complete.mutate(undefined, { onSuccess: () => setConfirming(false) })}
+        onConfirm={() =>
+          complete.mutate(undefined, {
+            onSuccess: () => {
+              setConfirming(false);
+              setJustCompleted(true);
+            },
+          })
+        }
       />
     </>
   );

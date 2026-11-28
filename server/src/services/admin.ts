@@ -64,6 +64,8 @@ interface DashboardRow {
   by_month: AdminDashboard["byMonth"];
   meetings_held: number;
   meetings_upcoming: number;
+  feedback_responses: number;
+  feedback_average_helpful: number | null;
 }
 
 /** The success measures (01 section 8); migration 0009 defines each one. */
@@ -92,6 +94,8 @@ export async function dashboard(db: Db): Promise<AdminDashboard> {
     byMonth: row.by_month,
     meetingsHeld: row.meetings_held,
     meetingsUpcoming: row.meetings_upcoming,
+    feedbackResponses: row.feedback_responses,
+    feedbackAverageHelpful: row.feedback_average_helpful,
   };
 }
 
