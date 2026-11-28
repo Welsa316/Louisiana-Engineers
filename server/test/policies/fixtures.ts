@@ -17,6 +17,10 @@ export interface PersonOptions {
   suspended?: boolean;
   deleted?: boolean;
   admin?: boolean;
+  /** The administrator role's region scope; null or left out means every region. */
+  adminRegion?: string | null;
+  /** A region slug (an active `regions` row); defaults to the column default, greater-new-orleans. */
+  region?: string;
   firstName?: string;
   lastName?: string;
   /** Professionals only; defaults to a 120-character placeholder (required once details exist). */
@@ -52,8 +56,8 @@ export async function makePerson(pool: Pool, options: PersonOptions = {}): Promi
     const kind = options.kind === undefined ? "professional" : options.kind;
     const bio = options.bio === undefined ? (kind === "professional" ? FIXTURE_BIO : null) : options.bio;
     await client.query(
-      `INSERT INTO profiles (id, first_name, last_name, kind, approval_state, visibility, admin_hidden_at, anonymized_at, bio)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `INSERT INTO profiles (id, first_name, last_name, kind, approval_state, visibility, admin_hidden_at, anonymized_at, bio, region)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, coalesce($10, 'greater-new-orleans'))`,
       [
         id,
         options.firstName ?? "Test",
@@ -64,6 +68,7 @@ export async function makePerson(pool: Pool, options: PersonOptions = {}): Promi
         options.adminHidden ? new Date() : null,
         options.anonymized ? new Date() : null,
         bio,
+        options.region ?? null,
       ],
     );
     if (kind === "professional" && options.participation !== false) {
@@ -81,7 +86,7 @@ export async function makePerson(pool: Pool, options: PersonOptions = {}): Promi
       );
     }
     if (options.admin) {
-      await client.query("INSERT INTO admin_roles (profile_id) VALUES ($1)", [id]);
+      await client.query("INSERT INTO admin_roles (profile_id, region_id) VALUES ($1, $2)", [id, options.adminRegion ?? null]);
     }
   });
   return id;

@@ -177,6 +177,10 @@ export interface AdminRole {
   /** null when granted by the `admin-grant` command */
   grantedByName: string | null;
   isSelf: boolean;
+  /** The region this administrator acts for; null means every region. */
+  regionId: string | null;
+  /** That region's label; null for every region. */
+  regionLabel: string | null;
 }
 
 /** One row of `GET /api/admin/tags?status=`. */

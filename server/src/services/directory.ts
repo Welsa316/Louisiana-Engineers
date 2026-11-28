@@ -46,6 +46,7 @@ export const directoryQuerySchema = z.object({
   topic: list(slug),
   experience: list(z.enum(experienceBandIds)),
   location: single(z.string().trim().max(80).optional()),
+  region: single(slug.optional()),
   verified: single(z.enum(["1", "true", "0", "false"]).optional()).transform((v) => v === "1" || v === "true"),
   mentoring: single(z.enum(mentoringFilters).optional()).transform((v) => v ?? "any"),
   audience: single(z.enum(audienceIds).optional()),
@@ -146,6 +147,7 @@ function filters(where: Where, search: DirectorySearch, text: TextSearch | null,
   if (search.location) {
     where.add(`e.location ILIKE '%' || ${where.param(likeLiteral(search.location))} || '%'`);
   }
+  if (search.region) where.add(`e.region = ${where.param(search.region)}`);
   if (search.verified) where.add("e.verified");
   if (search.participation.length) where.add(`e.participation && ${where.param(search.participation)}::text[]`);
   if (search.mentoring === "available") where.add("e.mentor_status = 'active' AND e.has_capacity");

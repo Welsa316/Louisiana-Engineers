@@ -2,7 +2,8 @@
  * Administrators: who holds the role, who granted it, and revocation. The
  * platform keeps at least two (A7); `admin_revoke` refuses anything below
  * that, and this screen says so before anyone tries. New administrators
- * are granted from Members.
+ * are granted from Members, for one region or for every region; the
+ * Region column shows each administrator's scope.
  */
 
 import { useState } from "react";
@@ -66,6 +67,7 @@ export function Admins() {
               <thead>
                 <tr>
                   <th scope="col">Administrator</th>
+                  <th scope="col">Region</th>
                   <th scope="col">Since</th>
                   <th scope="col">Granted by</th>
                   <th scope="col">
@@ -87,6 +89,7 @@ export function Admins() {
                         </div>
                       </div>
                     </td>
+                    <td data-label="Region">{a.regionLabel ?? (a.regionId ? a.regionId : "Every region")}</td>
                     <td data-label="Since">{fmtDate(a.grantedAt, true)}</td>
                     <td data-label="Granted by">{a.grantedByName ?? "Set up from the command line"}</td>
                     <td>

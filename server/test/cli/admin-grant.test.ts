@@ -115,6 +115,21 @@ describe("grantAdminByEmail", () => {
     expect((await auditRows(id)).map((row) => row.action)).toEqual(["admin.granted"]);
   });
 
+  it("restored_role_acts_for_every_region", async () => {
+    // The command sets up region-wide administrators (migration 0020), so a
+    // role that was once a chapter's comes back for every region.
+    await db.pool.query("INSERT INTO regions (id, label) VALUES ('baton-rouge', 'Greater Baton Rouge') ON CONFLICT DO NOTHING");
+    const other = await makePerson(db.pool, { email: "other@example.test", admin: true });
+    const id = await makePerson(db.pool, { email: "chapter@example.test" });
+    await db.pool.query(
+      "INSERT INTO admin_roles (profile_id, granted_by, revoked_at, region_id) VALUES ($1, $2, now(), 'baton-rouge')",
+      [id, other],
+    );
+    await grant("chapter@example.test");
+    const row = await db.pool.query("SELECT region_id, revoked_at FROM admin_roles WHERE profile_id = $1", [id]);
+    expect(row.rows).toEqual([{ region_id: null, revoked_at: null }]);
+  });
+
   it("errors_are_admin_grant_errors", async () => {
     const error = await grant("nobody@example.test").catch((e: unknown) => e);
     expect(error).toBeInstanceOf(AdminGrantError);

@@ -6,9 +6,10 @@
 import type { ReactNode, RefObject } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Link } from "react-router";
-import { Lock } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 import { limits } from "@shared/limits";
 import { mission } from "../../../content/site";
+import { regionLabel, useRegions, withChosenRegion } from "../../lib/vocabulary";
 import { CharCount, OnbField, OnbFieldset } from "../../ui/onboarding-fields";
 import { Card, Input, Notice, Option, PrivacyMark } from "../../ui/ui";
 import { fieldId, type OnboardingValues } from "./form";
@@ -131,6 +132,10 @@ export function BasicsStep({ headingRef, err }: StepProps) {
   const { register, control } = useFormContext<OnboardingValues>();
   const kind = useWatch({ control, name: "kind" });
   const bio = useWatch({ control, name: "bio" });
+  const region = useWatch({ control, name: "region" });
+  const activeRegions = useRegions();
+  // A choice only once the network serves more than one region.
+  const regions = activeRegions.length > 1 ? withChosenRegion(activeRegions, region) : null;
   const student = kind === "student";
   // Students are never listed: what they write reaches only mentors they send a request to.
   const seen = student ? "members" : "public";
@@ -175,14 +180,38 @@ export function BasicsStep({ headingRef, err }: StepProps) {
           {(a11y) => <Input {...a11y} {...register("location")} autoComplete="address-level2" />}
         </OnbField>
 
-        <div className="field pn-form-span">
-          <p className="field-label pn-field-label t-small">
-            <span>Region</span>
-            <PrivacyMark level={seen} />
-          </p>
-          <p className="t-body">Greater New Orleans</p>
-          <p className="pn-field-hint">The network serves Greater New Orleans for now.</p>
-        </div>
+        {regions ? (
+          <OnbField
+            id={fieldId("region")}
+            label="Region"
+            privacy={seen}
+            className="pn-form-span"
+            error={err("region")}
+            hint="The MEST region you live or work in. The directory can be filtered by it."
+          >
+            {(a11y) => (
+              <div className="select-wrap">
+                <select {...a11y} {...register("region")}>
+                  {regions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={16} aria-hidden="true" />
+              </div>
+            )}
+          </OnbField>
+        ) : (
+          <div className="field pn-form-span">
+            <p className="field-label pn-field-label t-small">
+              <span>Region</span>
+              <PrivacyMark level={seen} />
+            </p>
+            <p className="t-body">{regionLabel(activeRegions, region)}</p>
+            <p className="pn-field-hint">The network serves {regionLabel(activeRegions, region)} for now.</p>
+          </div>
+        )}
 
         <OnbField
           id={fieldId("bio")}

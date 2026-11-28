@@ -131,6 +131,13 @@ export function adminErrorText(error: unknown): string {
   if (isApiError(error, "invalid_vocabulary")) return "Use a short lowercase id with hyphens and a label of 2 to 80 characters.";
   if (isApiError(error, "not_found")) return "That record no longer exists. It may have been removed.";
   if (isApiError(error, "not_admin")) return "Your administrator role has been removed.";
+  if (isApiError(error, "out_of_region")) {
+    return "That member or role is outside the region you administer. An administrator for that region, or for every region, can do this.";
+  }
+  if (isApiError(error, "last_global_admin")) {
+    return "At least one administrator must keep every region. Give another administrator every region before changing this one.";
+  }
+  if (isApiError(error, "invalid_region")) return "That region is no longer offered. Reload the page and choose again.";
   if (isApiError(error, "validation")) {
     return error.issues[0]?.message ?? "Check the highlighted fields and try again.";
   }

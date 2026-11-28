@@ -7,7 +7,7 @@ import {
   adminVocabularySchema,
   configPatchSchema,
 } from "@shared/schemas/admin";
-import { pageQuerySchema, uuidSchema } from "@shared/schemas/common";
+import { pageQuerySchema, slugSchema, uuidSchema } from "@shared/schemas/common";
 import { disciplineGroups } from "@shared/taxonomy";
 import { adminReviewStatuses } from "@shared/types/admin";
 import { fieldLimits } from "@shared/limits";
@@ -44,7 +44,8 @@ const membersQuery = pageQuerySchema.extend({
     .optional(),
 });
 const tagsQuery = pageQuerySchema.extend({ status: z.enum(tagStatuses).optional() });
-const grantSchema = z.object({ profileId: uuidSchema });
+/** `regionId` null or left out grants every region; `admin_grant` keeps it within the caller's own scope. */
+const grantSchema = z.object({ profileId: uuidSchema, regionId: slugSchema.nullable().optional() });
 const vocabularySchema = adminVocabularySchema.extend({ groupName: z.enum(disciplineGroups as [string, ...string[]]).optional() });
 
 export function createAdminRoutes(): Hono {
@@ -112,8 +113,8 @@ export function createAdminRoutes(): Hono {
   });
 
   app.post("/admins", validate(grantSchema), async (c) => {
-    const { profileId } = c.req.valid("json");
-    await as(c, (db) => admin.grantAdmin(db, profileId));
+    const { profileId, regionId } = c.req.valid("json");
+    await as(c, (db) => admin.grantAdmin(db, profileId, regionId ?? null));
     return c.json({ ok: true });
   });
 

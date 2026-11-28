@@ -170,6 +170,7 @@ const FIELD_REFUSALS: Record<string, FieldIssue> = {
   invalid_expertise: { name: "expertise", message: "Use 2 to 12 areas of 2 to 40 characters each" },
   invalid_education: { name: "education", message: "Check the education entries: at most 6, with real years" },
   invalid_contact: { name: "contact.methods", message: "Each method you use needs its detail, and only methods you use can be shown to members" },
+  invalid_region: { name: "region", message: "That region is no longer offered. Choose another" },
 };
 
 function Wizard({

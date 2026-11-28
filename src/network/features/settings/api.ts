@@ -107,6 +107,7 @@ export function settingsErrorText(error: unknown): string {
   }
   if (isApiError(error, "invalid_topic")) return "One of the topics is no longer offered. Reload the page and choose again.";
   if (isApiError(error, "invalid_discipline")) return "That discipline is no longer offered. Choose another.";
+  if (isApiError(error, "invalid_region")) return "That region is no longer offered. Choose another.";
   if (isApiError(error, "tag_rejected")) return "One of your expertise tags was declined by an administrator. Remove it and save again.";
   if (isApiError(error, "invalid_expertise")) return "Add between 2 and 12 areas of expertise, each 2 to 40 characters.";
   if (isApiError(error, "invalid_education")) return "Check the education entries: each needs a degree, field, school and year.";
