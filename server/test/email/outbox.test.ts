@@ -303,6 +303,26 @@ describe("outbox sender", () => {
     expect(message.html).toContain("Open MEST Network to see it.");
   });
 
+  it("resend_sets_reply_to_only_when_one_is_configured", async () => {
+    // Replies to a send-only address would bounce; Reply-To sends them to a
+    // forwarded inbox instead (runbook: email).
+    const { createResendMailer } = await import("../../src/email/resend");
+    resendSend.mockResolvedValue({ data: { id: "email_1" }, error: null });
+    const message = { to: "member@example.test", subject: "Hi", text: "Hi", html: "<p>Hi</p>" };
+    await createResendMailer("re_test_key", "MEST Network <network@example.test>", { replyTo: "admin@example.test" }).send(message);
+    await createResendMailer("re_test_key", "MEST Network <network@example.test>").send(message);
+    expect(resendSend.mock.calls[0][0]).toMatchObject({ replyTo: "admin@example.test" });
+    expect(resendSend.mock.calls[1][0]).not.toHaveProperty("replyTo");
+  });
+
+  it("email_reply_to_must_be_an_address", async () => {
+    const { loadEnv } = await import("../../src/env");
+    const base = { DATABASE_URL: "postgres://x", APP_ORIGIN: "http://127.0.0.1:8787", SESSION_SECRET: "s".repeat(32), EMAIL_FROM: "MEST <n@example.test>" };
+    expect(loadEnv({ ...base, EMAIL_REPLY_TO: "admin@example.test" }).EMAIL_REPLY_TO).toBe("admin@example.test");
+    expect(loadEnv({ ...base, EMAIL_REPLY_TO: "" }).EMAIL_REPLY_TO).toBeUndefined();
+    expect(() => loadEnv({ ...base, EMAIL_REPLY_TO: "not an address" })).toThrow(/EMAIL_REPLY_TO/);
+  });
+
   it("without_an_api_key_the_sender_logs_the_text_and_marks_sent", async () => {
     const { createLogMailer } = await import("../../src/email/resend");
     const log = vi.spyOn(console, "log").mockImplementation(() => {});

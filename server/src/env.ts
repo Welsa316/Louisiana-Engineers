@@ -36,6 +36,9 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
   RESEND_API_KEY: optionalString,
   EMAIL_FROM: z.string().min(1, "EMAIL_FROM is required"),
+  // Where replies to a sent email go. EMAIL_FROM can be a send-only address,
+  // so this points replies at a real (for example forwarded) inbox.
+  EMAIL_REPLY_TO: optionalString.pipe(z.string().email("EMAIL_REPLY_TO must be an email address such as admin@example.org").optional()),
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
   PORT: z.coerce.number().int().min(1).max(65535).default(8787),

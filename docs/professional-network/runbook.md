@@ -95,6 +95,7 @@ Set these on the app service (not the Postgres service). `.env.example` lists th
 | `SESSION_SECRET` | 32 or more random characters: `openssl rand -hex 32` (see section 3.6 for what it does today) |
 | `EMAIL_FROM` | The sender, on the domain verified in Resend, for example `MEST Network <network@example.org>` |
 | `RESEND_API_KEY` | From section 2.6. Without it, production records every email as failed instead of sending |
+| `EMAIL_REPLY_TO` | Where replies to the network's emails go, for example `admin@mestnola.com` forwarded to the organizers' inbox (section 2.6). Optional; without it replies go to `EMAIL_FROM`, which has no inbox |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | From section 2.7. Leave both unset to hide the Google button; email links still work |
 | `NODE_ENV` | `production` (the image sets it; leave it) |
 | `PORT` | Leave unset; Railway provides it |
@@ -151,6 +152,8 @@ Repeat this check after any change Railway announces to its networking.
 3. Add a DMARC record if the domain has none: a TXT record at `_dmarc` with `v=DMARC1; p=none; rua=mailto:<a MEST address that receives reports>`. Tighten `p=none` to `quarantine` once a few weeks of reports show only Resend sending for the domain.
 4. Create an API key with sending access limited to that domain, and set it as `RESEND_API_KEY`.
 5. Request a sign-in link for your own address on the live site and confirm it arrives and is not marked as spam.
+
+**Receiving mail without a mailbox.** `EMAIL_FROM` (for example `network@mestnola.com`) is send-only: nothing reads it. The public contact address (`contact.email` in `src/content/site.ts`, for example `admin@mestnola.com`) needs no mailbox either. Forward it to the organizers' existing inbox with the DNS provider's free email forwarding (Cloudflare Email Routing, or the registrar's own forwarding), and optionally add a catch-all rule so a reply sent to `EMAIL_FROM` is forwarded too. Set `EMAIL_REPLY_TO` to the contact address so replies reach that inbox. Resend's records sit on the sending subdomain and DKIM, so they do not clash with the forwarding service's MX records on the domain itself. Send a test message to the contact address from another account and confirm it arrives.
 
 ### 2.7 Google sign-in
 
@@ -333,7 +336,7 @@ The job names are `expire-requests`, `reminders`, `resume-paused`, `retention`, 
 
 These are open in the repository and need a decision or a value before members are invited:
 
-- **Contact address.** `contact.email` in `src/content/site.ts` is empty, so the footer shows "Email to be announced" and the privacy notice says the address will be published before launch. Members are told to use it for questions and deletion requests.
+- **Contact address.** `contact.email` in `src/content/site.ts` is `admin@mestnola.com`, shown in the footer, the membership section and the privacy notice. Members are told to use it for questions and deletion requests, so the domain must be owned and the address forwarded (section 2.6) before launch; until then it bounces.
 - **Legal drafts.** The guidelines and privacy pages are marked "Draft for board review" (A12), including the retention periods (A9) and the backup retention in section 3.2.
 - **Administrators.** At least two, granted as in section 2.8, with the board's decision on who they are (A7).
 - **Accounts.** Two holders recorded for each account in section 1.

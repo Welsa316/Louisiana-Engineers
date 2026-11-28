@@ -19,7 +19,12 @@ export interface Mailer {
   send(message: OutgoingEmail): Promise<void>;
 }
 
-export function createResendMailer(apiKey: string, from: string): Mailer {
+export interface ResendOptions {
+  /** Where replies go when `from` is a send-only address (`EMAIL_REPLY_TO`). */
+  replyTo?: string;
+}
+
+export function createResendMailer(apiKey: string, from: string, options: ResendOptions = {}): Mailer {
   const client = new Resend(apiKey);
   return {
     kind: "resend",
@@ -30,6 +35,7 @@ export function createResendMailer(apiKey: string, from: string): Mailer {
         subject: message.subject,
         text: message.text,
         html: message.html,
+        ...(options.replyTo ? { replyTo: options.replyTo } : {}),
       });
       if (error) throw new Error(`resend: ${error.name}: ${error.message}`);
     },
@@ -59,7 +65,9 @@ let shared: Mailer | undefined;
 /** Resend when `RESEND_API_KEY` is set, otherwise the log mailer. */
 export function defaultMailer(): Mailer {
   if (!shared) {
-    shared = env.RESEND_API_KEY ? createResendMailer(env.RESEND_API_KEY, env.EMAIL_FROM) : createLogMailer();
+    shared = env.RESEND_API_KEY
+      ? createResendMailer(env.RESEND_API_KEY, env.EMAIL_FROM, { replyTo: env.EMAIL_REPLY_TO })
+      : createLogMailer();
   }
   return shared;
 }
