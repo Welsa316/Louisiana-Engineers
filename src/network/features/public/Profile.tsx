@@ -273,7 +273,7 @@ export function ProfileContent({
   return (
     <>
       <header className="pn-profile-head">
-        <Monogram initials={initialsOf(profile)} size="xl" />
+        <Monogram initials={initialsOf(profile)} photo={profile.photoUrl} size="xl" />
         <div className="min-w-0">
           <Name className="pn-profile-name">
             {name}

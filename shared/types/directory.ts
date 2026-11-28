@@ -86,6 +86,8 @@ export interface DirectoryEntry {
   /** Active mentor with a free slot: "Taking requests". */
   hasCapacity: boolean;
   lastActiveAt: string | null;
+  /** The approved profile photo (`/api/photos/:id?v=`), or null for initials. */
+  photoUrl: string | null;
 }
 
 export interface DisciplineFacet {
@@ -153,6 +155,8 @@ export interface ProfileView {
   /** Whether the caller has saved it; always false for a visitor. */
   saved: boolean;
   lastActiveAt: string | null;
+  /** The approved profile photo (`/api/photos/:id?v=`), or null for initials. */
+  photoUrl: string | null;
 }
 
 /** `GET /api/profiles/:id/contact` (signed-in members only). */

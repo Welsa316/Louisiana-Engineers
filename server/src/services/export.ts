@@ -11,6 +11,7 @@ import {
 import type { RequestRole } from "@shared/types/requests";
 import type { Db } from "../db/tx";
 import { exportMeetings } from "./meetings";
+import { photoForExport } from "./photos";
 import { getOwnProfile } from "./profiles";
 
 /**
@@ -21,7 +22,8 @@ import { getOwnProfile } from "./profiles";
  * (the other party's public fields only, of which only the name is kept),
  * meetings and proposed times from the meetings service (names only),
  * notifications under the recipient policy, and audit entries from
- * `my_audit_entries()`. Contact values are never read: the handoff values
+ * `my_audit_entries()`. A profile photo is noted (state, type and size),
+ * never copied into the file. Contact values are never read: the handoff values
  * belong to the mentor, and the file carries only the method names.
  */
 
@@ -171,6 +173,7 @@ export async function exportMyData(db: Db): Promise<DataExport> {
     exportedAt: new Date().toISOString(),
     profile,
     settings,
+    photo: await photoForExport(db),
     requests,
     relationships,
     meetings,

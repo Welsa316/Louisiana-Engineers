@@ -332,6 +332,7 @@ function Results({
               location: entry.location ?? "",
               disciplineId: entry.disciplineId,
               expertise: entry.tags,
+              photoUrl: entry.photoUrl,
             }}
             to={profilePath(mode, entry.id)}
             status={cardStatus(entry)}

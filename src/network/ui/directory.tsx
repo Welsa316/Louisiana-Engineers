@@ -221,6 +221,8 @@ export interface ProfileCardData {
   location: string;
   disciplineId: string;
   expertise: string[];
+  /** The approved photo; initials when absent. */
+  photoUrl?: string | null;
 }
 
 /** The mentorship pill on a card. */
@@ -250,7 +252,7 @@ export function ProfileCard({
   return (
     <article className="pn-pcard">
       <div className="pn-pcard-top">
-        <Monogram initials={p.initials} />
+        <Monogram initials={p.initials} photo={p.photoUrl} />
         {save ? (
           <button
             type="button"

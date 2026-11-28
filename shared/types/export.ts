@@ -10,6 +10,7 @@ import type { ContactMethodId } from "../taxonomy";
 import type { DeclineReason, MeetingMode, NotificationCategory, RequestFormat, RequestKind, RequestStatus } from "./common";
 import type { ExportMeeting, ExportSlot } from "./meetings";
 import type { OwnProfile, OwnSettings } from "./me";
+import type { PhotoContentType, PhotoStatus } from "./photos";
 import type { RequestRole } from "./requests";
 
 export const EXPORT_FORMAT = "mest-network-export";
@@ -71,6 +72,15 @@ export interface ExportAuditEntry {
   createdAt: string;
 }
 
+/** That a profile photo exists and where it stands. The image itself is not in the file. */
+export interface ExportPhoto {
+  status: PhotoStatus;
+  contentType: PhotoContentType;
+  byteSize: number;
+  uploadedAt: string;
+  reviewedAt: string | null;
+}
+
 export interface DataExport {
   format: typeof EXPORT_FORMAT;
   version: typeof EXPORT_VERSION;
@@ -78,6 +88,8 @@ export interface DataExport {
   /** null only when the account has no profile row. */
   profile: Omit<OwnProfile, "settings"> | null;
   settings: OwnSettings | null;
+  /** null when there is no photo. */
+  photo: ExportPhoto | null;
   requests: ExportRequest[];
   relationships: ExportRelationship[];
   /** Meetings in either role (Task 30). */

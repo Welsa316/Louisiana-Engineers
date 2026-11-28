@@ -92,6 +92,21 @@ export const fieldLimits = {
   meetingAgenda: { min: 0, max: 400 },
 } as const;
 
+/**
+ * Profile photos (Task 33): stored in Postgres, so they stay small. The
+ * browser resizes to `maxEdge` pixels on the longer side before upload; the
+ * server checks the bytes (JPEG or WebP by their magic numbers) and the size,
+ * and `profile_photos` repeats both as CHECK constraints.
+ */
+export const photoLimits = {
+  /** profile_photos.byte_size, inclusive */
+  maxBytes: 200_000,
+  /** The longer side after the browser resizes, in pixels */
+  maxEdge: 512,
+  /** What a stored photo can be, decided from its bytes */
+  contentTypes: ["image/jpeg", "image/webp"] as const,
+} as const;
+
 /** List endpoints: `?page` (1-based) and `&size`. */
 export const paging = { defaultSize: 20, maxSize: 50 } as const;
 

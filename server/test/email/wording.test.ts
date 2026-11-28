@@ -19,4 +19,14 @@ describe("template wording", () => {
     expect(removed.text).toMatch(/removed your MEST Network account/);
     expect(removed.text).not.toMatch(/Sign in to see where your account stands/);
   });
+
+  it("photo_reviewed_says_which_decision_was_taken", () => {
+    const approved = renderTemplate("photo-reviewed", { firstName: "Layla", decision: "approved" }, { appOrigin: "http://x.test" });
+    expect(approved.subject).toBe("Your profile photo is approved");
+    expect(approved.text).toContain("in place of your initials");
+    const rejected = renderTemplate("photo-reviewed", { firstName: "Layla", decision: "rejected" }, { appOrigin: "http://x.test" });
+    expect(rejected.subject).toBe("Your profile photo was not approved");
+    expect(rejected.text).toContain("your initials show on your profile instead");
+    expect(rejected.text).not.toContain("approved your profile photo");
+  });
 });

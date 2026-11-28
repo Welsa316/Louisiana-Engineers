@@ -37,6 +37,7 @@ import {
 } from "../../ui/settings-controls";
 import { Card, Chip, Input, Modal, Notice, Option, PageHead, Select, Status, Textarea, Toast, UiLink } from "../../ui/ui";
 import { settingsErrorText, useOwnProfile, useSaveProfile, useSetKind } from "./api";
+import { PhotoCard } from "./PhotoSettings";
 
 const FORM = "profile";
 
@@ -415,6 +416,7 @@ function ProfileForm({ profile }: { profile: OwnProfile }) {
         </div>
 
         <aside className="grid grid-cols-1 gap-6 min-w-0" aria-label="About your profile">
+          <PhotoCard profile={profile} />
           <ProfileStatusCard profile={profile} />
           <KindCard profile={profile} />
         </aside>
