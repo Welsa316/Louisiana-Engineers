@@ -177,7 +177,7 @@ Administrators are granted from the admin screen by another administrator. The f
    DATABASE_URL="$PROD_DB_URL" npm run admin:grant -- "$ADDR"
    ```
 
-   It prints the profile id and how many administrators are active. It refuses an address with no account, an account that has not confirmed its address, and a suspended or departing account. It writes `admin.granted` to the audit log.
+   It prints the profile id and how many administrators are active. The role it grants acts for every region (section 3.10). It refuses an address with no account, an account that has not confirmed its address, and a suspended or departing account. It writes `admin.granted` to the audit log.
 
 3. Grant at least two. The board's rule (A7) is two administrators at minimum; the admin screen refuses to remove one if that would leave fewer.
 
@@ -310,7 +310,64 @@ The jobs run inside the service every day (expiry hourly, email every minute). T
 DATABASE_URL="$PROD_DB_URL" npm run job -- deletions
 ```
 
-The job names are `expire-requests`, `reminders`, `resume-paused`, `retention`, `admin-digest` and `deletions`. A job already running in the service holds a lock, and the command then says it skipped. Never run `send-emails` from a computer: outside production it marks messages as sent without sending them and prints them to the terminal.
+The job names are `expire-requests`, `reminders`, `resume-paused`, `retention`, `admin-digest`, `deletions`, `complete-past-meetings`, `meeting-check-in` and `member-digest`. A job already running in the service holds a lock, and the command then says it skipped. Never run `send-emails` from a computer: outside production it marks messages as sent without sending them and prints them to the terminal.
+
+The three jobs Phases 2 to 4 added each run once a day:
+
+| Job | What it does |
+| --- | --- |
+| `complete-past-meetings` | Marks every upcoming meeting whose end (its start plus its length) has passed as completed. That is what "meetings held" on the dashboard counts. A meeting someone already answered "Did you meet?" for is left alone. Writes one `meeting.completed` audit entry with the count |
+| `meeting-check-in` | A day after a meeting's start, asks both people "Did you meet?" in the app and by email, once per meeting. Skips a meeting that was canceled or already answered, and anyone no longer in good standing. It is a reminder, so a member who turned off reminder emails gets only the in-app notice |
+| `member-digest` | Sends the opt-in weekly digest (section 3.11). It runs daily but sends each member at most one digest in seven days |
+
+Running any of the three again by hand is safe: each moves a meeting, or sends a member a digest, at most once.
+
+### 3.8 Profile photos
+
+A photo is optional; every member shows their initials until an administrator approves one. Members add, change and remove their photo in Settings, Profile.
+
+**Size limits.** The browser shrinks the chosen file before it is sent: the longer side to at most 512 pixels, saved as a JPEG of at most 200,000 bytes. Redrawing it also drops the file's camera, date and location details. The browser accepts a JPEG, PNG or WebP file of up to 25 MB to start from. The service then checks the upload itself: it takes only a JPEG or WebP, judged by the file's bytes rather than its name, and refuses anything over 200,000 bytes; the database checks both again. Photos are stored in the database, so each one adds at most 200 KB to the database and to every backup.
+
+**The moderation queue** is Administration, Photos, with three tabs:
+
+- **Waiting**: new photos, oldest first. Approve a clear photo of the member on their own; reject logos, group shots, other people, or anything you would not want on a professional profile.
+- **Shown**: approved photos. **Take down** hides one again.
+- **Not approved**: rejected photos. Approving one here reverses the rejection.
+
+Nothing notifies administrators when a photo arrives; the number beside Photos in the administration menu is the only signal, so look at it when you look at the approval queue. A member who uploads a new photo replaces the old one, and the new one waits for review even if the old one was shown.
+
+Each decision is written to the audit log (`photo.approved` or `photo.rejected`, as is each upload, `photo.uploaded`) and tells the member in the app and by email (template `photo-reviewed`, under their profile email setting). An approved photo shows only to people who may see the profile, and browsers check with the service before reusing a copy, so a takedown applies the next time anyone opens the page.
+
+The queue covers every region: any administrator, a chapter administrator included, sees and decides every member's photo. When an account is deleted its photo is deleted with it. The data export says whether a photo exists, its state, type and size, but not the image.
+
+### 3.9 The calendar feed
+
+A member turns the feed on in Settings, Calendar and gets a private address to add to Google Calendar, Apple Calendar, Outlook or any app that subscribes to a calendar by its address.
+
+**What it shows.** The meetings the member scheduled on the network: every meeting ahead and those of the last 30 days, up to 500. Each event has the time and length, whether it is online or in person, a title of "MEST mentorship:" and the other person's first name, and a link back to the request page. A canceled meeting shows as canceled. It never shows the place, what the pair plan to talk about or anyone's contact details. The feed asks calendar apps to check hourly; each app decides how often it really does, from every hour to once a day.
+
+**The address is shown once.** Only a fingerprint of it is stored (its sha256), so nobody can read a working address out of the database, administrators included, and there is no administrator screen for anyone's feed. The address stops working on its own when the account is suspended, scheduled for deletion or deleted, and the deletion sweep removes it.
+
+**How a member resets the private link.** If the address was shared by mistake, or they need it again on a new device, the member opens Settings, Calendar and chooses **Make a new address**, then confirms. The old address stops working at once; they add the new one to their calendar app in place of the old. **Turn the feed off** stops it with no replacement. Both are written to the audit log (`calendar_feed.created`, `calendar_feed.revoked`). Point a member who asks by email to these two buttons; an administrator cannot do it for them.
+
+### 3.10 Regions and chapter administrators
+
+The network serves one region, Greater New Orleans, until another is added. There is no screen for adding a region: a developer adds it in a new migration (a row in the `regions` table). Once more than one region is active, onboarding and Settings, Profile ask members for their region and the directory offers a region filter; Administration, Members always has one. A member can move only to an active region; members already in a region that is later retired keep it.
+
+**Granting for one region.** In Administration, Members, **Make administrator** asks what the new administrator administers: one region, or every region. A chapter administrator (one scoped to a region) acts only on members in that region: approving and verifying profiles, hiding and restoring them, deciding reports and granting or revoking the role. Their members list shows only their region, they can grant only their own region, and they never act on a region-wide administrator. Administration, Administrators shows each administrator's region.
+
+Some administrator screens still cover every region whatever the scope. Section 5.4 of [02-technical-architecture.md](02-technical-architecture.md) lists which.
+
+**Keeping an administrator for every region.** The last region-wide administrator who can act cannot be revoked, narrowed to one region, suspended or removed, and cannot delete their own account, so a region-wide role can always be granted from the screen. If none can act anyway (for example, none can sign in), the command in section 2.8 is the way back: `npm run admin:grant -- <email>` always grants for every region. On someone who is already a chapter administrator it widens their role to every region, prints `Widened the administrator role to every region`, and writes `admin.granted` to the audit log.
+
+### 3.11 The member weekly digest
+
+Members turn it on in Settings, Notifications (**Weekly digest**); it is off for everyone until they do. The `member-digest` job (section 3.7) sends each member who turned it on at most one digest in seven days, by email with the names (template `member-digest`) and in the app as counts, and only when something is new since their last one:
+
+- a professional hears about professionals newly listed in the directory in their own discipline;
+- a student hears about mentors who started taking requests for the topics they chose (none while the platform is paused).
+
+A digest carries names and titles only, never contact details, organizations or request text, and names up to 10 people per list with the rest counted. A first digest looks back one week. A member with nothing new gets nothing, and their week does not restart.
 
 ## 4. Incidents
 
@@ -332,6 +389,9 @@ The job names are `expire-requests`, `reminders`, `resume-paused`, `retention`, 
 | Google sign-in fails | The redirect URI and origin in section 2.7 match `APP_ORIGIN` exactly; the consent screen is published |
 | Requests never expire, reminders never go out | `JOBS_ENABLED` is `true`; the deploy log shows the jobs starting |
 | A sign-in link says it is invalid | Links last 15 minutes and work once; the member requests a new one |
+| A member's photo does not show | It is waiting in Administration, Photos, or was not approved (section 3.8) |
+| A calendar app stopped showing meetings | The member made a new address or turned the feed off, or the account is suspended or being deleted (section 3.9). After a new address, the member adds it to the app in place of the old one |
+| Meetings never become "held", nobody is asked "Did you meet?" | `JOBS_ENABLED` is `true`; the `complete-past-meetings` and `meeting-check-in` jobs (section 3.7) |
 
 ## 5. Before launch
 

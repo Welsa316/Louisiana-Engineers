@@ -199,6 +199,15 @@ Phases 1A to 1D together are the first release. They are split so that each has 
 
 **Acceptance criteria.** A pair proposes three times, one is chosen, a meeting appears for both, becomes completed after the time passes, and the dashboard counts it. A photo uploaded by a test account is not visible until an administrator approves it. Existing pairs without meetings are unaffected.
 
+**Built (2026-11-28, ahead of the two-month gate at the organizer's request; [07-build-plan-phases-2-4.md](07-build-plan-phases-2-4.md)).**
+
+- Scheduling (0014): either party of an active relationship proposes one to three times from the relationship card and the other chooses one, which creates the meeting; either can cancel it. The meetings log at `/network/me/meetings` lists upcoming and past meetings in both roles. The daily `complete-past-meetings` job completes meetings whose time has passed, and `meeting-check-in` asks both people "Did you meet?" a day after the start. The dashboard gained meetings held and meetings upcoming.
+- Feedback (0015): after a relationship is completed each party answers two questions once (how helpful, 1 to 5, and an optional comment). The other party is invited by notification and never sees the answer; administrators see the average and the count, and the comments without names.
+- Profile photos (0016): stored in Postgres rather than a storage bucket (no new account), resized in the browser to 512 px and 200 KB, shown only after an administrator approves them in Administration, Photos. Initials stay the default.
+- Vocabulary tools (0017): merge duplicate tags, rename a discipline, topic or tag, and retire a topic.
+- Member weekly digest (0018): opt-in, at most weekly, names and titles only.
+- Directory sorting by experience and by recent activity was already in the first release.
+
 ## 8. Phase 3: Calendar integration
 
 **Goal.** Calendar invites and reminders, only if the Phase 2 data shows pairs scheduling through the platform rather than through booking links.
@@ -211,9 +220,13 @@ Phases 1A to 1D together are the first release. They are split so that each has 
 
 **Acceptance criteria.** A meeting created in the platform appears in a subscribed calendar within the feed refresh interval; no calendar data is read from the member's calendar in the iCal approach.
 
+**Built (2026-11-28): the iCal feed only (0019).** A member turns it on in Settings, Calendar and gets a private address, shown once; only its sha256 is stored. The feed holds the member's upcoming meetings and those of the last 30 days with the other person's first name, never the place, the agenda or a contact value, and asks calendar apps to refresh hourly. A new address revokes the old one; turning the feed off revokes it too. Google Calendar OAuth was not built.
+
 ## 9. Phase 4: Regional expansion (possible)
 
 Not planned, not estimated. The schema is ready: `profiles.region` exists from day one with the default `greater-new-orleans`. If a Louisiana or Gulf South network forms, the work is a `regions` table, a region filter in the directory, chapter administrators scoped by region in `admin_roles`, and copy. No existing data changes.
+
+**Built (2026-11-28, 0020).** A `regions` table seeded with Greater New Orleans, which `profiles.region` now references; `admin_roles.region_id` scopes an administrator to one region (null is every region). A chapter administrator acts only on members in their region and grants only that region; the last region-wide administrator who can act cannot be revoked or narrowed, and `npm run admin:grant` always grants for every region. Onboarding, Settings and the directory offer a region once more than one is active. Adding a region is a migration; no screen does it. Which administrator reads stay network-wide is recorded in 02 section 5.4.
 
 ## 10. Recommended order and what can run in parallel
 
@@ -268,12 +281,12 @@ Complexity and phase are estimates. "Privacy and security" lists the concern the
 | Propose three times | Lightweight scheduling | No | M | availability_slots | Both parties only | 2 |
 | Meetings log | Evidence of meetings | No | M | meetings | Both parties; admin sees counts | 2 |
 | Post-completion feedback | Program quality | No | S | relationships | Answers visible to administrators in aggregate | 2 |
-| Profile photos | Recognition | No | M | Storage, moderation | Private bucket, signed URLs, admin approval | 2 |
+| Profile photos | Recognition | No | M | Moderation | Built in Postgres (no bucket): served by the API only to viewers who may see the profile, after administrator approval | 2 |
 | Directory sorting | Better browsing | No | S | last_active_at | last active shown as a band, not a timestamp | 2 |
-| Member weekly digest | Re-engagement | No | S | Edge Function | Opt in | 2 |
+| Member weekly digest | Re-engagement | No | S | Job | Opt in; names and titles only | 2 |
 | iCal feed | Calendar reminders | No | M | meetings | Per-member secret URL, revocable | 3 |
 | Google Calendar | Invites | No | L | OAuth verification | Minimal scopes; only if demanded | 3 |
-| Regions and chapters | Expansion | No | Not estimated | profiles.region | Chapter administrators scoped by region | 4 |
+| Regions and chapters | Expansion | No | Not estimated | profiles.region | Chapter administrators scoped by region (built in 0020) | 4 |
 
 ## 12. Cross-phase risks
 
