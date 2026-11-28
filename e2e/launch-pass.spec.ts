@@ -150,3 +150,24 @@ test("a profile's actions stick to the bottom of a phone screen, above the tab b
   const middle = await measure();
   expect(Math.abs(middle.barBottom - floor)).toBeLessThanOrEqual(1);
 });
+
+test("the directory's topic filter offers and names a topic administrators add", async ({ page }) => {
+  await page.route("**/api/config/vocabulary", async (route) => {
+    const res = await route.fetch();
+    const body = (await res.json()) as { topics: { id: string; label: string }[] };
+    await route.fulfill({
+      response: res,
+      json: { topics: [...body.topics, { id: "coastal-permitting", label: "Coastal permitting" }] },
+    });
+  });
+  await signIn(page, "amina-rahman");
+  await page.goto("/network/me/discover");
+  await expect(page.locator("main h1:visible").first()).toBeVisible();
+  const phone = (page.viewportSize()?.width ?? 0) < 768;
+  if (phone) await page.getByRole("button", { name: /^Filters/ }).click();
+  const panel = phone ? page.getByRole("dialog", { name: "Filters" }) : page.getByRole("complementary", { name: "Filters" });
+  await panel.getByRole("button", { name: "Coastal permitting" }).click();
+  await expect(page).toHaveURL(/topic=coastal-permitting/);
+  // The chosen filter reads as its name, never as its id.
+  await expect(page.getByText("coastal-permitting", { exact: true })).toHaveCount(0);
+});

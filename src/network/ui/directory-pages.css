@@ -24,6 +24,21 @@
 .pn-filters-more {
   margin-top: 1.75rem;
 }
+/* The desktop panel sticks as one piece, no taller than the screen, and
+   scrolls on its own; its blocks inside do not stick separately (two sticky
+   siblings slid over each other and covered the topic filters). */
+.pn-filters-desktop {
+  position: sticky;
+  top: calc(var(--pn-bar-h, 0px) + var(--header-h) + 1.5rem);
+  align-self: start;
+  max-height: calc(100vh - var(--pn-bar-h, 0px) - var(--header-h) - 3rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.5rem;
+}
+.pn-filters-desktop .pn-filters {
+  position: static;
+}
 .pn-filter-input {
   min-height: 2.75rem;
   font-size: 0.9375rem;
