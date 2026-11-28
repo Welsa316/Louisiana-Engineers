@@ -95,6 +95,7 @@ Set these on the app service (not the Postgres service). `.env.example` lists th
 | `SESSION_SECRET` | 32 or more random characters: `openssl rand -hex 32` (see section 3.6 for what it does today) |
 | `EMAIL_FROM` | The sender, on the domain verified in Resend, for example `MEST Network <network@example.org>` |
 | `RESEND_API_KEY` | From section 2.6. Without it, production records every email as failed instead of sending |
+| `ADMIN_EMAILS` | Optional. Addresses made administrators the first time they sign in, comma separated (section 2.8) |
 | `EMAIL_REPLY_TO` | Where replies to the network's emails go, for example `admin@mestnola.com` forwarded to the organizers' inbox (section 2.6). Optional; without it replies go to `EMAIL_FROM`, which has no inbox |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | From section 2.7. Leave both unset to hide the Google button; email links still work |
 | `NODE_ENV` | `production` (the image sets it; leave it) |
@@ -167,7 +168,11 @@ If `APP_ORIGIN` changes, update both entries in the Google client, or Google ref
 
 ### 2.8 The first administrators
 
-Administrators are granted from the admin screen by another administrator. The first ones are granted from the command line, which is the only way in on an empty database:
+Administrators are granted from the admin screen by another administrator. There are two ways to make the first ones.
+
+**The simple way: `ADMIN_EMAILS`.** In the app service's Variables, set `ADMIN_EMAILS` to the addresses, separated by commas (for example `admin@mestnola.com,second@example.org`), and redeploy. Each listed address becomes an administrator for every region the first time it signs in, and lands on Administration with no member profile to fill in; it can join the network as a member later from the Join the network link. A role revoked later is not granted again, so the list can stay set. Sign-in itself needs email sending working first (`RESEND_API_KEY`, section 2.6) and the request login (section 2.2).
+
+**From the command line**, which also recovers when no administrator can sign in:
 
 1. Each future administrator signs in once on the live site (email link or Google), so their account exists.
 2. Grant each one, typing the address they signed in with at the prompt (so the shell passes it through unchanged, quote marks included):
