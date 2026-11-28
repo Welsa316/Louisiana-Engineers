@@ -8,9 +8,12 @@
 -- 2. Suspending a member (admin_resolve_report, suspend_requests) and
 --    opening a deletion (schedule_account_deletion, both the grace and the
 --    immediate branches, which request_account_deletion reaches too) call
---    close_meetings_of_departing at once, so the member's meetings still to
---    come are canceled and their open times withdrawn without waiting for
---    the sweep. Both re-created from 0020; who may call them is unchanged.
+--    cancel_meetings_of_unavailable at once, so the member's meetings still
+--    to come are canceled (the other party is told) and their open times
+--    withdrawn without waiting for the sweep. Past meetings keep their place
+--    and agenda, since a suspension can be lifted and a deletion canceled;
+--    the sweep (close_meetings_of_departing) still empties them. Both
+--    re-created from 0020; who may call them is unchanged.
 -- 3. create_notification (0018) queues no email to a suspended member
 --    unless the category is account; the in-app row is still written.
 -- 4. propose_times (0014) still writes the in-app notice every time but
@@ -266,7 +269,50 @@ REVOKE EXECUTE ON FUNCTION
 
 -- 2. Suspension and deletion close meetings at once ---------------------------------
 
--- From 0020, with close_meetings_of_departing on suspension.
+-- A member who can no longer meet (suspended, or leaving): their open times
+-- are withdrawn and each meeting still to come is canceled, and the other
+-- party is told in-app and by email. The notice gives no reason and does not
+-- name the member, so a suspension stays private. Nothing else changes:
+-- past meetings keep their place and agenda until the sweep.
+CREATE FUNCTION cancel_meetings_of_unavailable(target uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  item record;
+  path text;
+BEGIN
+  UPDATE availability_slots sl SET status = 'withdrawn'
+    FROM mentorship_relationships rel
+   WHERE sl.relationship_id = rel.id AND target IN (rel.mentee_id, rel.mentor_id) AND sl.status = 'proposed';
+
+  FOR item IN
+    UPDATE meetings m SET status = 'canceled', canceled_by = target, canceled_at = now()
+      FROM mentorship_relationships rel
+     WHERE m.relationship_id = rel.id AND target IN (rel.mentee_id, rel.mentor_id)
+       AND m.status = 'upcoming' AND m.starts_at > now()
+    RETURNING m.id AS meeting_id, m.starts_at, rel AS rel_row,
+              CASE WHEN rel.mentee_id = target THEN rel.mentor_id ELSE rel.mentee_id END AS other
+  LOOP
+    path := relationship_path(item.rel_row, item.other);
+    PERFORM create_notification(
+      item.other,
+      CASE WHEN item.other = (item.rel_row).mentee_id THEN 'response' ELSE 'request' END::notification_category,
+      'Your meeting on ' || to_char(item.starts_at AT TIME ZONE 'America/Chicago', 'YYYY-MM-DD') || ' was canceled',
+      'The other member is no longer available to meet through MEST.',
+      path,
+      'default',
+      jsonb_build_object('requestId', (item.rel_row).request_id, 'meetingId', item.meeting_id, 'link', path),
+      true,
+      'mentorship_request', (item.rel_row).request_id
+    );
+  END LOOP;
+END
+$$;
+
+REVOKE EXECUTE ON FUNCTION cancel_meetings_of_unavailable(uuid) FROM PUBLIC, app_user;
+
+-- From 0020, with cancel_meetings_of_unavailable on suspension.
 CREATE OR REPLACE FUNCTION admin_resolve_report(id uuid, status report_status, note text, action text) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -329,7 +375,7 @@ BEGIN
     UPDATE users u SET suspended_at = now()
      WHERE u.id = rep.profile_id AND u.suspended_at IS NULL AND u.deleted_at IS NULL;
     -- Their meetings still to come are canceled and their open times withdrawn.
-    PERFORM close_meetings_of_departing(rep.profile_id);
+    PERFORM cancel_meetings_of_unavailable(rep.profile_id);
     PERFORM create_notification(
       rep.profile_id, 'account',
       'Your account can no longer send or answer requests',
@@ -370,7 +416,7 @@ BEGIN
 END
 $$;
 
--- From 0020, with close_meetings_of_departing in both branches.
+-- From 0020, with cancel_meetings_of_unavailable in both branches.
 CREATE OR REPLACE FUNCTION schedule_account_deletion(target uuid, immediate boolean, reason text) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -416,7 +462,7 @@ BEGIN
        SET immediate = true, execute_after = least(d.execute_after, now()), reason = coalesce(clean_reason, d.reason)
      WHERE d.id = open_row.id;
     PERFORM close_requests_of_departing(target);
-    PERFORM close_meetings_of_departing(target);
+    PERFORM cancel_meetings_of_unavailable(target);
     PERFORM write_audit('account.deletion_requested', 'profile', target,
       jsonb_build_object('immediate', true, 'reason', clean_reason));
     RETURN open_row.id;
@@ -439,7 +485,7 @@ BEGIN
     UPDATE mentorship_settings s SET previous_status = s.status, status = 'off' WHERE s.profile_id = target;
   END IF;
   PERFORM close_requests_of_departing(target);
-  PERFORM close_meetings_of_departing(target);
+  PERFORM cancel_meetings_of_unavailable(target);
 
   IF is_immediate THEN
     PERFORM create_notification(

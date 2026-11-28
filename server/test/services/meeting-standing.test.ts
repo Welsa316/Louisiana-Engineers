@@ -153,6 +153,39 @@ describe("suspension and a scheduled deletion close meetings at once", () => {
     await expectClosed(arranged, arranged.pair.mentor);
   });
 
+  it("suspension_tells_the_other_party_and_keeps_past_meeting_notes", async () => {
+    const arranged = await arrange();
+    // A meeting already held, with its notes: a suspension can be lifted, so they stay.
+    const past = await upcomingMeeting(arranged.pair, 72);
+    await db.pool.query(
+      "UPDATE meetings SET starts_at = now() - interval '3 days', place = 'Library room 2', agenda = 'Resume review' WHERE id = $1",
+      [past],
+    );
+    const admin = await makePerson(db.pool, { admin: true, firstName: "Bea" });
+    const reporter = await makeStudent(db.pool);
+    const reportId = await scalarAs<string>(db.pool, reporter, "SELECT report_profile($1, 'unsafe', NULL) AS value", [
+      arranged.pair.mentor,
+    ]);
+    await runAs(db.pool, admin, "SELECT admin_resolve_report($1, 'resolved', NULL, 'suspend_requests')", [reportId]);
+
+    await expectClosed(arranged, arranged.pair.mentor);
+    const kept = await db.pool.query<{ place: string; agenda: string }>("SELECT place, agenda FROM meetings WHERE id = $1", [past]);
+    expect(kept.rows[0]).toEqual({ place: "Library room 2", agenda: "Resume review" });
+
+    // The mentee is told, without the mentor's name or any reason.
+    const told = await db.pool.query<{ title: string; body: string; link: string }>(
+      "SELECT title, body, link FROM notifications WHERE recipient_id = $1 AND title LIKE '%was canceled'",
+      [arranged.pair.mentee],
+    );
+    expect(told.rows).toHaveLength(1);
+    expect(told.rows[0].link).toBe(`/network/me/requests/${arranged.pair.requestId}`);
+    const mentorName = await db.pool.query<{ first_name: string }>("SELECT first_name FROM profiles WHERE id = $1", [
+      arranged.pair.mentor,
+    ]);
+    expect(`${told.rows[0].title} ${told.rows[0].body}`).not.toContain(mentorName.rows[0].first_name);
+    expect(told.rows[0].body).not.toMatch(/suspend|report/i);
+  });
+
   it("a_members_own_deletion_request_cancels_their_meetings", async () => {
     const arranged = await arrange();
     await runAs(db.pool, arranged.pair.mentee, "SELECT request_account_deletion(false, NULL)");
