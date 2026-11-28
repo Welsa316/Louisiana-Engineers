@@ -152,9 +152,10 @@ function otherName(event: CalendarEvent): string {
   return event.otherFirstName?.trim() || "Member";
 }
 
+/** The mentee's request page, or the mentor's mentorship page (where the meetings are). */
 function requestPage(origin: string, event: CalendarEvent): string {
-  const area = event.role === "mentee" ? "me" : "mentor";
-  return new URL(`/network/${area}/requests/${event.requestId}`, origin).toString();
+  const page = event.role === "mentee" ? "me/requests" : "mentor/mentees";
+  return new URL(`/network/${page}/${event.requestId}`, origin).toString();
 }
 
 /**

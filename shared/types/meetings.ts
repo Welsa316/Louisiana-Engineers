@@ -98,10 +98,13 @@ export type MeetingLogResponse = Paged<Meeting>;
 
 /**
  * `409` codes the scheduling actions answer. `403 { code: 'forbidden' }`
- * means choosing one's own proposed time.
+ * means choosing one's own proposed time. `counterparty_unavailable` refuses
+ * proposing or choosing while the other party is suspended or leaving
+ * (migration 0021).
  */
 export type MeetingActionErrorCode =
   | "not_active"
+  | "counterparty_unavailable"
   | "invalid_slots"
   | "slot_unavailable"
   | "slot_past"

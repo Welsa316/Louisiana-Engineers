@@ -73,7 +73,24 @@ export const apiErrorHandler: ErrorHandler = (error, c) => {
 };
 
 function logUnhandled(c: Context, error: unknown): void {
-  console.error(`[http] ${c.req.method} ${c.req.path} failed`, safeErrorSummary(error));
+  console.error(`[http] ${c.req.method} ${redactPath(c.req.path)} failed`, safeErrorSummary(error));
+}
+
+/**
+ * Paths with a secret segment, and what a log writes instead. The calendar
+ * feed's address is its key (`/api/calendar/<token>.ics`), so a log line
+ * must never carry it.
+ */
+const SECRET_PATHS: { pattern: RegExp; replace: string }[] = [
+  { pattern: /^\/api\/calendar\/[^/]+?(\.ics)?$/i, replace: "/api/calendar/<redacted>$1" },
+];
+
+/** A request path as a log may write it, with secret segments replaced by `<redacted>`. */
+export function redactPath(path: string): string {
+  for (const { pattern, replace } of SECRET_PATHS) {
+    if (pattern.test(path)) return path.replace(pattern, replace);
+  }
+  return path;
 }
 
 /**
