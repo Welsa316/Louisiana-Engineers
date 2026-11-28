@@ -155,7 +155,9 @@ test.describe("administration", () => {
 
     await page.goto("/network/admin/vocabulary");
     await expect(page.getByRole("heading", { level: 2, name: "Disciplines" })).toBeVisible();
-    await expect(page.getByText("Coastal & environmental")).toBeVisible();
+    // The visible label (the Rename button also names it, for screen readers).
+    await expect(page.getByText("Coastal & environmental", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Rename Coastal & environmental" })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     await page.goto("/network/admin/settings");
