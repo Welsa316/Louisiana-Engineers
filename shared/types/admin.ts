@@ -7,7 +7,7 @@
 
 import type { ConfigKey } from "../limits";
 import type { DisciplineGroup } from "../taxonomy";
-import type { ApprovalState, MentorStatus, ReviewDecision, TagStatus, VerifiedMethod, Visibility } from "./common";
+import type { ApprovalState, MentorStatus, ProfileKind, ReviewDecision, TagStatus, VerifiedMethod, Visibility } from "./common";
 import type { AdminDashboardCounts, AdminMemberRow, Education } from "./profiles";
 
 export type { AdminDashboardCounts, AdminMemberRow } from "./profiles";
@@ -145,11 +145,24 @@ export interface AdminReviewDetail extends AdminReviewItem {
   history: AdminReviewHistoryItem[];
 }
 
-/** One row of `GET /api/admin/members?q=`: `admin_list_members` plus the state the actions need. */
+/** The filters of `GET /api/admin/members` (03 section 8.3); each narrows the list when given. */
+export interface AdminMemberFilters {
+  /** Matches first, last or full name. */
+  q?: string;
+  kind?: ProfileKind;
+  approval?: ApprovalState;
+  mentorStatus?: MentorStatus;
+  verified?: boolean;
+  /** A region slug, such as `greater-new-orleans`. */
+  region?: string;
+}
+
+/** One row of `GET /api/admin/members`: `admin_list_members` plus the state the actions need. */
 export interface AdminMember extends AdminMemberRow {
   visibility: Visibility;
   adminHidden: boolean;
   verified: boolean;
+  region: string;
   isAdmin: boolean;
   /** "Title · Organization" for professionals, the program for students. */
   detail: string | null;

@@ -259,7 +259,7 @@ describe("sessions", () => {
   it("public_config_reports_google_and_pause", async () => {
     const res = await app.request("/api/config/public");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ googleEnabled: false, platformPaused: false });
+    expect(await res.json()).toEqual({ googleEnabled: false, platformPaused: false, defaultMaxActive: 3 });
 
     await db.pool.query("UPDATE config SET value = 'true' WHERE key = 'platform_paused'");
     const google = testApp(
@@ -268,7 +268,44 @@ describe("sessions", () => {
     expect(await (await google.request("/api/config/public")).json()).toEqual({
       googleEnabled: true,
       platformPaused: true,
+      defaultMaxActive: 3,
     });
+  });
+
+  it("public_config_carries_the_default_mentee_count", async () => {
+    // Onboarding prefills "mentees at once" from it, so an administrator's change reaches new mentors.
+    await db.pool.query("UPDATE config SET value = '5' WHERE key = 'default_max_active'");
+    try {
+      const body = (await (await app.request("/api/config/public")).json()) as { defaultMaxActive: number };
+      expect(body.defaultMaxActive).toBe(5);
+    } finally {
+      await db.pool.query("UPDATE config SET value = '3' WHERE key = 'default_max_active'");
+    }
+  });
+
+  it("vocabulary_lists_active_topics_in_order_with_administrators_additions", async () => {
+    const before = (await (await app.request("/api/config/vocabulary")).json()) as {
+      topics: { id: string; label: string }[];
+    };
+    expect(before.topics.length).toBeGreaterThan(0);
+    expect(before.topics[0]).toEqual({ id: expect.any(String), label: expect.any(String) });
+
+    await db.pool.query(
+      "INSERT INTO mentorship_topics (id, label, sort_order) VALUES ('coastal-permitting', 'Coastal permitting', 1000)",
+    );
+    await db.pool.query(
+      "INSERT INTO mentorship_topics (id, label, sort_order, active) VALUES ('retired-topic', 'Retired topic', 1001, false)",
+    );
+    try {
+      const res = await app.request("/api/config/vocabulary");
+      expect(res.status).toBe(200);
+      const after = (await res.json()) as { topics: { id: string; label: string }[] };
+      // A visitor reads it (onboarding runs before anyone is listed); the new
+      // topic comes last and a retired one is left out.
+      expect(after.topics).toEqual([...before.topics, { id: "coastal-permitting", label: "Coastal permitting" }]);
+    } finally {
+      await db.pool.query("DELETE FROM mentorship_topics WHERE id IN ('coastal-permitting', 'retired-topic')");
+    }
   });
 
   it("session_cookie_is_secure_in_production_and_over_https", async () => {

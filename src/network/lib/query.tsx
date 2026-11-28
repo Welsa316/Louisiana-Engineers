@@ -32,6 +32,7 @@ export function createQueryClient(): QueryClient {
 export const queryKeys = {
   session: ["session"] as const,
   publicConfig: ["config", "public"] as const,
+  vocabulary: ["config", "vocabulary"] as const,
 };
 
 export function QueryProvider({ client, children }: { client?: QueryClient; children: ReactNode }) {

@@ -17,7 +17,6 @@ import {
   audiences,
   disciplineGroups,
   disciplines,
-  mentorshipTopics,
   participationOptions,
   type AudienceId,
   type ParticipationId,
@@ -25,6 +24,7 @@ import {
 import type { OwnProfile } from "@shared/types/me";
 import { isApiError } from "../../lib/api";
 import { useMeta } from "../../lib/meta";
+import { useTopics, withChosen } from "../../lib/vocabulary";
 import {
   CharCount,
   ErrorSummary,
@@ -657,6 +657,7 @@ function ProfessionalFields({
 }
 
 function StudentFields({ draft, set, errors }: { draft: Draft; set: SetField; errors: Record<string, string> }) {
+  const topics = withChosen(useTopics(), draft.topicsNeeded);
   const toggleTopic = (id: string) =>
     set(
       "topicsNeeded",
@@ -699,7 +700,7 @@ function StudentFields({ draft, set, errors }: { draft: Draft; set: SetField; er
             Topics you want help with ({limits.topicsNeeded.min} to {limits.topicsNeeded.max})
           </legend>
           <div className="pn-chips">
-            {mentorshipTopics.map((t) => (
+            {topics.map((t) => (
               <Chip
                 key={t.id}
                 pressed={draft.topicsNeeded.includes(t.id)}

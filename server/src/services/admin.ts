@@ -3,6 +3,7 @@ import type {
   AdminDashboard,
   AdminDiscipline,
   AdminMember,
+  AdminMemberFilters,
   AdminReviewDetail,
   AdminReviewHistoryItem,
   AdminReviewItem,
@@ -262,7 +263,16 @@ export async function restoreProfile(db: Db, profileId: string): Promise<void> {
 
 /* ---------------------------------------------------------------- members */
 
-export async function listMembers(db: Db, q: string | undefined, paging: PageArgs): Promise<Paged<AdminMember>> {
+export async function listMembers(db: Db, filters: AdminMemberFilters, paging: PageArgs): Promise<Paged<AdminMember>> {
+  const args = [
+    filters.q?.trim() || null,
+    filters.kind ?? null,
+    filters.approval ?? null,
+    filters.mentorStatus ?? null,
+    filters.verified ?? null,
+    filters.region ?? null,
+  ];
+  const call = "admin_list_members($1, $2, $3, $4::profile_kind, $5::approval_state, $6::mentor_status, $7::boolean, $8)";
   const rows = await db.query<{
     id: string;
     first_name: string | null;
@@ -270,17 +280,19 @@ export async function listMembers(db: Db, q: string | undefined, paging: PageArg
     kind: AdminMemberRow["kind"];
     approval_state: AdminMemberRow["approvalState"];
     mentor_status: AdminMemberRow["mentorStatus"];
+    verified: boolean;
+    region: string;
     email_domain: string;
     joined_at: Date;
     total: number;
   }>(
-    `SELECT id, first_name, last_name, kind, approval_state, mentor_status, email_domain, joined_at, total
-       FROM admin_list_members($1, $2, $3)`,
-    [paging.page, paging.size, q?.trim() || null],
+    `SELECT id, first_name, last_name, kind, approval_state, mentor_status, verified, region, email_domain, joined_at, total
+       FROM ${call}`,
+    [paging.page, paging.size, ...args],
   );
   if (rows.length === 0) {
     // Past the last page: the window total has no row, so ask for the first.
-    const first = await db.maybeOne<{ total: number }>("SELECT total FROM admin_list_members(1, 1, $1)", [q?.trim() || null]);
+    const first = await db.maybeOne<{ total: number }>(`SELECT total FROM ${call}`, [1, 1, ...args]);
     return { items: [], total: first?.total ?? 0 };
   }
 
@@ -288,12 +300,10 @@ export async function listMembers(db: Db, q: string | undefined, paging: PageArg
     id: string;
     visibility: Visibility;
     admin_hidden: boolean;
-    verified: boolean;
     is_admin: boolean;
     detail: string | null;
   }>(
     `SELECT p.id, p.visibility, p.admin_hidden_at IS NOT NULL AS admin_hidden,
-            coalesce(d.verified, false) AS verified,
             EXISTS (SELECT 1 FROM admin_roles a WHERE a.profile_id = p.id AND a.revoked_at IS NULL) AS is_admin,
             CASE WHEN d.profile_id IS NOT NULL THEN d.title || ' · ' || d.organization ELSE s.program END AS detail
        FROM profiles p
@@ -319,7 +329,8 @@ export async function listMembers(db: Db, q: string | undefined, paging: PageArg
         joinedAt: r.joined_at.toISOString(),
         visibility: e?.visibility ?? "hidden",
         adminHidden: e?.admin_hidden ?? false,
-        verified: e?.verified ?? false,
+        verified: r.verified,
+        region: r.region,
         isAdmin: e?.is_admin ?? false,
         detail: e?.detail ?? null,
       };

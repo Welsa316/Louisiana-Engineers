@@ -12,10 +12,10 @@ import {
   audiences,
   disciplineGroups,
   disciplines,
-  mentorshipTopics,
   participationOptions,
   type ParticipationId,
 } from "@shared/taxonomy";
+import { useTopics, withChosen } from "../../lib/vocabulary";
 import { ContactMatrix } from "../../ui/onboarding-contact";
 import { ChipChoices, OnbField, OnbFieldset, TagInput } from "../../ui/onboarding-fields";
 import { Input, Notice, Option } from "../../ui/ui";
@@ -251,6 +251,7 @@ const MODES: [MentorshipValues["mode"], string, string][] = [
 export function MentorshipStep({ headingRef, err }: StepProps) {
   const { register, control, setValue } = useFormContext<OnboardingValues>();
   const m = useWatch({ control, name: "mentorship" });
+  const topics = withChosen(useTopics(), m.topics);
   const set = <K extends keyof MentorshipValues>(key: K, value: MentorshipValues[K]) =>
     setValue(`mentorship.${key}`, value as never, { shouldDirty: true });
 
@@ -265,7 +266,7 @@ export function MentorshipStep({ headingRef, err }: StepProps) {
 
       <div className="pn-wizard-body pn-form">
         <OnbFieldset id={fieldId("mentorship.topics")} legend="Topics you will talk about" privacy="public" error={err("mentorship.topics")}>
-          <ChipChoices options={mentorshipTopics} values={m.topics} onChange={(next) => set("topics", next)} />
+          <ChipChoices options={topics} values={m.topics} onChange={(next) => set("topics", next)} />
         </OnbFieldset>
         <OnbFieldset id={fieldId("mentorship.audience")} legend="Who you would like to help" privacy="public" error={err("mentorship.audience")}>
           <ChipChoices options={audiences} values={m.audience} onChange={(next) => set("audience", next)} />

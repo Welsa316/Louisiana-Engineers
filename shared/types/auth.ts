@@ -26,6 +26,8 @@ export interface MeResponse {
 export interface PublicConfig {
   googleEnabled: boolean;
   platformPaused: boolean;
+  /** `config.default_max_active`: what onboarding prefills as "mentees at once". */
+  defaultMaxActive: number;
 }
 
 /** `POST /api/auth/dev-login` (test mode only) */

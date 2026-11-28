@@ -16,9 +16,9 @@ import {
   experienceBandFor,
   experienceBands,
   participationOptions,
-  topicById,
   type ContactMethodId,
 } from "@shared/taxonomy";
+import { topicLabel, useTopics } from "../../lib/vocabulary";
 import { Monogram, Notice, Segmented } from "../../ui/ui";
 import { StepHeading } from "./CommonSteps";
 import { stepLabels, type OnboardingValues, type StepId } from "./form";
@@ -58,6 +58,7 @@ function ProfessionalCard({ values, viewer }: { values: OnboardingValues; viewer
   const mentoring = values.participation.includes("mentoring");
   const shared = values.contact.shareWithMembers.filter((m) => m !== "mest" && values.contact.methods.includes(m));
   const discipline = disciplineById(values.disciplineId)?.label;
+  const topics = useTopics();
 
   if (viewer === "visitor" && values.visibility === "members") {
     return (
@@ -106,7 +107,7 @@ function ProfessionalCard({ values, viewer }: { values: OnboardingValues; viewer
         <div className="onb-preview-section">
           <h3>Mentorship</h3>
           <p>
-            {values.mentorship.topics.map((t) => topicById(t)?.label ?? t).join(", ") || "No topics yet"}
+            {values.mentorship.topics.map((t) => topicLabel(topics, t)).join(", ") || "No topics yet"}
           </p>
           <p className="onb-preview-sub">
             For {values.mentorship.audience.map((a) => labelOf(audiences, a).toLowerCase()).join(", ") || "nobody yet"}

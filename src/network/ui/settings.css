@@ -116,8 +116,10 @@
   white-space: pre-line;
 }
 
-/* An added tag: the pressed chip's look, but a remove button rather than a toggle. */
-.pn-chip-added {
+/* An added tag: the pressed chip's look, but a remove button rather than a
+   toggle. Doubled class: network.css's .pn-chip sets the colour too, and
+   which stylesheet loads last depends on the chunk order. */
+.pn-chip.pn-chip-added {
   background: var(--color-purple);
   border-color: var(--color-purple);
   color: var(--color-bg);

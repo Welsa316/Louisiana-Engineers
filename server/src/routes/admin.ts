@@ -10,7 +10,8 @@ import {
 import { pageQuerySchema, uuidSchema } from "@shared/schemas/common";
 import { disciplineGroups } from "@shared/taxonomy";
 import { adminReviewStatuses } from "@shared/types/admin";
-import { tagStatuses } from "@shared/types/common";
+import { fieldLimits } from "@shared/limits";
+import { approvalStates, mentorStatuses, profileKinds, tagStatuses } from "@shared/types/common";
 import { requireAdmin, userIdOf } from "../auth/middleware";
 import { withUser, type Db } from "../db/tx";
 import { validate } from "../http/validate";
@@ -27,7 +28,21 @@ import * as admin from "../services/admin";
 
 const idParam = z.object({ id: uuidSchema });
 const reviewsQuery = pageQuerySchema.extend({ status: z.enum(adminReviewStatuses).default("pending") });
-const membersQuery = pageQuerySchema.extend({ q: z.string().trim().max(120).optional() });
+const membersQuery = pageQuerySchema.extend({
+  q: z.string().trim().max(120).optional(),
+  kind: z.enum(profileKinds).optional(),
+  approval: z.enum(approvalStates).optional(),
+  mentorStatus: z.enum(mentorStatuses).optional(),
+  verified: z
+    .enum(["1", "0", "true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "1" || v === "true")),
+  region: z
+    .string()
+    .max(fieldLimits.slug.max)
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "expected a region slug")
+    .optional(),
+});
 const tagsQuery = pageQuerySchema.extend({ status: z.enum(tagStatuses).optional() });
 const grantSchema = z.object({ profileId: uuidSchema });
 const vocabularySchema = adminVocabularySchema.extend({ groupName: z.enum(disciplineGroups as [string, ...string[]]).optional() });
@@ -84,8 +99,8 @@ export function createAdminRoutes(): Hono {
   /* Members */
 
   app.get("/members", validate(membersQuery, "query"), async (c) => {
-    const { q, page, size } = c.req.valid("query");
-    return c.json(await as(c, (db) => admin.listMembers(db, q, { page, size })));
+    const { page, size, ...filters } = c.req.valid("query");
+    return c.json(await as(c, (db) => admin.listMembers(db, filters, { page, size })));
   });
 
   /* Administrators */

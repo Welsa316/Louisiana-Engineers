@@ -7,7 +7,8 @@
 
 import { useFormContext, useWatch } from "react-hook-form";
 import { limits } from "@shared/limits";
-import { audiences, mentorshipTopics } from "@shared/taxonomy";
+import { audiences } from "@shared/taxonomy";
+import { useTopics, withChosen } from "../../lib/vocabulary";
 import { ChipChoices, CharCount, OnbField, OnbFieldset, TagInput } from "../../ui/onboarding-fields";
 import { Input, Option } from "../../ui/ui";
 import { REQUIRED_NOTE, StepHeading, type StepProps } from "./CommonSteps";
@@ -19,6 +20,7 @@ export function StudiesStep({ headingRef, err }: StepProps) {
   const goals = useWatch({ control, name: "goals" });
   const topics = useWatch({ control, name: "topicsNeeded" });
   const interests = useWatch({ control, name: "interests" });
+  const topicOptions = withChosen(useTopics(), topics);
 
   return (
     <>
@@ -90,7 +92,7 @@ export function StudiesStep({ headingRef, err }: StepProps) {
           hint={`Choose 1 to ${limits.topicsNeeded.max}. Used to suggest mentors; never shown on your profile.`}
         >
           <ChipChoices
-            options={mentorshipTopics}
+            options={topicOptions}
             values={topics}
             max={limits.topicsNeeded.max}
             onChange={(next) => setValue("topicsNeeded", next, { shouldDirty: true })}

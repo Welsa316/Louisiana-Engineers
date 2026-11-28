@@ -230,6 +230,43 @@ describe("members", () => {
     expect(page.items).toHaveLength(2);
     expect((await call(cookie, "GET", "/members?size=51")).status).toBe(400);
   });
+
+  it("members_filter_by_kind_approval_mentor_status_verified_and_region", async () => {
+    const { cookie } = await admins();
+    const mentor = await makeMentor(db.pool, { firstName: "Layla", lastName: "Haddad" });
+    const paused = await makeMentor(db.pool, { firstName: "Fatima", lastName: "Noor", status: "paused", pausedUntil: "2027-01-15" });
+    await makePerson(db.pool, { firstName: "Dawud", lastName: "Jenkins", approval: "pending" });
+    await makeStudent(db.pool, { firstName: "Amina", lastName: "Rahman" });
+    await asSystem(db.pool, async (client) => {
+      await client.query(
+        "UPDATE professional_details SET verified = true, verified_method = 'linkedin', verified_at = now() WHERE profile_id = $1",
+        [mentor],
+      );
+      await client.query("UPDATE profiles SET region = 'acadiana' WHERE id = $1", [paused]);
+    });
+
+    const names = async (query: string) => {
+      const page = await json<Paged<AdminMember>>(await call(cookie, "GET", `/members?${query}`));
+      expect(page.total).toBe(page.items.length);
+      return page.items.map((m) => m.lastName).sort();
+    };
+    expect(await names("kind=student")).toEqual(["Rahman"]);
+    expect(await names("kind=professional&approval=pending")).toEqual(["Jenkins"]);
+    expect(await names("mentorStatus=active")).toEqual(["Haddad"]);
+    expect(await names("mentorStatus=paused")).toEqual(["Noor"]);
+    expect(await names("verified=1")).toEqual(["Haddad"]);
+    expect(await names("region=acadiana")).toEqual(["Noor"]);
+    // Filters combine with each other and with the name search.
+    expect(await names("kind=professional&region=greater-new-orleans&q=a")).toEqual(["Admin", "Admin", "Haddad", "Jenkins"]);
+    expect(await names("kind=professional&verified=1&q=noor")).toEqual([]);
+    // The rows carry the region and the verified mark the filters read.
+    const one = await json<Paged<AdminMember>>(await call(cookie, "GET", "/members?verified=1"));
+    expect(one.items[0]).toMatchObject({ id: mentor, verified: true, region: "greater-new-orleans" });
+
+    for (const bad of ["kind=robot", "approval=maybe", "mentorStatus=busy", "verified=yes", "region=Not%20a%20slug"]) {
+      expect((await call(cookie, "GET", `/members?${bad}`)).status, bad).toBe(400);
+    }
+  });
 });
 
 describe("administrators", () => {

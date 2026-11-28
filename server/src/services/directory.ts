@@ -109,22 +109,35 @@ class Where {
   }
 }
 
-/**
- * Each word matches as a prefix, stemmed (English) or as typed (simple, which
- * is how the names are indexed), and every word must match.
- */
-function tsquerySql(where: Where, terms: string[]): string {
-  return terms
-    .map((term) => {
-      const p = where.param(`${term}:*`);
-      return `(to_tsquery('english'::regconfig, ${p}) || to_tsquery('simple'::regconfig, ${p}))`;
-    })
-    .join(" && ");
+/** One word as a prefix, stemmed (English) or as typed (simple, which is how the names are indexed). */
+function termSql(where: Where, term: string): string {
+  const p = where.param(`${term}:*`);
+  return `(to_tsquery('english'::regconfig, ${p}) || to_tsquery('simple'::regconfig, ${p}))`;
+}
+
+/** The search as SQL: every word must match, somewhere in the combined document. */
+interface TextSearch {
+  /** Every word, AND-ed: the exact match. */
+  all: string;
+  /** Any word, OR-ed: what the indexed candidates are found by. */
+  any: string;
+}
+
+function textSearchSql(where: Where, terms: string[]): TextSearch | null {
+  if (!terms.length) return null;
+  const words = terms.map((term) => termSql(where, term));
+  return { all: words.join(" && "), any: words.join(" || ") };
 }
 
 /** The filters as SQL; `except` leaves one out (the facet it counts). */
-function filters(where: Where, search: DirectorySearch, tsquery: string | null, except?: "discipline"): void {
-  if (tsquery) where.add(`e.search_tsv @@ (${tsquery})`);
+function filters(where: Where, search: DirectorySearch, text: TextSearch | null, except?: "discipline"): void {
+  if (text) {
+    // The GIN indexes find the candidates (directory_search_candidates, as
+    // the owner, since `@@` cannot be an index condition under row
+    // policies); the exact all-words match then runs on those few rows.
+    where.add(`e.id IN (SELECT directory_search_candidates(${text.any}))`);
+    where.add(`e.search_tsv @@ (${text.all})`);
+  }
   if (except !== "discipline" && search.discipline.length) {
     where.add(`e.discipline_id = ANY (${where.param(search.discipline)}::text[])`);
   }
@@ -237,9 +250,9 @@ export async function searchDirectory(db: Db, search: DirectorySearch): Promise<
 
   const listParams: unknown[] = [];
   const where = new Where(listParams);
-  const tsquery = terms.length ? tsquerySql(where, terms) : null;
-  filters(where, search, tsquery);
-  const rank = tsquery ? `ts_rank(e.search_tsv, ${tsquery})` : null;
+  const text = textSearchSql(where, terms);
+  filters(where, search, text);
+  const rank = text ? `ts_rank(e.search_tsv, ${text.all})` : null;
   const offset = (search.page - 1) * search.size;
   const limit = where.param(search.size);
   const skip = where.param(offset);
@@ -254,7 +267,7 @@ export async function searchDirectory(db: Db, search: DirectorySearch): Promise<
 
   const countParams: unknown[] = [];
   const countWhere = new Where(countParams);
-  filters(countWhere, search, terms.length ? tsquerySql(countWhere, terms) : null);
+  filters(countWhere, search, textSearchSql(countWhere, terms));
   const { total } = await db.one<{ total: number }>(
     `SELECT count(*)::int AS total FROM directory_entries e ${countWhere.sql()}`,
     countParams,
@@ -262,7 +275,7 @@ export async function searchDirectory(db: Db, search: DirectorySearch): Promise<
 
   const facetParams: unknown[] = [];
   const facetWhere = new Where(facetParams);
-  filters(facetWhere, search, terms.length ? tsquerySql(facetWhere, terms) : null, "discipline");
+  filters(facetWhere, search, textSearchSql(facetWhere, terms), "discipline");
   const facets = await db.query<DisciplineFacet>(
     `SELECT e.discipline_id AS id, count(*)::int AS count
        FROM directory_entries e

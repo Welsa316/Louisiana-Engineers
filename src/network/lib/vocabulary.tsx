@@ -1,0 +1,38 @@
+/**
+ * The mentorship topics members choose from, read from
+ * `GET /api/config/vocabulary` so a topic an administrator adds is offered
+ * in onboarding and settings at once. Until the answer arrives (or if it
+ * fails) the starting set in `shared/taxonomy.ts` stands in, so the choices
+ * never render empty.
+ */
+
+import { useQuery } from "@tanstack/react-query";
+import { mentorshipTopics } from "@shared/taxonomy";
+import type { PublicVocabulary, VocabularyTopic } from "@shared/types/vocabulary";
+import { api } from "./api";
+import { queryKeys } from "./query";
+
+export function useTopics(): VocabularyTopic[] {
+  const { data } = useQuery({
+    queryKey: queryKeys.vocabulary,
+    queryFn: () => api<PublicVocabulary>("/config/vocabulary"),
+    staleTime: 5 * 60_000,
+  });
+  return data?.topics ?? mentorshipTopics;
+}
+
+/**
+ * The topics to offer, plus any the member already chose that are no longer
+ * active (retired by an administrator), so a saved choice stays visible and
+ * can be cleared.
+ */
+export function withChosen(topics: VocabularyTopic[], chosen: string[]): VocabularyTopic[] {
+  const known = new Set(topics.map((t) => t.id));
+  const retired = chosen.filter((id) => !known.has(id)).map((id) => ({ id, label: topicLabel(topics, id) }));
+  return [...topics, ...retired];
+}
+
+/** A topic's label, from the live list first, then the starting set, then the id itself. */
+export function topicLabel(topics: VocabularyTopic[], id: string): string {
+  return topics.find((t) => t.id === id)?.label ?? mentorshipTopics.find((t) => t.id === id)?.label ?? id;
+}

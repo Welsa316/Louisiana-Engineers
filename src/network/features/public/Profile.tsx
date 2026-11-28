@@ -311,7 +311,7 @@ export function ProfileContent({
           </div>
         </div>
         {/* In a preview the actions are shown as the viewer would see them, but do nothing. */}
-        <div inert={preview ? true : undefined} className="contents">
+        <div inert={preview ? true : undefined} className={preview ? "contents" : "contents pn-profile-head-actions"}>
           <ProfileActions profile={profile} viewer={viewer} slot={slot} reportSlot={reportSlot} />
         </div>
       </header>
@@ -386,6 +386,15 @@ export function ProfileContent({
           <MentorshipPanel profile={profile} firstName={firstName} />
         </aside>
       </div>
+
+      {/* On a phone the actions leave the header and stick to the bottom of the
+          screen (above the tab bar) while the profile is on screen (03 section
+          12). Only one of the two copies is ever displayed. */}
+      {preview ? null : (
+        <div className="pn-profile-bar">
+          <ProfileActions profile={profile} viewer={viewer} slot={slot} reportSlot={reportSlot} />
+        </div>
+      )}
     </>
   );
 }

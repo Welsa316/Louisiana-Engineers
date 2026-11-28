@@ -116,3 +116,46 @@
     font-size: 0.8125rem;
   }
 }
+
+/* The profile's phone action bar (03 section 12): the same actions as the
+   header, stuck to the bottom of the screen while the profile is on it.
+   It bleeds to the screen edges over the page gutter so content does not
+   show beside it, and sits above the app shell's tab bar. */
+.pn-profile-bar {
+  display: none;
+}
+@media (max-width: 47.99rem) {
+  .pn-profile-head-actions {
+    display: none;
+  }
+  .pn-profile-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 40;
+    display: block;
+    margin: 2rem calc(-1 * var(--gutter)) 0;
+    padding: 0.75rem var(--gutter) calc(0.75rem + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--pn-line);
+  }
+  .pn-profile-bar:has(> .pn-profile-actions:empty) {
+    display: none;
+  }
+  /* Inside the app shell the tab bar is fixed below; the bar sits on top of it. */
+  .pn-app .pn-profile-bar {
+    bottom: calc(3.5rem + 1px + env(safe-area-inset-bottom));
+    padding-bottom: 0.75rem;
+  }
+  .pn-profile-bar .pn-profile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .pn-profile-bar .pn-profile-actions > * {
+    flex: 1 1 9rem;
+  }
+  .pn-profile-bar .pn-profile-actions > :first-child {
+    flex-basis: 100%;
+  }
+}

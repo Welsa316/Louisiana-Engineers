@@ -6,12 +6,13 @@ import { Hono } from "hono";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { DirectoryResponse, ProfileView } from "@shared/types/directory";
 import { createSession } from "../../src/auth/session";
-import { wrapClient } from "../../src/db/tx";
+import { wrapClient, type Db } from "../../src/db/tx";
 import { createApp } from "../../src/index";
 import { renderMeta } from "../../src/meta";
 import { createDirectoryRoutes } from "../../src/routes/directory";
 import { createProfileRoutes } from "../../src/routes/profiles";
-import { asSystem, createTestDb, testApp, truncateAll, type TestDb } from "../harness";
+import { directoryQuerySchema, searchDirectory } from "../../src/services/directory";
+import { asSystem, asUser, createTestDb, testApp, truncateAll, type TestDb } from "../harness";
 import { FIXTURE_BIO, makePerson, type PersonOptions } from "../policies/fixtures";
 
 /**
@@ -316,6 +317,101 @@ describe("GET /api/directory: search, filters and sort", () => {
     }
     await db.pool.query("UPDATE config SET value = 'false' WHERE key = 'platform_paused'");
     expect((await directory()).total).toBe(1);
+  });
+});
+
+describe("search and the GIN indexes", () => {
+  /** Every statement `searchDirectory` runs for `search`, as the viewer, recorded. */
+  async function recordSearch(query: string, viewer: string | null) {
+    const recorded: { sql: string; params: unknown[] }[] = [];
+    await asUser(db.pool, viewer, async (client) => {
+      const real = wrapClient(client);
+      const note = (sql: string, params?: unknown[]) => recorded.push({ sql, params: params ?? [] });
+      const recording: Db = {
+        client,
+        query: ((sql: string, params?: unknown[]) => (note(sql, params), real.query(sql, params))) as Db["query"],
+        one: ((sql: string, params?: unknown[]) => (note(sql, params), real.one(sql, params))) as Db["one"],
+        maybeOne: ((sql: string, params?: unknown[]) => (note(sql, params), real.maybeOne(sql, params))) as Db["maybeOne"],
+      };
+      await searchDirectory(recording, directoryQuerySchema.parse(Object.fromEntries(new URLSearchParams(query))));
+    });
+    return recorded;
+  }
+
+  /** The plan of `sql` as the viewer, with sequential scans priced out so an index that can serve it is used. */
+  async function planAs(viewer: string | null, sql: string, params: unknown[]): Promise<string> {
+    return asUser(db.pool, viewer, async (client) => {
+      await client.query("SET LOCAL enable_seqscan = off");
+      const plan = await client.query<{ "QUERY PLAN": string }>(`EXPLAIN ${sql}`, params);
+      return plan.rows.map((row) => row["QUERY PLAN"]).join("\n");
+    });
+  }
+
+  it("search_text_goes_through_the_indexed_candidates", async () => {
+    await pro({ firstName: "Layla", lastName: "Haddad", tags: ["Coastal restoration"] });
+    const recorded = await recordSearch("q=coastal", null);
+    const list = recorded.find((r) => /FROM directory_entries e/.test(r.sql) && /LIMIT/.test(r.sql));
+    expect(list).toBeDefined();
+
+    // The request itself (row policies on) filters text through the definer
+    // function, since `@@` is not leakproof and so can never be an index
+    // condition under a row policy.
+    const plan = await planAs(null, list!.sql, list!.params);
+    expect(plan).toMatch(/directory_search_candidates/);
+    expect(plan).not.toMatch(/Seq Scan on (profiles|professional_details)/);
+  });
+
+  it("search_candidates_use_both_gin_indexes", async () => {
+    // The function's own query, read from the catalog and planned as its
+    // owner (which is how a definer function runs).
+    const { prosrc } = (
+      await db.pool.query<{ prosrc: string }>("SELECT prosrc FROM pg_proc WHERE proname = 'directory_search_candidates'")
+    ).rows[0];
+    const plan = await asSystem(db.pool, async (client) => {
+      await client.query("SET LOCAL enable_seqscan = off");
+      await client.query(`PREPARE candidates(tsquery) AS ${prosrc}`);
+      const rows = await client.query<{ "QUERY PLAN": string }>(
+        "EXPLAIN EXECUTE candidates(to_tsquery('english', 'coastal:*') || to_tsquery('simple', 'coastal:*'))",
+      );
+      await client.query("DEALLOCATE candidates");
+      return rows.rows.map((row) => row["QUERY PLAN"]).join("\n");
+    });
+    expect(plan).toMatch(/Bitmap Index Scan on profiles_search_tsv_idx/);
+    expect(plan).toMatch(/Bitmap Index Scan on professional_details_search_idx/);
+  });
+
+  it("search_candidates_hold_only_profiles_the_caller_may_list", async () => {
+    const pub = await pro({ firstName: "Coral", lastName: "Public" });
+    const members = await pro({ firstName: "Coral", lastName: "Members", visibility: "members" });
+    await pro({ firstName: "Coral", lastName: "Hidden", visibility: "hidden" });
+    await pro({ firstName: "Coral", lastName: "Pending", approval: "pending" });
+    await pro({ firstName: "Coral", lastName: "Removed", adminHidden: true });
+    await pro({ firstName: "Coral", lastName: "Unlisted", participation: ["networking"] });
+    await makePerson(db.pool, { kind: "student", firstName: "Coral", lastName: "Student", visibility: "public" });
+    const viewer = await member();
+
+    const candidates = (who: string | null) =>
+      asUser(db.pool, who, async (client) =>
+        (
+          await client.query<{ id: string }>(
+            "SELECT id FROM directory_search_candidates(to_tsquery('simple', 'coral:*')) AS c(id)",
+          )
+        ).rows
+          .map((r) => r.id)
+          .sort(),
+      );
+    // Called directly, it answers no more than the directory would.
+    expect(await candidates(null)).toEqual([pub]);
+    expect(await candidates(viewer)).toEqual(sorted([pub, members]));
+  });
+
+  it("search_words_may_span_the_name_and_the_profile", async () => {
+    const layla = await pro({ firstName: "Layla", lastName: "Haddad", tags: ["Coastal restoration"] });
+    await pro({ firstName: "Layla", lastName: "Other", tags: ["Bridges"] });
+    await pro({ firstName: "Omar", lastName: "Said", tags: ["Coastal restoration"] });
+    // One word from the name, one from the tag: only the profile with both.
+    expect(ids(await directory("q=layla%20coastal"))).toEqual([layla]);
+    expect((await directory("q=layla%20coastal")).total).toBe(1);
   });
 });
 

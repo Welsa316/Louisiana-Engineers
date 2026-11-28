@@ -354,6 +354,48 @@ describe("keeping the account", () => {
     expect(await settingsRow(leaver)).toMatchObject({ status: "off", previous_status: "active" });
     expect((await profileRow(leaver)).visibility).toBe("public");
   });
+
+  it("admin_hide_and_restore_during_grace_keep_the_saved_status", async () => {
+    const resumeOn = new Date(Date.now() + 30 * DAY).toISOString().slice(0, 10);
+    const leaver = await makeLeaver({ status: "paused", pausedUntil: resumeOn });
+    const admin = await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    const cookie = await cookieFor(leaver);
+    expect((await call(cookie, "POST", "/me/deletion", { confirmName: "Layla" })).status).toBe(200);
+    const saved = { status: "off", previous_status: "paused", paused_until: resumeOn };
+    expect(await settingsRow(leaver)).toEqual(saved);
+
+    // A report handled during the grace period hides the profile, then the
+    // administrator thinks better of it: neither touches the saved status.
+    await runAs(db.pool, admin, "SELECT admin_hide_profile($1)", [leaver]);
+    expect(await settingsRow(leaver)).toEqual(saved);
+    await runAs(db.pool, admin, "SELECT admin_restore_profile($1)", [leaver]);
+    // Restored to the directory rules, but mentoring stays off while the account is leaving.
+    expect(await settingsRow(leaver)).toEqual(saved);
+    expect((await profileRow(leaver)).visibility).toBe("hidden");
+
+    // Keeping the account brings back what the member had.
+    expect((await call(cookie, "DELETE", "/me/deletion")).status).toBe(200);
+    expect(await settingsRow(leaver)).toEqual({ status: "paused", previous_status: null, paused_until: resumeOn });
+  });
+
+  it("admin_restore_during_grace_leaves_mentoring_for_the_cancel", async () => {
+    const leaver = await makeLeaver();
+    const admin = await makePerson(db.pool, { admin: true, visibility: "hidden" });
+    // Hidden by an administrator first (active is saved), then the member asks to leave.
+    await runAs(db.pool, admin, "SELECT admin_hide_profile($1)", [leaver]);
+    expect(await settingsRow(leaver)).toMatchObject({ status: "off", previous_status: "active" });
+    const cookie = await cookieFor(leaver);
+    expect((await call(cookie, "POST", "/me/deletion", { confirmName: "Layla" })).status).toBe(200);
+
+    // Restoring during the grace period clears the hide but does not turn
+    // mentoring back on for an account that is leaving.
+    await runAs(db.pool, admin, "SELECT admin_restore_profile($1)", [leaver]);
+    expect(await settingsRow(leaver)).toMatchObject({ status: "off", previous_status: "active" });
+
+    expect((await call(cookie, "DELETE", "/me/deletion")).status).toBe(200);
+    expect(await settingsRow(leaver)).toMatchObject({ status: "active", previous_status: null });
+    expect((await profileRow(leaver)).visibility).toBe("public");
+  });
 });
 
 describe("signing in during the grace period", () => {
